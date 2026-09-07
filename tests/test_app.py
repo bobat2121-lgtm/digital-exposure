@@ -1,4 +1,4 @@
-"""View switching and price-refresh integration with an isolated quote cache."""
+"""Public report integration using isolated, complete saved quote snapshots."""
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
@@ -6,11 +6,15 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
+import streamlit as st
 from streamlit.testing.v1 import AppTest
+
 from report.current_prices import SOURCE_URLS, load_current_prices, save_current_prices
+from report.post_export import render_post_png
+from report.public_page import render_public_report
 
 
-class AppViewTests(unittest.TestCase):
+class PublicAppTests(unittest.TestCase):
     def setUp(self):
         directory = TemporaryDirectory()
         self.addCleanup(directory.cleanup)
@@ -18,15 +22,20 @@ class AppViewTests(unittest.TestCase):
         cache_patch = patch("report.current_prices.CACHE_PATH", self.cache_path)
         cache_patch.start()
         self.addCleanup(cache_patch.stop)
-        network_patch = patch("report.current_prices.urlopen", side_effect=AssertionError("Tests must not use the network"))
-        network_patch.start()
+        network_patch = patch("report.current_prices.urlopen", side_effect=AssertionError("Public visits must not fetch quotes"))
+        self.quote_network = network_patch.start()
         self.addCleanup(network_patch.stop)
-        monitor_patch = patch("report.filing_monitor.monitor_url", return_value=None)
-        monitor_patch.start()
-        self.addCleanup(monitor_patch.stop)
-        monitor_network_patch = patch("report.filing_monitor.urlopen", side_effect=AssertionError("Tests must not use the network"))
-        monitor_network_patch.start()
+        feed_patch = patch("report.filing_monitor.read_monitor", side_effect=AssertionError("The public page must not request a filing feed"))
+        self.filing_feed = feed_patch.start()
+        self.addCleanup(feed_patch.stop)
+        monitor_network_patch = patch("report.filing_monitor.urlopen", side_effect=AssertionError("The public page must not call SEC monitoring"))
+        self.monitor_network = monitor_network_patch.start()
         self.addCleanup(monitor_network_patch.stop)
+        monitor_render_patch = patch("report.filing_monitor.render_monitor")
+        self.monitor_render = monitor_render_patch.start()
+        self.addCleanup(monitor_render_patch.stop)
+        st.cache_data.clear()
+        self.addCleanup(st.cache_data.clear)
         self.prices = {
             "schema_version": 1, "fetched_at": "2026-09-01T16:30:00+00:00",
             "quotes": {symbol: {"symbol": symbol, "price": price,
@@ -37,129 +46,111 @@ class AppViewTests(unittest.TestCase):
         save_current_prices(self.prices, now=datetime(2026, 9, 7, tzinfo=timezone.utc))
         self.app_path = Path(__file__).resolve().parents[1] / "app.py"
 
-    def refresh_button(self, app):
-        return next(button for button in app.button if button.label == "Refresh prices")
+    def assert_unavailable(self, app):
+        self.assertEqual(len(app.exception), 0)
+        self.assertEqual(len(app.error), 1)
+        self.assertEqual(app.error[0].value, "The report is temporarily unavailable. Please try again shortly.")
+        self.assertEqual(len(app.get("download_button")), 0)
+        self.assertEqual(len(app.expander), 0)
+        self.assertFalse(any('class="credit-grid"' in element.proto.body for element in app.get("html")))
 
-    def assert_bottom_audits_available(self, app):
-        labels = [expander.label.lower() for expander in app.expander]
-        self.assertEqual(len(labels), 2)
-        self.assertTrue(any("method" in label or "calculated" in label for label in labels), labels)
-        self.assertTrue(any("source" in label or "input" in label for label in labels), labels)
+    def report_html(self, app):
+        # Streamlit can move style-only HTML into its event container, so DOM
+        # iteration order is not a reliable way to identify the visible report.
+        return next(element.proto.body for element in app.get("html")
+                    if '<div class="dcr">' in element.proto.body)
 
-    def test_post_is_default_and_details_remain_available(self):
+    def test_public_report_has_one_overview_and_discreet_download(self):
         app = AppTest.from_file(str(self.app_path)).run(timeout=30)
         self.assertEqual(len(app.exception), 0)
-        self.assertEqual(app.radio[0].value, "Post view")
-        self.assertEqual(app.radio[0].options, ["Post view", "Detailed view"])
-        self.assertEqual(app.selectbox[0].value, "Current prices · dated balances")
-        self.assertFalse(self.refresh_button(app).disabled)
+        self.assertEqual(len(app.error), 0)
+        for element_type in ("selectbox", "radio", "tabs", "button", "dataframe", "table"):
+            self.assertEqual(len(app.get(element_type)), 0, element_type)
+        self.assertEqual([expander.label for expander in app.expander], ["Calculation overview", "Latest SEC filings"])
+        self.monitor_render.assert_called_once()
+        download = app.get("download_button")[0].proto
         self.assertEqual(len(app.get("download_button")), 1)
-        self.assert_bottom_audits_available(app)
+        self.assertEqual(download.label, "Download")
+        self.assertEqual(download.type, "tertiary")
+        self.assertTrue(download.ignore_rerun)
+        self.assertTrue(download.url.endswith(".png"))
 
-        app.radio[0].set_value("Detailed view").run(timeout=30)
-        self.assertEqual(len(app.exception), 0)
-        self.assert_bottom_audits_available(app)
-        self.assertEqual(len(app.get("download_button")), 1)
+        html = self.report_html(app)
+        self.assertIn("The Digital Credit Report", html)
+        self.assertIn('aria-label="Strategy comparison panel"', html)
+        self.assertIn('aria-label="Strive comparison panel"', html)
+        self.assertIn("845,050", html)
+        self.assertIn("23,156", html)
+        self.assertIn("VWAP", html)
+        self.assertIn("$97.48", html)
+        for removed in ("Current price demo", "CURRENT PRICE DEMO", "Reported net proceeds", "Sources &amp; input audit",
+                        "post-preview", "data:image/png", "Post view"):
+            self.assertNotIn(removed, html)
+        self.assertEqual(len(app.markdown), 1)
+        self.assertIn("Strategy includes its designated", app.markdown[0].value)
+        self.assertIn("June 30 debt carryforward", app.markdown[0].value)
+        self.assertIn("year-end award count remains unreconciled", app.markdown[0].value)
 
-        app.selectbox[0].set_value("Illustrative example").run(timeout=30)
-        self.assertEqual(len(app.exception), 0)
-        self.assertTrue(self.refresh_button(app).disabled)
-        self.assert_bottom_audits_available(app)
-        app.selectbox[0].set_value("Aug 31, 2026 · Historical replay").run(timeout=30)
-        self.assertEqual(len(app.exception), 0)
-        self.assertTrue(self.refresh_button(app).disabled)
-        self.assert_bottom_audits_available(app)
-
-        app.radio[0].set_value("Post view").run(timeout=30)
-        self.assertEqual(len(app.exception), 0)
-        self.assert_bottom_audits_available(app)
-        app.selectbox[0].set_value("Current prices · dated balances").run(timeout=30)
-        self.assertEqual(len(app.exception), 0)
-        self.assertFalse(self.refresh_button(app).disabled)
-        self.assertEqual(len(app.get("download_button")), 1)
-        self.assert_bottom_audits_available(app)
-
-    def test_successful_price_refresh_saves_complete_snapshot_and_rerenders(self):
-        app = AppTest.from_file(str(self.app_path)).run(timeout=30)
-        refreshed = deepcopy(self.prices)
-        refreshed["quotes"]["ASST"]["price"] = 31.0
-        refreshed["quotes"]["BTC-USD"]["price"] = 83_000.0
-        with patch("report.current_prices.pull_current_prices", return_value=refreshed) as pull:
-            self.refresh_button(app).click().run(timeout=30)
-        pull.assert_called_once_with()
-        self.assertEqual(len(app.exception), 0)
-        self.assertEqual(len(app.warning), 0)
-        self.assertEqual(load_current_prices(), refreshed)
-        self.assertEqual(app.selectbox[0].value, "Current prices · dated balances")
-        self.assertEqual(len(app.get("download_button")), 1)
-
-    def test_failed_price_refresh_retains_saved_quotes_and_recovery_clears_warning(self):
-        app = AppTest.from_file(str(self.app_path)).run(timeout=30)
+    def test_public_reruns_preserve_saved_quotes_and_do_not_request_live_sources(self):
         original = self.cache_path.read_bytes()
-        with patch("report.current_prices.pull_current_prices", side_effect=ValueError("Missing ASST quote")) as pull:
-            self.refresh_button(app).click().run(timeout=30)
-        pull.assert_called_once_with()
+        app = AppTest.from_file(str(self.app_path)).run(timeout=30)
+        initial_html = self.report_html(app)
+        initial_download = app.get("download_button")[0].proto.url
+        app.run(timeout=30)
         self.assertEqual(len(app.exception), 0)
+        self.assertEqual(self.report_html(app), initial_html)
+        self.assertEqual(app.get("download_button")[0].proto.url, initial_download)
         self.assertEqual(self.cache_path.read_bytes(), original)
-        self.assertEqual(len(app.warning), 1)
-        self.assertIn("saved quotes retained", app.warning[0].value)
-        self.assertIn("Missing ASST quote", app.warning[0].value)
-        self.assertEqual(len(app.get("download_button")), 1)
-        with patch("report.current_prices.pull_current_prices", return_value=self.prices):
-            self.refresh_button(app).click().run(timeout=30)
-        self.assertEqual(len(app.exception), 0)
-        self.assertEqual(len(app.warning), 0)
         self.assertEqual(load_current_prices(), self.prices)
+        self.quote_network.assert_not_called()
+        self.filing_feed.assert_not_called()
+        self.monitor_network.assert_not_called()
 
-    def test_monitor_updates_and_outage_preserve_report_and_last_feed(self):
-        import streamlit as st
-        from report.page import render_post_preview
-
-        origin = "https://capital-report-test.example.workers.dev"
-        status = {"schemaVersion": 1, "issuers": [{"ticker": "MSTR", "configured": True,
-                  "lastSuccessAt": "2026-09-07T12:01:00.000Z", "inWindow": True}]}
-        baseline = {"ticker": "MSTR", "form": "8-K", "accession": "0001050446-26-000100",
-                    "acceptedAt": "2026-09-07T12:00:00.000Z", "firstSeenAt": "2026-09-07T12:00:20.000Z",
-                    "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1050446/000105044626000100/mstr-20260907.htm",
-                    "baseline": True, "status": "baseline", "extracted": None}
-        feed = {"schemaVersion": 1, "filings": [baseline]}
-        original_quotes = self.cache_path.read_bytes()
-        st.cache_data.clear()
-        self.addCleanup(st.cache_data.clear)
-        with patch("report.filing_monitor.monitor_url", return_value=origin), \
-             patch("report.filing_monitor.read_monitor", return_value=(status, feed)) as read, \
-             patch("report.page.render_post_preview", wraps=render_post_preview) as preview:
+    def test_saved_quote_update_changes_web_and_download_together_without_changing_balances(self):
+        with patch("report.public_page.render_public_report", wraps=render_public_report) as web, \
+             patch("report.post_export.render_post_png", wraps=render_post_png) as export:
             app = AppTest.from_file(str(self.app_path)).run(timeout=30)
             self.assertEqual(len(app.exception), 0)
-            self.assertEqual(len(app.warning), 0)
-            original_view, original_png = preview.call_args.args
-            self.assertEqual(app.dataframe[0].value.iloc[0]["State"], "Initial baseline")
+            first_view = web.call_args.args[0]
+            self.assertEqual(export.call_args.args[0], first_view)
+            first_download = app.get("download_button")[0].proto.url
 
-            new_filing = {**baseline, "accession": "0001050446-26-000101", "baseline": False,
-                          "firstSeenAt": "2026-09-07T12:01:10.000Z", "status": "ready_for_review",
-                          "extracted": {"parserVersion": "1", "periodStart": "2026-08-31", "periodEnd": "2026-09-06",
-                                        "balanceDate": "2026-09-06", "priorBalanceDate": "2026-08-30",
-                                        "facts": {}, "priorFacts": {}, "securities": {}, "missing": [],
-                                        "issues": [], "extractionValidated": True}}
-            updated_feed = {"schemaVersion": 1, "filings": [new_filing, baseline]}
-            read.return_value = (status, updated_feed)
-            st.cache_data.clear()
+            refreshed = deepcopy(self.prices)
+            refreshed["quotes"]["ASST"]["price"] = 31.0
+            refreshed["quotes"]["BTC-USD"]["price"] = 83_000.0
+            save_current_prices(refreshed, now=datetime(2026, 9, 7, tzinfo=timezone.utc))
             app.run(timeout=30)
             self.assertEqual(len(app.exception), 0)
-            self.assertEqual(app.dataframe[0].value.iloc[0]["State"], "ready_for_review")
-            self.assertEqual(preview.call_args.args, (original_view, original_png))
+            latest_view = web.call_args.args[0]
+            self.assertEqual(export.call_args.args[0], latest_view)
+            self.assertNotEqual(latest_view.btc_price, first_view.btc_price)
+            self.assertNotEqual(latest_view.companies[1].stock_price, first_view.companies[1].stock_price)
+            self.assertNotEqual(app.get("download_button")[0].proto.url, first_download)
+            self.assertEqual(latest_view.subtitle, first_view.subtitle)
+            self.assertEqual(latest_view.capital_period_label, first_view.capital_period_label)
+            for previous, current in zip(first_view.companies, latest_view.companies):
+                self.assertEqual(current.shares, previous.shares)
+                self.assertEqual(current.bought, previous.bought)
+                self.assertEqual(current.total_bitcoin, previous.total_bitcoin)
+            self.assertEqual(load_current_prices(), refreshed)
 
-            read.side_effect = OSError("Monitor request timed out")
-            st.cache_data.clear()
-            app.run(timeout=30)
-            self.assertEqual(len(app.exception), 0)
-            self.assertEqual(len(app.warning), 1)
-            self.assertIn("Verified report balances are retained", app.warning[0].value)
-            self.assertTrue(any("may be stale" in caption.value for caption in app.caption))
-            self.assertEqual(len(app.dataframe[0].value), 2)
-            self.assertEqual(preview.call_args.args, (original_view, original_png))
-            self.assertEqual(self.cache_path.read_bytes(), original_quotes)
-            self.assert_bottom_audits_available(app)
+    def test_missing_or_corrupt_quote_snapshot_shows_error_without_partial_report(self):
+        self.cache_path.unlink()
+        app = AppTest.from_file(str(self.app_path)).run(timeout=30)
+        self.assert_unavailable(app)
+        self.cache_path.write_text("{invalid JSON", encoding="utf-8")
+        app.run(timeout=30)
+        self.assert_unavailable(app)
+        self.quote_network.assert_not_called()
+        self.filing_feed.assert_not_called()
+
+    def test_storage_failure_shows_public_error_and_retains_cache(self):
+        original = self.cache_path.read_bytes()
+        with patch("report.current_prices.load_current_prices", side_effect=OSError("Private cache path is inaccessible")):
+            app = AppTest.from_file(str(self.app_path)).run(timeout=30)
+        self.assert_unavailable(app)
+        self.assertEqual(self.cache_path.read_bytes(), original)
+        self.assertNotIn("Private cache path", app.error[0].value)
 
 
 if __name__ == "__main__":

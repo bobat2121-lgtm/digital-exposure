@@ -11,6 +11,6 @@
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["IssuerPoller"] }, { "tag": "v2", "new_sqlite_classes": ["ReportNotifier"] }],
   "triggers": { "crons": ["* 10-14 * * MON"] },
-  "vars": { "PUBLIC_ORIGIN": "*" },
-  "secrets": { "required": ["SEC_USER_AGENT", "ADMIN_TOKEN", "STREAMLIT_ACK_TOKEN", "DISCORD_WEBHOOK_URL"] }
+  "vars": { "PUBLIC_ORIGIN": "*", "NOTIFICATIONS_ACTIVE_AFTER": "2026-09-08T00:00:00Z" },
+  "secrets": { "required": ["SEC_USER_AGENT", "ADMIN_TOKEN", "DISCORD_WEBHOOK_URL"] }
 }

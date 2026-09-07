@@ -77,6 +77,14 @@ def calculate_common_capital(activity: CommonCapital) -> float | None:
     return proceeds - activity.buybacks_cash
 
 
+def common_average_sale_price(activity: CommonCapital) -> float | None:
+    """Net issuance proceeds per share sold, before any repurchase cash flows."""
+    if not _nonnegative(activity.issuance_proceeds_after_fees):
+        return None
+    price = _ratio(activity.issuance_proceeds_after_fees, activity.issued_shares)
+    return price if _known(price) else None
+
+
 def weekly_vwap(trades: tuple[Trade, ...] | None) -> float | None:
     """sum(price * volume) / sum(volume), not an unweighted mean price."""
     if not trades:

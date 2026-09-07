@@ -1,18 +1,17 @@
-# The Monday Capital Report
+# The Digital Credit Report
 
-A single-page Streamlit report comparing Strategy (MSTR) and Strive (ASST),
-live at [digital-credit-report.streamlit.app](https://digital-credit-report.streamlit.app/).
-It opens with **Current prices · dated balances**, using the latest
-saved market quotes and the verified August 30 / August 28 balance snapshots.
-Use **Refresh prices** to update all five market references together. The
-edition selector also preserves the **August 31 historical replay** and
-September 7 **Illustrative example**. See [CURRENT_PRICES.md](CURRENT_PRICES.md)
-for current quote sources, timing and the fixed balance/activity dates.
+A single-page Streamlit report comparing Strategy (MSTR) and Strive (ASST).
+The hosted app is at [digital-credit-report.streamlit.app](https://digital-credit-report.streamlit.app/).
+This checkout contains the approved public redesign; see [DEPLOYMENT.md](DEPLOYMENT.md)
+for rollout status. It uses saved market quotes with verified August 30 / August 28
+balance snapshots. The Imprint title, responsive panels, and compact download
+share the same figures. See [PUBLIC_REPORT.md](PUBLIC_REPORT.md) for the design
+and [CURRENT_PRICES.md](CURRENT_PRICES.md) for quote sources and snapshot dates.
 
 The live [capital-report SEC monitor](https://capital-report.alatimore06370.workers.dev/api/status)
 checks both issuers every 30 seconds on Mondays, 06:45–09:30 Eastern. Its
 [filing feed](https://capital-report.alatimore06370.workers.dev/api/filings)
-appears under **Sources & input audit** and refreshes every 15 seconds while
+appears under **Latest SEC filings** and refreshes every 15 seconds while
 the report session is open. New filings and parsed facts update there;
 **the financial cards retain their verified figures until all required NAV
 inputs and supplemental balances are reconciled**. See
@@ -43,30 +42,24 @@ python -m venv .venv
 
 On macOS/Linux, use `.venv/bin/python` instead. Open the local URL printed by
 Streamlit (normally http://127.0.0.1:8501). Saved financial cards render without
-API keys or network access. The live monitor and manual price/VWAP refreshes
-use the network; a monitor outage retains the card and last retrieved feed.
-Market refreshes preserve actual quote timestamps and
-replace the saved snapshot only when all quotes validate successfully.
+API keys or network access. The read-only filing monitor uses the network;
+a monitor outage retains the card and last retrieved feed. Price and VWAP
+refreshes are local scripts. They preserve provider timestamps and replace
+the saved snapshot only when the complete update validates successfully.
 
-The app opens in **Post view**: a compact 1800 × 1125 card with both companies
-side by side. The entire image scales to fit the browser window for a screenshot.
-Use **Download post PNG** to save the full-resolution image for a weekly X post;
-the downloaded resolution is independent of the screen size. This is the exact
-image displayed in Post view, with no controls included in the download.
+The public report has one responsive view: two aligned company panels on
+computer screens, stacked panels on phones. A discreet **Download** button at
+the bottom saves a fixed 1800 × 1125 PNG for X. There are no public edition
+selectors, post/detail tabs, or price-refresh controls.
 
-Choose **Detailed view** for the longer responsive report. Both views provide
-**How the numbers are calculated** and **Sources & input audit** beneath the
-card. Both layouts and downloads use the selected edition.
-The redesigned Post view uses balanced text sizes, a separate weekly-change
-column, total BTC held beside weekly purchases, and actual QTD/YTD basic-share
-growth from reconciled period baselines. The bottom audit explains Strive's
-40.8% issuer KPI versus this report's 45.56% basic-share result; see
-[STRIVE_YIELD_AUDIT.md](STRIVE_YIELD_AUDIT.md) for the source reconciliation.
-Formulas live below the card; VWAP and preferred transactions remain identified
-on it. See [DESIGN_DEMO.md](DESIGN_DEMO.md) for the layout and
-[PERIOD_GROWTH.md](PERIOD_GROWTH.md) for the calculations and source audit, and
-[LIVE_UPDATES.md](LIVE_UPDATES.md) for the active filing monitor and archived
-offline publication rehearsal.
+**Calculation overview** explains the metrics in 270 words. Market Activity
+groups common capital, preferred capital, and effective common shares.
+Strategy's proceeds-based average sale price, Strive's VWAP proxy, and
+preferred repurchase prices remain visible. Total BTC, weekly changes,
+and QTD/YTD growth use the shared calculation model. Source reconciliations
+remain in [PUBLIC_CALCULATION_AUDIT.md](PUBLIC_CALCULATION_AUDIT.md),
+[STRIVE_YIELD_AUDIT.md](STRIVE_YIELD_AUDIT.md), and [PERIOD_GROWTH.md](PERIOD_GROWTH.md).
+
 You can also export without running Streamlit:
 
 ```powershell
@@ -90,8 +83,7 @@ Current filenames are
 
 ## Refresh the ASST price estimate
 
-Below either view, expand **Sources & input audit**, select the window and click
-**Pull ASST VWAP**. The equivalent command is:
+Refresh the saved historical VWAP through the local script:
 
 ```powershell
 .venv\Scripts\python pull_vwap.py --edition 2026-08-31 --window auto
@@ -132,11 +124,12 @@ implemented.
 - `report/sample_data.py`: explicit current and saved-prior illustrative fixtures.
 - `report/calculations.py`: pure financial formulas and transaction rules.
 - `report/presentation.py`: one formatted view, shared by page and image.
-- `report/page.py` and `assets/report.css`: responsive HTML and visual styling.
+- `report/public_page.py` and `assets/public.css`: the responsive public report.
+- `report/page.py` and `assets/report.css`: legacy detailed export presentation.
 - `report/png_export.py`: deterministic Pillow export with bundled logos/fonts.
 - `report/post_export.py`: compact post image, using the same formatted figures.
-- `assets/post.css`: scales the post image within the available viewport.
-- `report/methodology.py`: expandable definitions and the underlying input audit.
+- `report/branding.py` and `assets/title-imprint.png`: the approved PNG title artwork.
+- `report/methodology.py`: concise public definitions and preserved legacy methodology.
 - `report/filing_monitor.py`: public feed validation and the 15-second Streamlit fragment.
 - `data/sec-monitor.json`: deployed Worker origin, with no administration credentials.
 - `worker-capital-report/`: SEC discovery, issuer parsers, Durable Object scheduling and tests.
@@ -148,8 +141,8 @@ securities at current prices and foreign preferred claims at current FX for
 constant-price NAV. A combined liquid-asset input supports disclosed totals
 whose cash/securities split is unavailable, without counting reserves twice.
 The Cloudflare Worker handles scheduled SEC discovery and supported filing
-extraction. Streamlit reads its public feed and can refresh market quotes on
-demand. Automatic publication of a complete financial card remains separate:
+extraction. Streamlit reads its public feed; local maintenance scripts refresh
+the saved market quotes. Automatic publication of a complete financial card remains separate:
 new filings must be reconciled with every required balance, claim and price
 input before replacing the verified report.
 
@@ -189,8 +182,8 @@ payment history. The resulting **≈ $12.23 NAV/share** rises **≈ 2.67%** at
 constant prices, while BTC/share rises **4.27%**. The approximately $80.4m
 increase in senior preferred claims helps explain that gap.
 
-The main post uses shorter transaction notes, with the full explanations kept
-in the source audit. **Price / basic NAV** names the report's basic-share
+The post uses short transaction notes; full source reconciliations remain in
+the repository audit documents. **Price / basic NAV** names the report's basic-share
 valuation basis explicitly; it is not a reproduction of either issuer's mNAV.
 
 All historical valuation metrics carry **≈** because of these specific
@@ -218,6 +211,8 @@ Font License in `assets/FONT-LICENSE.txt`, from the
 
 The app uses Streamlit's documented [HTML](https://docs.streamlit.io/develop/api-reference/text/st.html)
 and [download button](https://docs.streamlit.io/develop/api-reference/widgets/st.download_button)
-APIs. The export needs only Pillow and runs without browser automation.
+APIs. The export needs only Pillow and runs without browser automation. The
+fixed [Imprint title artwork](assets/BRAND-TITLE.md) preserves the approved
+Georgia/Lato appearance without bundling a Microsoft font.
 
 See `VALIDATION.md` for the completed formula, layout and download checks.

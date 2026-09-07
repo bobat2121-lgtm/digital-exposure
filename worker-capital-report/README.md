@@ -1,6 +1,6 @@
 # capital-report SEC poller
 
-Cloudflare Worker and per-issuer SQLite Durable Objects monitor Strategy (CIK 1050446) and Strive (CIK 1920406). The public feed exposes new SEC 8-K / 8-K/A filings, their acceptance and retrieval timestamps, source-document hashes, and validated reported facts. Separate per-week Durable Objects notify Discord after Streamlit acknowledges both Monday filings.
+Cloudflare Worker and per-issuer SQLite Durable Objects monitor Strategy (CIK 1050446) and Strive (CIK 1920406). The public feed exposes new SEC 8-K / 8-K/A filings, their acceptance and retrieval timestamps, source-document hashes, and validated reported facts. Separate per-week Durable Objects notify Discord after both Monday filings are published to the feed. No browser session or Streamlit callback is needed.
 
 ## Schedule
 
@@ -28,7 +28,6 @@ The Strive parser extracts both balance dates, BTC, cash, STRC holdings, Class A
 |---|---|---|
 | GET | `/api/status` | Configuration readiness, Eastern schedule, per-issuer success/error/retry/alarm state |
 | GET | `/api/filings` | Up to 100 recent filing records, newest first |
-| POST | `/api/streamlit/ack` | Dedicated-token acknowledgement of both displayed Monday primary filings |
 | POST | `/api/admin/poll` | Authenticated single immediate polling cycle for both issuers |
 | POST | `/api/admin/replay` | Authenticated offline parser/deduplication rehearsal in a separate namespace |
 | POST | `/api/admin/notifications` | Private delivery state for the last three Mondays and setup test |
@@ -48,31 +47,36 @@ Existing filings are baselined on the first successful scan. Only the three most
 
 ## Discord delivery
 
-Streamlit sends `{ "filings": [{ "ticker": "MSTR", "accession": "…", "sha256": "…" }, { "ticker": "ASST", "accession": "…", "sha256": "…" }] }` to `/api/streamlit/ack` using `Authorization: Bearer STREAMLIT_ACK_TOKEN`. This token is distinct from the Worker admin token and stays in Streamlit server secrets. The body is limited to 2 KiB.
+The issuer saves each eligible retrieved receipt, a publication outbox event and its recovery alarm in one SQLite transaction. It relays the event to the filing Monday's `ReportNotifier`. A failed relay remains pending and retries after a restart or after the SEC polling window closes; it does not change SEC backoff or make an extra SEC request.
 
-The Worker checks its stored primary-document receipts: matching SHA-256 and trusted SEC URL, non-baseline `8-K`, the same Eastern Monday within 14 days, valid completed retrieval timestamps, and a weekly extraction containing BTC holdings and weekly purchases. `partial` weekly extractions with those BTC facts qualify; unrelated filings, amendments and historical setup records do not. Merely polling or reading the feed never sends a notification.
+The coordinator durably stores candidates and independently reads the same bounded feed projection used by `/api/filings`. Both exact accessions, hashes and trusted SEC URLs must be present. Each receipt must be a non-baseline primary `8-K`, accepted on the same Eastern Monday within 14 days, with completed retrieval timestamps and weekly BTC holdings/purchases. Partial weekly extractions with those two BTC facts qualify; amendments, unrelated filings and historical setup records do not.
 
-One durable delivery record per Monday survives duplicate acknowledgements and Worker restarts. Discord requests use `wait=true`, disable mentions, and confirm a returned message ID. The message links to Streamlit and both SEC filings and explicitly distinguishes new filing facts from financial cards, which still require reconciliation. A setup test uses the separate stable ID `test:discord-setup-v1` and never consumes a weekly notification.
+`NOTIFICATIONS_ACTIVE_AFTER` is the fixed initial activation cutoff, **2026-09-08T00:00:00Z**. Both first discovery and completed retrieval must be on or after it. Preserve this value on future deployments: advancing it would discard eligible pending events. Existing receipts are not retroactively queued. Already-sent records and existing Discord retry deadlines survive the upgrade.
 
-Discord 429 responses honor both the `Retry-After` header and JSON `retry_after`; timeouts and 5xx responses retry with exponential backoff. A separate alarm continues after SEC polling closes, with up to 24 delivery attempts. Other 4xx failures stop and appear only in authenticated notification status. Secrets and Discord response bodies are never logged. Rarely, Discord may accept a message just before a timeout or process interruption; because webhooks have no idempotency key, retrying an unconfirmed delivery can duplicate that message.
+Candidate revisions preserve a follow-up check when another event arrives during feed verification. Once the pair is verified, the coordinator atomically saves publication time and its Discord delivery obligation. Public feed reads remain read-only. The retired `/api/streamlit/ack` route returns 404; the Worker and Streamlit no longer need its token.
+
+Discord requests use `wait=true`, disable mentions and confirm a returned message ID. The combined message links both SEC filings and the report, states that the filings are published to the feed, and says Streamlit is expected to load that feed when opened. Financial cards still await reconciliation; no completed browser rendering is claimed.
+
+Discord 429 responses honor the `Retry-After` header and JSON `retry_after`; timeouts and 5xx responses retry with exponential backoff. A separate alarm continues after SEC polling closes, with up to 24 delivery attempts. Other 4xx failures stop and appear only in authenticated notification status. Secrets and Discord response bodies are never logged. Rarely, Discord may accept a message just before a timeout or process interruption; because webhooks have no idempotency key, retrying unconfirmed delivery can duplicate that message. Confirmed sends remain deduplicated.
+
+`POST /api/admin/notifications` shows publication checks, issuer outboxes and delivery state. `POST /api/admin/discord-test` uses the stable new `test:discord-unattended-v1` key, sends a clearly labelled setup message once, and leaves the old `test:discord-setup-v1` receipt intact. These routes require the existing admin Bearer token. Terminal failed deliveries require operator recovery; repeated acknowledgements or page views cannot reset them.
 
 ## Deploy to the existing Worker
 
 Install dependencies with `npm ci`. Generate bindings with `npm run types`. Then run `npm run check`, `npm test`, and `npm run dry-run`.
 
-Set four production secrets through Cloudflare or Wrangler:
+Set three production secrets through Cloudflare or Wrangler:
 
 ```text
 npx wrangler secret put SEC_USER_AGENT
 npx wrangler secret put ADMIN_TOKEN
-npx wrangler secret put STREAMLIT_ACK_TOKEN
 npx wrangler secret put DISCORD_WEBHOOK_URL
 npm run deploy
 ```
 
-`SEC_USER_AGENT` must identify the actual application and a monitored contact email. `ADMIN_TOKEN` and the separate `STREAMLIT_ACK_TOKEN` must be cryptographically random tokens at least 32 characters long. `DISCORD_WEBHOOK_URL` is the Discord webhook secret. Do not put production values in the repository, browser JavaScript, Streamlit frontend, logs, or command arguments. `.dev.vars.example` contains blank local-development placeholders only.
+`SEC_USER_AGENT` must identify the actual application and a monitored contact email. `ADMIN_TOKEN` must be a cryptographically random token at least 32 characters long. `DISCORD_WEBHOOK_URL` is the Discord webhook secret. Do not put production values in the repository, browser JavaScript, Streamlit frontend, logs, or command arguments. `.dev.vars.example` contains blank local-development placeholders only.
 
-The config deploys to **capital-report**. Migration `v1` provisions `IssuerPoller`; additive migration `v2` provisions `ReportNotifier` without replacing issuer storage. It does not need KV, R2 or a database account ID.
+The config deploys to **capital-report**. Migration `v1` provisions `IssuerPoller`; additive migration `v2` provisions `ReportNotifier` without replacing issuer storage. The unattended update adds tables inside these existing classes and needs no additional migration. It does not need KV, R2 or a database account ID.
 
 After deployment, set `CAPITAL_REPORT_ADMIN_TOKEN` in the shell environment and run:
 
@@ -86,7 +90,7 @@ Configure the Streamlit server with the public worker base URL (`SEC_MONITOR_URL
 
 ## Validation and source fixtures
 
-62 tests run in workerd, covering the SEC parser and poller plus acknowledgement authentication and gating, persisted-hash validation, same-Monday pairing, stale/future/baseline rejection, concurrent and restarted delivery deduplication, 429 delays including empty responses, 5xx/timeouts, alarm recovery and cleanup failures, permanent errors and isolated setup tests.
+71 tests run in workerd, covering SEC parsing and polling, no-browser publication, atomic receipt/outbox/alarm storage, failed handoffs and busy-alarm recovery after 09:30, shared feed projection checks, concurrent candidate revisions, activation and receipt gating, persisted Discord cooldowns, restart deduplication, rate limits, timeouts, permanent errors and isolated setup tests.
 
 The test plugin currently ships an older runtime. `vitest.config.ts` selects the workerd binary bundled with the pinned production Wrangler so tests use the same September 7 compatibility date. Tests mock SEC and Discord requests and use dummy secrets; no messages or live EDGAR requests are sent. Some dependencies emit source-map warnings during tests; the checks themselves pass.
 

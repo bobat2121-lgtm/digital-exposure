@@ -3,6 +3,39 @@ from .models import Report
 from .calculations import liquid_assets
 from .presentation import number
 
+PUBLIC_METHODOLOGY = """
+**Shares & NAV.** Per-share figures use split-adjusted Class A + B common shares.
+NAV is BTC value + cash/securities − debt principal − preferred liquidation
+claims, including accrued dividends. Strategy includes its designated
+treasury liquidity only. Price/basic NAV divides the stock price by NAV/share.
+
+**Bitcoin.** Bought means reported gross purchases; total BTC is ending holdings.
+BTC/common share is holdings divided by shares, in sats (100 million/BTC).
+
+**Market activity.** Strategy common capital uses disclosed net proceeds less buybacks.
+Average sale price = net issuance proceeds ÷ shares sold, after fees.
+Strive uses net new shares × prior-week equity VWAP, estimated from one-minute
+bars, before fees; noncash share changes can affect this proxy. Preferred capital
+uses issuance cash less repurchases; SATA uses net new shares × $100 before
+fees. Repurchase average = repurchase cash ÷ shares repurchased.
+
+**Growth.** WoW compares the dated snapshots; QTD starts June 30, 2026 and YTD
+December 31, 2025. Growth is ending per-share value ÷ starting value − 1.
+NAV growth holds BTC, securities and FX prices constant at current marks;
+Strategy's liquidity stays at its disclosed USD value. These are not stock returns.
+
+**Ratios.** Net BTC amplification = BTC value ÷ NAV. Preferred/BTC = preferred
+claims ÷ BTC value. Their weekly changes use the prior edition's own prices,
+in multiples and percentage points respectively.
+
+**Estimates.** ≈ includes rounded balances, reconstructed claims and Strategy's
+June 30 debt carryforward. Quotes can be newer than balances. Missing inputs
+stay unavailable. Price/NAV and amplification are N/M when NAV ≤ 0.
+
+**Strive YTD, August 28.** Its 40.8% uses assumed dilution; our 45.56% uses basic
+shares. The issuer's year-end award count remains unreconciled.
+"""
+
 POST_METHODOLOGY = """
 **Share basis.** All per-share measures use actual effective Class A + Class B
 common shares, adjusted consistently for stock splits. They do not use EPS

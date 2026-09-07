@@ -124,7 +124,7 @@ class CurrentReportTests(unittest.TestCase):
         self.assertFalse(report.illustrative)
         self.assertEqual(view.report_time, "Updated Sep 7, 2026 · 12:30 PM ET")
         self.assertEqual(view.btc_timestamp, "Sep 7 · 12:29 PM ET")
-        self.assertEqual(view.capital_period_label, "Capital · Aug 24–30")
+        self.assertEqual(view.capital_period_label, "Market Activity · Aug 24–30")
         self.assertEqual(report.prior_comparison_date, "Aug 24")
         for company in view.companies:
             self.assertEqual(company.nav_change.label, "Reported-week NAV/share")
@@ -150,15 +150,25 @@ class CurrentReportTests(unittest.TestCase):
                 if renderer is render_post_png:
                     self.assertEqual(image.height, 1125)
                 text = " ".join(drawn)
-                for required in ("CURRENT PRICE DEMO · ≈ ESTIMATED", view.report_time,
-                                 "Balance dates: Strategy Aug 30 · Strive Aug 28", "CAPITAL · AUG 24–30",
-                                 "Sep 4 · 4:00 PM ET", "Sep 7 · 12:29 PM ET", "LAST PRICE",
+                header_time = (view.report_time.replace("Updated ", "Quotes updated ", 1)
+                               if renderer is render_post_png else view.report_time)
+                self.assertEqual(image.info["Title"], "The Digital Credit Report")
+                for required in (header_time,
+                                 "Balance dates: Strategy Aug 30 · Strive Aug 28", "MARKET ACTIVITY · AUG 24–30",
+                                 "Sep 4 · 4:00 PM ET", "LAST PRICE",
                                  "$150.00", "$30.00", "+$602.8m", "+$76.9m", "+$80.3m",
                                  "NAV per common share", "vs Aug 24"):
                     self.assertIn(required, text)
+                if renderer is render_post_png:
+                    self.assertIn(f"BTC {view.btc_price}", drawn)
+                    self.assertNotIn(view.btc_timestamp, text)
+                else:
+                    self.assertIn(view.btc_timestamp, text)
                 self.assertNotIn("CAPITAL THIS WEEK", text)
                 self.assertNotIn("vs last Monday", text)
                 self.assertNotIn("ILLUSTRATIVE", text)
+                self.assertNotIn("CURRENT PRICE DEMO", text)
+                self.assertNotIn("reported net proceeds", text)
                 for source, company in zip(report.companies, view.companies):
                     expected_btc = f"{source.current.btc_holdings:,.0f} BTC"
                     self.assertEqual(company.total_bitcoin.value, expected_btc)

@@ -7,8 +7,8 @@ facts with source links and timestamps:
 - [Monitor status](https://capital-report.alatimore06370.workers.dev/api/status)
 - [Filing feed](https://capital-report.alatimore06370.workers.dev/api/filings)
 
-The Streamlit page reads this public feed in **Sources & input audit → Live
-SEC filing monitor**. A fragment refreshes it every **15 seconds** while an
+The Streamlit page reads this public feed in **Latest SEC filings**.
+A fragment refreshes it every **15 seconds** while an
 active report session is open. No administrator token is needed to read it,
 and opening the page does not trigger SEC requests.
 
@@ -54,37 +54,42 @@ retrieved feed, marks it stale, and leaves the financial card unchanged.
 
 ## Discord notification
 
-After the live Streamlit monitor renders both companies' eligible Monday
-8-Ks, it sends a server-authenticated receipt to the Worker. The Worker checks
-each accession and document hash against its stored SEC records, then posts
-one combined Discord alert for that Monday with the report and filing links.
-The message confirms availability in the filing monitor; it does not announce
-updated financial cards.
+Cloudflare sends one combined alert after both new Monday primary 8-Ks are
+retrieved, recognized as weekly BTC updates and published to the feed used by
+Streamlit. No browser session is required. There is no separate document
+upload into Streamlit: the app reads the Worker feed when opened and refreshes
+it during an active session.
+
+Each issuer atomically stores its receipt, a publication outbox event and a
+recovery alarm. Failed handoffs retry after restart and after 09:30 without
+extending SEC polling. The Monday coordinator verifies exact accessions,
+SHA-256 hashes and source URLs through the same projection as `/api/filings`.
+It persists the verified pair and publication time before sending Discord.
 
 Both filings must be primary 8-Ks accepted on the same Monday in New York,
-received within the preceding 14 days, and recognized as weekly BTC updates.
-Initial baseline records, amendments, unrelated filings, missing documents,
-and invalid hashes cannot trigger an alert. Reporting/balance dates can differ
-between the issuers.
+received within 14 days and contain recognized weekly BTC facts. Baselines,
+amendments, unrelated filings and incomplete retrievals cannot qualify.
+The fixed initial activation cutoff is **2026-09-08T00:00:00Z**; discovery and
+retrieval must be on or after it. Preserve this cutoff on future deployments
+so pending events remain eligible. Previously ingested records are not queued.
 
-Streamlit needs an active browser session to send its receipt. Keep the live
-page open Monday pre-market for prompt confirmation. Once acknowledged,
-Cloudflare owns delivery and retries independently of the browser and the SEC
-polling window. Saved delivery state suppresses normal repeated alerts across
-refreshes and Worker restarts. Discord has no webhook idempotency key, so an
-ambiguous network failure after Discord accepts a message can still cause a
-duplicate retry.
+The message confirms feed publication and says Streamlit is expected to load
+the feed when opened. It does not claim successful browser receipt or updated
+financial cards. Candidate revisions retain a new event arriving during
+verification. Existing confirmed sends and Discord retry deadlines survive
+deployments. Discord retries continue independently of SEC polling. A rare
+ambiguous network failure after Discord accepts a message may still duplicate
+an unconfirmed delivery; confirmed sends remain deduplicated.
 
-Cloudflare stores `DISCORD_WEBHOOK_URL` and `STREAMLIT_ACK_TOKEN` as secrets.
-Only `STREAMLIT_ACK_TOKEN` is shared with Streamlit's server secret settings;
-the app does not receive the webhook or Worker administrator credential.
+Only Cloudflare stores `DISCORD_WEBHOOK_URL`. Streamlit requires no notification
+secret. The old `/api/streamlit/ack` route is retired and returns 404, and
+`STREAMLIT_ACK_TOKEN` can be removed from both secret stores after rollout.
 
-An authenticated `POST /api/admin/discord-test` sends one clearly labeled
-setup test, separate from weekly alerts. Repeating that request does not
-send another successful setup message. `POST /api/admin/notifications`
-returns recent delivery states and failures. See the Worker runbook for retry
-behavior and setup commands. The authenticated Streamlit callback is
-`POST /api/streamlit/ack`; all public feed routes remain read-only.
+Authenticated `POST /api/admin/notifications` returns publication checks,
+outboxes and delivery failures. `POST /api/admin/discord-test` uses the separate
+stable key `test:discord-unattended-v1`, sends one clearly labelled setup test,
+and preserves the prior setup receipt. The Worker runbook documents retries
+and operational limits. Public feed routes remain read-only.
 
 ## Initial deployment verification
 
@@ -106,9 +111,10 @@ Cloudflare scheduling, and page caching also contribute.
 
 See [the Worker runbook](worker-capital-report/README.md) for endpoints,
 deployment commands, credentials, parser coverage and the authenticated smoke
-script. The 35 Worker tests use mocked SEC requests in workerd. The 129 Python
-tests include feed validation, trusted links, baseline separation, stale-feed
-recovery, and preservation of the report PNG and quote cache.
+script. Worker tests use mocked SEC and Discord requests in workerd. They include
+no-browser publication, atomic outbox storage, post-window retry and race
+recovery. Python tests cover read-only feed refresh, trusted links, baseline
+separation, stale-feed recovery and preservation of the report PNG and quotes.
 
 ## Archived offline publication rehearsal
 

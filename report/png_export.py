@@ -15,6 +15,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 from .view_types import CompanyView, MetricView, ReportView
+from .branding import draw_title
 
 
 ASSETS = Path(__file__).resolve().parents[1] / "assets"
@@ -210,11 +211,12 @@ def render_png(view: ReportView) -> bytes:
     text draw is bounds checked, and corresponding rows share measured heights.
     """
     if len(view.companies) != 2:
-        raise ValueError("The Monday Capital Report requires exactly two companies.")
+        raise ValueError("The Digital Credit Report requires exactly two companies.")
 
     rows = tuple(_company_rows(company) for company in view.companies)
     row_heights = tuple(max(left.height, right.height) for left, right in zip(*rows))
-    panel_top = 220
+    header_offset = 0 if view.label else -40
+    panel_top = 220 + header_offset
     header_height = 128
     nav_height = 172
     capital_heading_height = 60
@@ -225,14 +227,16 @@ def render_png(view: ReportView) -> bytes:
     canvas = _Canvas(height)
     draw = canvas.draw
     draw.rectangle((0, 0, WIDTH, 7), fill=ORANGE)
-    canvas.text(_Text(MARGIN, 40, view.label, 21, True, ORANGE))
+    if view.label:
+        canvas.text(_Text(MARGIN, 40, view.label, 21, True, ORANGE))
     title_size = _fit(view.title, 48, 1090, True)
-    canvas.text(_Text(MARGIN, 86, view.title, title_size, True))
-    canvas.text(_Text(MARGIN, 149, view.subtitle, 25, False, MUTED))
-    canvas.right(view.report_time, WIDTH - MARGIN, 90, 23, True, width=570)
+    if not draw_title(canvas, view.title, MARGIN, 86 + header_offset, size=title_size, width=1090):
+        canvas.text(_Text(MARGIN, 86 + header_offset, view.title, title_size, True))
+    canvas.text(_Text(MARGIN, 149 + header_offset, view.subtitle, 25, False, MUTED))
+    canvas.right(view.report_time, WIDTH - MARGIN, 90 + header_offset, 23, True, width=570)
     btc_line = f"BTC REFERENCE {view.btc_price}"
-    canvas.right(btc_line, WIDTH - MARGIN, 130, 19, False, MUTED, width=570)
-    canvas.right(view.btc_timestamp, WIDTH - MARGIN, 157, 18, False, MUTED, width=570)
+    canvas.right(btc_line, WIDTH - MARGIN, 130 + header_offset, 19, False, MUTED, width=570)
+    canvas.right(view.btc_timestamp, WIDTH - MARGIN, 157 + header_offset, 18, False, MUTED, width=570)
 
     for index, company in enumerate(view.companies):
         panel_x = MARGIN + index * (PANEL_WIDTH + GAP)
@@ -288,6 +292,6 @@ def _metadata(view: ReportView):
 
     metadata = PngInfo()
     metadata.add_text("Title", view.title)
-    metadata.add_text("Description", view.label + ". " + view.footer)
-    metadata.add_text("Software", "The Monday Capital Report local prototype")
+    metadata.add_text("Description", ". ".join(part for part in (view.label, view.footer) if part))
+    metadata.add_text("Software", "The Digital Credit Report")
     return metadata

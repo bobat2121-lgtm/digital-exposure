@@ -3,6 +3,7 @@ from dataclasses import replace
 from io import BytesIO
 
 from .png_export import INK, LINE, MUTED, ORANGE, _Canvas, _metadata
+from .branding import draw_title
 from .post_export import WIDTH, HEIGHT, MARGIN, GAP, PANEL_WIDTH, INSET, _text, _pair, _disclosure, _post_details
 from .view_types import CompanyView, MetricView, ReportView
 
@@ -10,7 +11,7 @@ GREEN, RED = "#15745E", "#AE4355"
 
 
 def demo_report_view(view: ReportView) -> ReportView:
-    return replace(view, label=f"REDESIGN PREVIEW · {view.label}")
+    return replace(view, label=" · ".join(part for part in ("REDESIGN PREVIEW", view.label) if part))
 
 
 def _color(tone: str) -> str:
@@ -54,7 +55,6 @@ def _company(canvas: _Canvas, c: CompanyView, index: int, capital_period: str) -
     _disclosure(canvas, _post_details(c.common), left, 520, width, 562, size=18)
     _pair(canvas, c.preferred, left, 563, width, value_size=29, label_size=23)
     _disclosure(canvas, ("\n".join(_post_details(c.preferred)),), left, 602, width, 646, size=18)
-    draw.line((left, 657, right, 657), fill=LINE)
     _pair(canvas, c.shares, left, 675, width, value_size=29, label_size=23)
     canvas.right(c.shares.change, right, 715, 18, color=MUTED, width=width)
     draw.line((left, 748, right, 748), fill=LINE)
@@ -80,14 +80,22 @@ def _company(canvas: _Canvas, c: CompanyView, index: int, capital_period: str) -
 
 def render_redesign_png(view: ReportView) -> bytes:
     if len(view.companies) != 2:
-        raise ValueError("The Monday Capital Report requires exactly two companies.")
+        raise ValueError("The Digital Credit Report requires exactly two companies.")
     canvas = _Canvas(HEIGHT)
     canvas.draw.rectangle((0, 0, WIDTH, 6), fill=ORANGE)
-    _text(canvas, view.label, MARGIN, 27, WIDTH - 2 * MARGIN, size=18, bold=True, color=ORANGE)
-    _text(canvas, view.title, MARGIN, 64, 1100, size=40, bold=True)
-    _text(canvas, view.subtitle, MARGIN, 115, 1040, size=20, color=MUTED)
-    canvas.right(view.report_time, WIDTH - MARGIN, 66, 21, True, width=620)
-    canvas.right(f"BTC {view.btc_price} · {view.btc_timestamp}", WIDTH - MARGIN, 115, 19, color=MUTED, width=640)
+    if view.label:
+        _text(canvas, view.label, MARGIN, 27, WIDTH - 2 * MARGIN, size=18, bold=True, color=ORANGE)
+    title_y, subtitle_y = (64, 115) if view.label else (38, 98)
+    if not draw_title(canvas, view.title, MARGIN, title_y, size=40, width=1100):
+        _text(canvas, view.title, MARGIN, title_y, 1100, size=40, bold=True)
+    _text(canvas, view.subtitle, MARGIN, subtitle_y, 1040, size=20, color=MUTED)
+    if view.report_time.startswith("Updated "):
+        canvas.right(f"BTC {view.btc_price}", WIDTH - MARGIN, title_y + 4, 29, True, width=620)
+        canvas.right(view.report_time.replace("Updated ", "Quotes updated ", 1),
+                     WIDTH - MARGIN, title_y + 45, 19, color=MUTED, width=640)
+    else:
+        canvas.right(view.report_time, WIDTH - MARGIN, title_y + 2, 21, True, width=620)
+        canvas.right(f"BTC {view.btc_price} · {view.btc_timestamp}", WIDTH - MARGIN, subtitle_y, 19, color=MUTED, width=640)
     for index, company in enumerate(view.companies):
         _company(canvas, company, index, view.capital_period_label)
     footer = "NAV growth at constant prices · ≈ estimates · Methodology on Streamlit"

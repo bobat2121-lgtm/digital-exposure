@@ -4,7 +4,8 @@ import { extractWeekly } from "./parser";
 import { boundedText, fetchSec, MAX_DOCUMENT_BYTES, MAX_SUBMISSIONS_BYTES, parseSubmissions, SecError, validUserAgent } from "./sec";
 import { inPollingWindow, nextAlarmTime, nextWindowStart, POLL_INTERVAL_MS, retryDelay, TIME_ZONE } from "./schedule";
 import { initialState, ISSUERS, type Filing, type PollState, type Ticker } from "./types";
-import { parseAcknowledgement, recentMondays, SETUP_TEST_ID, validateReceipt } from "./notifications";
+import { LEGACY_SETUP_TEST_ID, SETUP_TEST_ID } from "./notifications";
+import { eligiblePublication, publishedFeed, recentMondays, type PublicationEvent } from "./feed";
 export { ReportNotifier } from "./notifications";
 
 const tickers = Object.keys(ISSUERS) as Ticker[];
@@ -21,10 +22,12 @@ function statusFor(filing: Filing): Filing["status"] {
 /** One durable coordination boundary per issuer; public reads never call the SEC. */
 export class IssuerPoller extends DurableObject<Env> {
   private busy = false;
+  private relaying = false;
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS state (id INTEGER PRIMARY KEY CHECK(id=1), body TEXT NOT NULL)");
     this.ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS filings (accession TEXT PRIMARY KEY, accepted_at TEXT NOT NULL, body TEXT NOT NULL)");
+    this.ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS publication_outbox (accession TEXT PRIMARY KEY, body TEXT NOT NULL, status TEXT NOT NULL, attempts INTEGER NOT NULL, next_attempt_at INTEGER NOT NULL, error TEXT)");
   }
   private state(ticker: Ticker): PollState {
     const row = this.ctx.storage.sql.exec<{ body: string }>("SELECT body FROM state WHERE id=1").toArray()[0];
@@ -38,6 +41,56 @@ export class IssuerPoller extends DurableObject<Env> {
   private saveFiling(filing: Filing): void {
     this.ctx.storage.sql.exec("INSERT INTO filings(accession,accepted_at,body) VALUES(?,?,?) ON CONFLICT(accession) DO UPDATE SET body=excluded.body",
       filing.accession, filing.acceptedAt, JSON.stringify(filing));
+  }
+  private async saveReceipt(filing: Filing): Promise<void> {
+    const event = eligiblePublication(filing, Date.now(), this.env.NOTIFICATIONS_ACTIVE_AFTER);
+    // Receipt, publication obligation and recovery alarm commit as one SQLite transaction.
+    await this.ctx.storage.transaction(async () => {
+      this.saveFiling(filing);
+      if (event) this.ctx.storage.sql.exec("INSERT OR IGNORE INTO publication_outbox(accession,body,status,attempts,next_attempt_at) VALUES(?,?,'pending',0,?)",
+        filing.accession, JSON.stringify(event), Date.now());
+      await this.reschedule(this.state(filing.ticker));
+    });
+  }
+  async publicationStatus() {
+    return this.ctx.storage.sql.exec<{ accession: string; status: string; attempts: number; next_attempt_at: number; error: string | null }>(
+      "SELECT accession,status,attempts,next_attempt_at,error FROM publication_outbox ORDER BY next_attempt_at DESC LIMIT 50").toArray();
+  }
+  async relayToNotifier(event: PublicationEvent): Promise<void> {
+    await this.env.REPORT_NOTIFIER.getByName(`week:${event.week}`).candidate(event);
+  }
+  async relayPublications(): Promise<void> {
+    if (this.relaying) return;
+    this.relaying = true;
+    try {
+      const events = this.ctx.storage.sql.exec<{ accession: string; body: string; attempts: number }>(
+        "SELECT accession,body,attempts FROM publication_outbox WHERE status='pending' AND next_attempt_at<=? ORDER BY next_attempt_at LIMIT 10", Date.now()).toArray();
+      for (const row of events) {
+        const event = JSON.parse(row.body) as PublicationEvent;
+        const receipt = await this.filing(row.accession);
+        const eligible = receipt && eligiblePublication(receipt, Date.now(), this.env.NOTIFICATIONS_ACTIVE_AFTER);
+        if (!eligible || JSON.stringify(eligible) !== JSON.stringify(event)) {
+          this.ctx.storage.sql.exec("UPDATE publication_outbox SET status='discarded',error='Receipt no longer qualifies' WHERE accession=?", row.accession); continue;
+        }
+        const attempts = row.attempts + 1;
+        await this.ctx.storage.transaction(async () => {
+          this.ctx.storage.sql.exec("UPDATE publication_outbox SET attempts=?,next_attempt_at=? WHERE accession=?", attempts, Date.now() + 60_000, row.accession);
+          await this.reschedule(this.state(event.filing.ticker));
+        });
+        try {
+          await this.relayToNotifier(event);
+          this.ctx.storage.sql.exec("UPDATE publication_outbox SET status='delivered',error=NULL WHERE accession=?", row.accession);
+        } catch {
+          // Publication retries never modify SEC failures or its cooldown.
+          this.ctx.storage.sql.exec("UPDATE publication_outbox SET next_attempt_at=?,error='Notification coordinator handoff failed' WHERE accession=?",
+            Date.now() + Math.min(15 * 60_000, 15_000 * 2 ** Math.min(attempts - 1, 6)), row.accession);
+        }
+      }
+    } finally {
+      this.relaying = false;
+      const state = this.ctx.storage.sql.exec<{ body: string }>("SELECT body FROM state WHERE id=1").toArray()[0];
+      if (state) await this.reschedule(JSON.parse(state.body) as PollState);
+    }
   }
   async filings(limit = 100): Promise<Filing[]> {
     return this.ctx.storage.sql.exec<{ body: string }>("SELECT body FROM filings ORDER BY accepted_at DESC LIMIT ?", Math.min(200, Math.max(1, limit)))
@@ -55,7 +108,10 @@ export class IssuerPoller extends DurableObject<Env> {
       publicationMode: "reported_facts_for_review" };
   }
   private async reschedule(state: PollState): Promise<void> {
-    const when = nextAlarmTime(Date.now(), state);
+    const sec = nextAlarmTime(Date.now(), state);
+    const publication = this.ctx.storage.sql.exec<{ next: number | null }>("SELECT MIN(next_attempt_at) AS next FROM publication_outbox WHERE status='pending'").one().next;
+    const times = [sec, publication].filter((time): time is number => time !== null);
+    const when = times.length ? Math.max(Date.now() + 1000, Math.min(...times)) : null;
     if (when === null) await this.ctx.storage.deleteAlarm();
     else await this.ctx.storage.setAlarm(when);
   }
@@ -64,7 +120,7 @@ export class IssuerPoller extends DurableObject<Env> {
     const now = Date.now();
     let state = this.state(ticker);
     if (!validUserAgent(this.env.SEC_USER_AGENT)) return { ticker, outcome: "configuration_required" };
-    if (!force && !inPollingWindow(now)) { await this.ctx.storage.deleteAlarm(); return { ticker, outcome: "outside_window" }; }
+    if (!force && !inPollingWindow(now)) { await this.relayPublications(); await this.reschedule(state); return { ticker, outcome: "outside_window" }; }
     // A manual poll cannot override SEC rate limits or a recent in-flight attempt.
     if (state.backoffUntil > now) { await this.reschedule(state); return { ticker, outcome: "backoff", backoffUntil: state.backoffUntil }; }
     if (state.lastAttemptAt && now - Date.parse(state.lastAttemptAt) < POLL_INTERVAL_MS - 100) {
@@ -110,7 +166,7 @@ export class IssuerPoller extends DurableObject<Env> {
           filing.extracted = extractWeekly(document.text, ticker);
           filing.documents = [{ url: filing.primaryDocumentUrl, fetchedAt, sha256: await sha256(document.text) }];
           filing.documentFetchedAt = fetchedAt; filing.status = statusFor(filing); filing.error = null;
-          filing.nextDocumentAttemptAt = 0; this.saveFiling(filing); fetched++;
+          filing.nextDocumentAttemptAt = 0; await this.saveReceipt(filing); fetched++;
         } catch (error) {
           const sec = error instanceof SecError ? error : new SecError("Filing parser failed; manual review required");
           filing.status = "document_error"; filing.error = sec.message;
@@ -129,12 +185,19 @@ export class IssuerPoller extends DurableObject<Env> {
       console.error(JSON.stringify({ event: "sec_poll_error", ticker, error: state.error, retryAt: new Date(state.backoffUntil).toISOString() }));
       return { ticker, outcome: "error", error: state.error, backoffUntil: state.backoffUntil };
     } finally {
-      try { await this.reschedule(state); } finally { this.busy = false; }
+      try { await this.relayPublications(); await this.reschedule(state); } finally { this.busy = false; }
     }
   }
   async alarm(): Promise<void> {
-    const row = this.ctx.storage.sql.exec<{ body: string }>("SELECT body FROM state WHERE id=1").toArray()[0];
-    if (row) await this.poll((JSON.parse(row.body) as PollState).ticker);
+    try {
+      await this.relayPublications();
+      const row = this.ctx.storage.sql.exec<{ body: string }>("SELECT body FROM state WHERE id=1").toArray()[0];
+      if (row) await this.poll((JSON.parse(row.body) as PollState).ticker);
+    } finally {
+      // An alarm may fire during an in-flight relay/poll. Busy guards must not consume its recovery wake-up.
+      const row = this.ctx.storage.sql.exec<{ body: string }>("SELECT body FROM state WHERE id=1").toArray()[0];
+      if (row) await this.reschedule(JSON.parse(row.body) as PollState);
+    }
   }
   /** This method is only reachable through an authenticated route in a separate replay namespace. */
   async replay(ticker: Ticker, html: string) {
@@ -176,34 +239,20 @@ export default {
           publicationMode: "reported_facts_for_review", issuers: await Promise.all(tickers.map(ticker => env.ISSUER_POLLER.getByName(ticker).status(ticker))) }, env);
       }
       if (request.method === "GET" && path === "/api/filings") {
-        const all = (await Promise.all(tickers.map(ticker => env.ISSUER_POLLER.getByName(ticker).filings(100)))).flat();
-        return json({ schemaVersion: 1, generatedAt: new Date().toISOString(), publicationMode: "reported_facts_for_review",
-          filings: all.sort((a, b) => b.acceptedAt.localeCompare(a.acceptedAt)).slice(0, 100) }, env);
-      }
-      if (path === "/api/streamlit/ack") {
-        if (request.method !== "POST") return json({ error: "POST required" }, env, 405, false);
-        if (!(await authorized(request, env.STREAMLIT_ACK_TOKEN))) return json({ error: "Unauthorized" }, env, 401, false);
-        let input: unknown;
-        try { input = JSON.parse(await boundedText(new Response(request.body, { headers: request.headers }), 2048)); }
-        catch { return json({ error: "Acknowledgement requires a bounded JSON body" }, env, 400, false); }
-        const acknowledgements = parseAcknowledgement(input);
-        if (!acknowledgements) return json({ error: "Acknowledgement requires one MSTR and one ASST accession and SHA-256" }, env, 400, false);
-        const receipts = await Promise.all(acknowledgements.map(async ack => validateReceipt(await env.ISSUER_POLLER.getByName(ack.ticker).filing(ack.accession), ack, Date.now())));
-        const [strategy, strive] = receipts;
-        if (!strategy || !strive || strategy.week !== strive.week) return json({ error: "Both matching Monday filing receipts must be available" }, env, 409, false);
-        const notification = await env.REPORT_NOTIFIER.getByName(`week:${strategy.week}`).acknowledge(strategy.week, [strategy.filing, strive.filing]);
-        return json({ schemaVersion: 1, week: strategy.week, outcome: notification.status === "sent" ? "sent" : notification.status === "failed" ? "failed" : "queued",
-          notification: { status: notification.status } }, env, 200, false);
+        return json(await publishedFeed(env), env);
       }
       if (path.startsWith("/api/admin/")) {
         if (request.method !== "POST") return json({ error: "POST required" }, env, 405, false);
         if (!(await authorized(request, env.ADMIN_TOKEN))) return json({ error: "Unauthorized" }, env, 401, false);
         if (path === "/api/admin/notifications") {
           const weeks = await Promise.all(recentMondays(Date.now()).map(async week => ({ week, ...await env.REPORT_NOTIFIER.getByName(`week:${week}`).status() })));
-          return json({ schemaVersion: 1, weeks, setupTest: await env.REPORT_NOTIFIER.getByName(SETUP_TEST_ID).status() }, env, 200, false);
+          return json({ schemaVersion: 1, mode: "unattended_feed_publication", activation: env.NOTIFICATIONS_ACTIVE_AFTER, weeks,
+            outboxes: await Promise.all(tickers.map(async ticker => ({ ticker, events: await env.ISSUER_POLLER.getByName(ticker).publicationStatus() }))),
+            previousSetupTest: await env.REPORT_NOTIFIER.getByName(LEGACY_SETUP_TEST_ID).status(),
+            setupTest: await env.REPORT_NOTIFIER.getByName(SETUP_TEST_ID).status() }, env, 200, false);
         }
         if (path === "/api/admin/discord-test") {
-          return json({ schemaVersion: 1, testId: SETUP_TEST_ID, notification: await env.REPORT_NOTIFIER.getByName(SETUP_TEST_ID).acknowledge("setup", [], true) }, env, 200, false);
+          return json({ schemaVersion: 1, testId: SETUP_TEST_ID, notification: await env.REPORT_NOTIFIER.getByName(SETUP_TEST_ID).setupTest() }, env, 200, false);
         }
         if (path === "/api/admin/poll") {
           const results = [];

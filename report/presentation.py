@@ -2,7 +2,7 @@
 from math import isfinite
 from dataclasses import replace
 
-from .calculations import (calculate_company, preferred_activity_capital,
+from .calculations import (calculate_company, common_average_sale_price, preferred_activity_capital,
                            preferred_average_repurchase_price, weekly_vwap)
 from .models import Company, CompanyMetrics, PreferredActivity, Report
 from .view_types import CompanyView, MetricView, PeriodGrowthView, ReportView
@@ -97,7 +97,9 @@ def _preferred_details(c: Company) -> tuple[str, ...]:
 
 def _common_post_details(c: Company, m: CompanyMetrics) -> tuple[str, ...]:
     if c.common_capital_method == "reported_atm":
-        return (f"{number(c.common_capital.issued_shares, 0)} shares sold · reported net proceeds",)
+        sold = f"{number(c.common_capital.issued_shares, 0)} shares sold"
+        average = common_average_sale_price(c.common_capital)
+        return (f"{sold} · {number(average, prefix='$')} avg. sale price",) if average is not None else (sold,)
     if m.common_capital_estimated:
         if c.equity_vwap_note:
             return (f"{number(m.shares_change, 0, signed=True)} net shares · {number(m.common_equity_vwap, prefix='$')} VWAP est.",)
@@ -216,6 +218,9 @@ def build_report_view(report: Report, *, prices: dict | None = None) -> ReportVi
     for field, value in (("label", report.data_label), ("footer", report.footer), ("subtitle", report.subtitle)):
         if value is not None:
             metadata[field] = value
+    if report.edition_id == "current-prices" and not report.illustrative:
+        metadata["label"] = ""
+        metadata["footer"] = "Dated balances at the displayed market prices · ≈ estimates. Calculation overview on Streamlit."
     from .period_growth import get_period_growth
     period_growth = get_period_growth(report, prices) if report.edition_id in ("current-prices", "2026-08-31") and not report.illustrative else {}
 
@@ -237,7 +242,8 @@ def build_report_view(report: Report, *, prices: dict | None = None) -> ReportVi
             periods.append(PeriodGrowthView(label, btc, nav, tone(growth.btc_per_share_growth_pct), tone(growth.nav_per_share_growth_pct)))
         companies.append(replace(company, periods=tuple(periods)))
     return ReportView(
-        title=report.title, report_time=report.report_time,
+        title=report.title.replace("The Monday Capital Report", "The Digital Credit Report"),
+        report_time=report.report_time,
         capital_period_label=report.capital_period_label,
         btc_price=number(report.current_btc_price, 0, prefix="$"),
         btc_timestamp=report.btc_quote_timestamp,

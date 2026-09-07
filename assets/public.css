@@ -1,0 +1,145 @@
+:root { color-scheme: light; }
+.stApp { background: #f5f3ed; color: #1b2c34; border-top: 4px solid #e88029; }
+[data-testid="stHeader"] { display: none; }
+[data-testid="stToolbar"] { visibility: hidden; }
+.stMainBlockContainer { max-width: 1180px; padding: 24px 28px 20px; }
+.stApp, button, [data-testid="stExpander"] { font-family: Report, Arial, sans-serif; }
+.stMainBlockContainer [data-testid="stVerticalBlock"] { gap: 12px; }
+.dcr { font-family: Report, Arial, sans-serif; color: #1b2c34; font-variant-numeric: tabular-nums; line-height: 1.4; }
+.dcr * { box-sizing: border-box; }
+.dcr h1, .dcr h3, .dcr p { padding: 0; margin: 0; font-family: inherit; }
+.credit-report-head { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
+.dcr h1 { font-size: clamp(25px, 2.6vw, 33px); line-height: 1.16; font-weight: 700; letter-spacing: -.035em; }
+.dcr .title-lockup { font-family: Report, Arial, sans-serif; font-weight: 400; letter-spacing: -.04em; color: #52646d; line-height: 1.2; }
+.title-focus { font-family: Georgia, 'Times New Roman', serif; font-weight: 700; letter-spacing: -.06em; color: #1b2c34; white-space: nowrap; }
+.title-suffix { white-space: nowrap; }
+.title-suffix::after { content: ''; display: inline-block; width: 6px; height: 6px; margin-left: 5px; vertical-align: 1px; border-radius: 50%; background: #e88029; }
+.credit-report-head > div:first-child { min-width: 0; }
+.credit-report-head p { font-size: 12px; color: #627078; margin-top: 8px; }
+.market-summary { display: flex; flex-direction: column; text-align: right; flex-shrink: 0; }
+.market-summary strong { font-size: 18px; line-height: 1.3; }
+.market-summary span { font-size: 11px; line-height: 1.5; color: #627078; margin-top: 3px; }
+.credit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
+.credit-card { display: grid; grid-template-rows: subgrid; grid-row: span 9; min-width: 0; padding: 0 22px 14px; background: #fff; border: 1px solid #e3e6e3; border-top: 3px solid #1b2c34; border-radius: 0 0 10px 10px; box-shadow: 0 3px 16px #1b2c3404; }
+.credit-card.strategy { border-top-color: #e88029; }
+.issuer-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 11px 0 10px; border-bottom: 1px solid #e5e9e8; }
+.issuer-logo { width: 158px; max-width: 45%; height: auto; max-height: 39px; }
+.strive .issuer-logo { width: 170px; }
+.equity-quote { display: flex; flex-direction: column; text-align: right; }
+.equity-quote strong { font-size: 22px; line-height: 1.15; }
+.equity-quote span, .equity-quote time { font-size: 10px; line-height: 1.35; color: #67777e; }
+.valuation-pair { display: grid; grid-template-columns: 1.25fr 1fr; gap: 12px; padding: 12px 0 11px; }
+.valuation-pair h3 { font-size: 12px; font-weight: 400; color: #52646d; line-height: 1.4; }
+.valuation-pair strong { display: block; font-size: 31px; line-height: 1.2; margin-top: 3px; letter-spacing: -.025em; }
+.valuation-pair > div:last-child { text-align: right; }
+.valuation-pair > div:last-child strong { font-size: 27px; padding-top: 4px; }
+.bitcoin-pair { display: flex; justify-content: space-between; gap: 14px; padding: 0 0 5px; }
+.bitcoin-pair > div:last-child { text-align: right; }
+.bitcoin-pair h3 { font-size: 13px; color: #52646d; font-weight: 400; }
+.bitcoin-pair strong { font-size: 18px; line-height: 1.35; }
+.market-activity { display: grid; grid-template-rows: subgrid; grid-row: span 4; }
+.capital-period { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 15px 0 3px; }
+.capital-period span:first-child { font-size: 11px; text-transform: uppercase; letter-spacing: .025em; font-weight: 700; color: #a95313; }
+.capital-period span:last-child { font-size: 10px; color: #67777e; }
+.capital-row { padding: 5px 0 7px; }
+.capital-value { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.capital-value h3 { font-size: 14px; line-height: 1.35; font-weight: 700; }
+.capital-value strong { font-size: 18px; white-space: nowrap; }
+.dcr .transaction-note { color: #65767e; font-size: 11px; line-height: 1.4; margin-top: 2px; overflow-wrap: anywhere; }
+.preferred-capital { padding-bottom: 7px; }
+.common-shares { padding: 5px 0 9px; border-bottom: 1px solid #e5e9e8; }
+.common-shares > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.common-shares h3 { font-size: 14px; font-weight: 700; }
+.common-shares strong { font-size: 18px; white-space: nowrap; }
+.common-shares p { text-align: right; font-size: 11px; color: #65767e; margin-top: 2px; }
+.weekly-metrics { padding: 4px 0 8px; }
+.weekly-metrics table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.metric-label-col { width: 49%; }
+.metric-value-col { width: 28%; }
+.metric-delta-col { width: 23%; }
+.weekly-metrics thead th { font-size: 10px; color: #6b7c83; font-weight: 400; text-transform: uppercase; letter-spacing: .04em; text-align: right; padding: 3px 0 4px; }
+.weekly-metrics tbody th { font-size: 13px; font-weight: 400; text-align: left; padding: 5px 8px 5px 0; line-height: 1.3; }
+.weekly-metrics td { text-align: right; font-size: 13px; padding: 5px 0; white-space: nowrap; }
+.weekly-metrics .metric-value { font-size: 17px; font-weight: 700; letter-spacing: -.015em; }
+.delta { color: #65767e; }
+.positive { color: #08765f; }
+.negative { color: #b23b50; }
+.btc-growth-row th { font-weight: 700 !important; }
+.btc-growth-row .delta { display: inline-block; padding: 2px 6px; border-radius: 5px; font-weight: 700; }
+.btc-growth-row .delta.positive { background: #e8f5ee; }
+.btc-growth-row .delta.negative { background: #fbecef; }
+.growth-panel { background: #f5f7f6; border-radius: 6px; padding: 8px 12px; }
+.growth-panel table { width: 100%; border-collapse: collapse; }
+.growth-panel thead th { font-size: 10px; text-transform: uppercase; letter-spacing: .035em; font-weight: 400; color: #61727a; padding: 1px 0 6px; }
+.growth-panel th { text-align: left; }
+.growth-panel thead th:not(:first-child), .growth-panel td { text-align: right; }
+.growth-panel tbody th { font-size: 12px; font-weight: 400; padding: 3px 0; }
+.growth-panel td { font-size: 14px; font-weight: 700; padding: 3px 0 3px 14px; white-space: nowrap; }
+.credit-footnote { color: #65767e; font-size: 10px; margin-top: 10px; line-height: 1.5; }
+.screen-reader-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+[data-testid="stExpander"] { border: 1px solid #dce2de; background: #f8f7f3; border-radius: 7px; }
+[data-testid="stExpander"] summary { color: #52646d; }
+[data-testid="stExpander"] summary p { font-size: 13px; }
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] { font-size: 13px; color: #425760; line-height: 1.6; }
+[data-testid="stDownloadButton"] { display: flex; justify-content: flex-end; }
+[data-testid="stDownloadButton"] button { color: #67777e; font-size: 12px; min-height: 30px; padding: 4px 6px; }
+[data-testid="stDownloadButton"] button:hover { color: #1b2c34; }
+@media (max-width: 900px) and (min-width: 760px) {
+  .stMainBlockContainer { padding: 22px 20px; }
+  .credit-grid { gap: 0 14px; }
+  .credit-card { padding-left: 15px; padding-right: 15px; }
+  .valuation-pair h3 { font-size: 11px; }
+  .capital-period { flex-wrap: wrap; gap: 1px 8px; }
+  .growth-panel td { font-size: 13px; }
+  .weekly-metrics .metric-value { font-size: 15px; }
+  .weekly-metrics td { font-size: 12px; }
+  .weekly-metrics tbody th { font-size: 12px; }
+  .btc-growth-row .delta { padding: 3px 4px; }
+  .capital-value h3 { font-size: 13px; }
+  .capital-value strong { font-size: 16px; }
+  .common-shares h3 { font-size: 13px; }
+  .common-shares strong { font-size: 16px; }
+}
+@media (max-width: 759px) {
+  .stMainBlockContainer { padding: 22px 16px 20px; }
+  .credit-report-head { display: block; margin-bottom: 18px; }
+  .dcr h1 { font-size: clamp(24px, 5.8vw, 32px); }
+  .dcr .title-lockup { font-size: clamp(25px, 5.8vw, 32px); line-height: 1.24; }
+  .title-suffix::after { width: 5px; height: 5px; margin-left: 4px; }
+  .credit-report-head p { font-size: 11px; margin-top: 7px; }
+  .market-summary { margin-top: 12px; text-align: left; display: flex; gap: 2px; align-items: flex-start; }
+  .market-summary strong { font-size: 17px; }
+  .market-summary span { margin-top: 0; }
+  .credit-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .credit-card { display: block; grid-row: auto; padding: 0 18px 16px; }
+  .market-activity { display: block; grid-row: auto; }
+  .metric-label-col { width: 44%; }
+  .metric-value-col { width: 33%; }
+  .issuer-head { padding: 12px 0 10px; }
+  .valuation-pair { padding-top: 12px; }
+  .capital-row { padding-top: 6px; }
+  .preferred-capital { padding-bottom: 7px; }
+  .weekly-metrics tbody th, .weekly-metrics td { padding-top: 6px; padding-bottom: 6px; }
+  .growth-panel { padding-top: 9px; padding-bottom: 9px; }
+  .growth-panel tbody th, .growth-panel td { padding-top: 4px; padding-bottom: 4px; }
+  .credit-footnote { margin-top: 14px; }
+}
+@media (max-width: 430px) {
+  .weekly-metrics .metric-value { font-size: 16px; }
+}
+@media (max-width: 370px) {
+  .stMainBlockContainer { padding-left: 12px; padding-right: 12px; }
+  .credit-card { padding-left: 14px; padding-right: 14px; }
+  .dcr h1 { font-size: 23px; }
+  .dcr .title-lockup { font-size: 24px; }
+  .valuation-pair strong { font-size: 29px; }
+  .valuation-pair > div:last-child strong { font-size: 25px; }
+  .capital-period { flex-wrap: wrap; gap: 1px 8px; }
+  .capital-value h3 { font-size: 12px; }
+  .capital-value strong { font-size: 16px; }
+  .common-shares h3 { font-size: 12px; }
+  .weekly-metrics tbody th { font-size: 12px; }
+  .weekly-metrics .metric-value { font-size: 14px; }
+  .weekly-metrics td { font-size: 12px; }
+  .btc-growth-row .delta { padding: 3px 4px; }
+}

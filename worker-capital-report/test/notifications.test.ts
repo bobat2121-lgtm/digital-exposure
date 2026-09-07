@@ -4,10 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { extractWeekly } from "../src/parser";
 import { documentUrl } from "../src/sec";
 import { discordEndpoint, SETUP_TEST_ID } from "../src/notifications";
+import { eligiblePublication, type PublicationEvent } from "../src/feed";
 import { ISSUERS, type Filing, type Ticker } from "../src/types";
 import strategyHtml from "./fixtures/strategy-20260831.html?raw";
 
-const ackAuth = { Authorization: "Bearer offline-streamlit-ack-token-000000000000000000" };
 const adminAuth = { Authorization: "Bearer offline-test-token-0000000000000000000000" };
 const hash = "a".repeat(64);
 const week = "2026-09-14";
@@ -25,43 +25,54 @@ async function seed(record: Filing): Promise<void> {
     state.storage.sql.exec("INSERT OR REPLACE INTO filings(accession,accepted_at,body) VALUES(?,?,?)", record.accession, record.acceptedAt, JSON.stringify(record));
   });
 }
-function ackBody() {
-  return { filings: [filing("MSTR"), filing("ASST")].map(value => ({ ticker: value.ticker, accession: value.accession, sha256: hash })) };
+function event(ticker: Ticker): PublicationEvent {
+  const record = filing(ticker);
+  return { week, filing: { ticker, accession: record.accession, sha256: hash, url: record.primaryDocumentUrl } };
 }
-function acknowledge(body: unknown = ackBody(), headers = ackAuth) {
-  return exports.default.fetch("https://worker.test/api/streamlit/ack", { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+async function acknowledge() {
+  const stub = env.REPORT_NOTIFIER.getByName(`week:${week}`);
+  await Promise.all([stub.candidate(event("MSTR")), stub.candidate(event("ASST"))]);
+  await runDurableObjectAlarm(stub);
+  const result = await stub.status();
+  return Response.json({ outcome: result.status === "sent" ? "sent" : result.status === "failed" ? "failed" : "queued", week });
 }
 function success(): Response { return Response.json({ id: messageId }); }
 beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date(`${week}T12:00:00Z`)); });
 afterEach(async () => { vi.restoreAllMocks(); vi.useRealTimers(); await reset(); });
 
-describe("Streamlit receipt gating", () => {
-  it("does not notify for cached receipts alone; requires a dedicated authenticated complete acknowledgement", async () => {
+describe("unattended feed publication gating", () => {
+  it("notifies after both candidates match the feed, without any Streamlit request", async () => {
     const send = vi.spyOn(globalThis, "fetch").mockImplementation(async () => success());
     await seed(filing("MSTR")); await seed(filing("ASST"));
-    await exports.default.fetch("https://worker.test/api/filings");
-    expect(send).not.toHaveBeenCalled();
-    expect((await acknowledge(ackBody(), adminAuth)).status).toBe(401);
-    expect((await acknowledge({ filings: [ackBody().filings[0]] })).status).toBe(400);
-    expect(send).not.toHaveBeenCalled();
     expect(await (await acknowledge()).json()).toMatchObject({ outcome: "sent", week });
     expect(send).toHaveBeenCalledTimes(1);
     const [url, request] = send.mock.calls[0];
     expect(String(url)).toContain("?wait=true");
     const payload = JSON.parse(String(request?.body));
     expect(payload.allowed_mentions).toEqual({ parse: [] });
-    expect(payload.content).toContain("available in the Streamlit SEC monitor");
-    expect(payload.content).toContain("financial cards have not been refreshed automatically");
+    expect(payload.content).toContain("published to the Digital Credit Report data feed");
+    expect(payload.content).toContain("Streamlit is expected to load the feed when opened. Financial cards await reconciliation.");
     expect(payload.content).toContain(filing("MSTR").primaryDocumentUrl);
     expect(payload.content).toContain(filing("ASST").primaryDocumentUrl);
+    expect(await env.REPORT_NOTIFIER.getByName(`week:${week}`).status()).toMatchObject({ publishedAt: `${week}T12:00:00.000Z` });
   });
-  it("does not notify until both issuers have a persisted primary receipt", async () => {
+  it("public reads and the retired acknowledgement route cannot trigger notification", async () => {
     const send = vi.spyOn(globalThis, "fetch").mockImplementation(async () => success());
-    await seed(filing("MSTR"));
-    expect((await acknowledge()).status).toBe(409);
+    await seed(filing("MSTR")); await seed(filing("ASST"));
+    await exports.default.fetch("https://worker.test/api/filings");
+    expect((await exports.default.fetch("https://worker.test/api/streamlit/ack", { method: "POST", headers: adminAuth, body: "{}" })).status).toBe(404);
     expect(send).not.toHaveBeenCalled();
   });
-  it.each(["wrong_hash", "baseline", "amendment", "non_monday", "different_monday", "future", "old", "missing_btc", "pending", "untrusted_url", "unfetched", "future_fetched"])("rejects %s before Discord", async reason => {
+  it("waits for a second company and keeps each Monday separate", async () => {
+    const send = vi.spyOn(globalThis, "fetch").mockImplementation(async () => success());
+    await seed(filing("MSTR")); await seed(filing("ASST"));
+    const stub = env.REPORT_NOTIFIER.getByName(`week:${week}`);
+    await stub.candidate(event("MSTR")); await runDurableObjectAlarm(stub);
+    expect(await stub.status()).toMatchObject({ publication: { status: "waiting_for_peer" } });
+    await env.REPORT_NOTIFIER.getByName("week:2026-09-21").candidate({ ...event("ASST"), week: "2026-09-21" });
+    expect(send).not.toHaveBeenCalled();
+  });
+  it.each(["wrong_hash", "baseline", "amendment", "non_monday", "different_monday", "future", "old", "missing_btc", "pending", "untrusted_url", "unfetched", "future_fetched", "before_activation"])("rejects %s before Discord", async reason => {
     const send = vi.spyOn(globalThis, "fetch").mockImplementation(async () => success());
     const bad = filing("ASST");
     if (reason === "wrong_hash") bad.documents[0].sha256 = "b".repeat(64);
@@ -76,8 +87,9 @@ describe("Streamlit receipt gating", () => {
     if (reason === "untrusted_url") bad.primaryDocumentUrl = bad.documents[0].url = "https://example.com/filing.htm";
     if (reason === "unfetched") bad.documentFetchedAt = null;
     if (reason === "future_fetched") bad.documentFetchedAt = bad.documents[0].fetchedAt = "2026-09-14T13:00:00Z";
+    if (reason === "before_activation") bad.firstSeenAt = "2026-09-07T12:00:00Z";
     await seed(filing("MSTR")); await seed(bad);
-    expect((await acknowledge()).status).toBe(409);
+    expect(await (await acknowledge()).json()).toMatchObject({ outcome: "queued" });
     expect(send).not.toHaveBeenCalled();
   });
   it("accepts a partial weekly extraction with both BTC facts", async () => {
@@ -86,11 +98,9 @@ describe("Streamlit receipt gating", () => {
     await seed(filing("MSTR")); await seed(partial);
     expect(await (await acknowledge()).json()).toMatchObject({ outcome: "sent" });
   });
-  it("bounds and validates acknowledgement JSON, including duplicate tickers and arbitrary URL fields", async () => {
-    const oversized = await exports.default.fetch("https://worker.test/api/streamlit/ack", { method: "POST", headers: ackAuth, body: "x".repeat(3000) });
-    expect(oversized.status).toBe(400);
-    expect((await acknowledge({ filings: [ackBody().filings[0], ackBody().filings[0]] })).status).toBe(400);
-    expect((await acknowledge({ ...ackBody(), url: "https://example.com" })).status).toBe(400);
+  it("fails closed for missing or future activation configuration", () => {
+    expect(eligiblePublication(filing("MSTR"), Date.now(), "")).toBeNull();
+    expect(eligiblePublication(filing("MSTR"), Date.now(), "2026-09-21T00:00:00Z")).toBeNull();
   });
 });
 
@@ -157,7 +167,7 @@ describe("durable Discord delivery", () => {
     const stub = env.REPORT_NOTIFIER.getByName(`week:${week}`);
     await runInDurableObject(stub, async (instance, state) => {
       const cleanup = vi.spyOn(state.storage, "deleteAlarm").mockRejectedValueOnce(new Error("Storage cleanup failure"));
-      await instance.acknowledge(week, []);
+      await instance.setupTest();
       expect(await instance.status()).toMatchObject({ status: "sent", messageId });
       cleanup.mockRestore();
     });
@@ -185,7 +195,7 @@ describe("durable Discord delivery", () => {
     expect(send).toHaveBeenCalledTimes(1);
     expect(String(send.mock.calls[0][1]?.body)).toContain("setup test");
     expect(await env.REPORT_NOTIFIER.getByName(SETUP_TEST_ID).status()).toMatchObject({ status: "sent", kind: "test" });
-    expect(await env.REPORT_NOTIFIER.getByName(`week:${week}`).status()).toMatchObject({ status: "waiting_for_streamlit" });
+    expect(await env.REPORT_NOTIFIER.getByName(`week:${week}`).status()).toMatchObject({ status: "waiting_for_filings" });
   });
   it("accepts only the configured Discord host and webhook path", () => {
     expect(discordEndpoint(env.DISCORD_WEBHOOK_URL)).toContain("?wait=true");
