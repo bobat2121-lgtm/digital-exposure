@@ -30,12 +30,34 @@ GitHub authorization. See
 
 ## Live Worker deployment
 
+Discord integration was deployed September 7, 2026 as Worker version
+`3c509f9e-1111-44f6-b4ce-a162cdf05286`. It adds a separate notification Durable
+Object through migration `v2`, preserving the existing SEC data and schedule.
+The webhook is a Cloudflare secret. A separate `STREAMLIT_ACK_TOKEN` is shared
+with the live app's encrypted secret settings for its receipt callback.
+
+The live setup test received Discord message confirmation on its first
+attempt. A repeated setup-test request retained the same message ID and
+attempt count; historical filing receipts returned HTTP 409 and an
+unauthenticated receipt returned HTTP 401. No historical weekly alert was sent.
+See [LIVE_UPDATES.md](LIVE_UPDATES.md#discord-notification) for the exact trigger
+and active-Streamlit-session requirement.
+
+Before deployment, the 61-test Worker suite passed; a further cleanup-failure
+regression was added and all 27 notification tests passed. TypeScript and the
+deployment dry-run passed. The Python client passed 34 filing, acknowledgement,
+and existing Streamlit app tests. These tests use local/mock filings; future
+Monday release-to-notification latency still requires a real new filing pair.
+
+### Original SEC poller deployment
+
 The SEC poller is deployed at
 [capital-report.alatimore06370.workers.dev](https://capital-report.alatimore06370.workers.dev/)
 with version `8c4fcbcb-3ffd-4658-81bd-d9bf828bf2d4`. Production SEC-identification
 and administrator secrets are configured in Cloudflare. The report reads the
 public origin from `data/sec-monitor.json`; `SEC_MONITOR_URL` can override it.
-No Worker administration credential is required in Streamlit.
+No Worker administration credential is required in Streamlit; the dedicated
+acknowledgement secret above can only confirm displayed filing receipts.
 
 At **2026-09-07T21:38:50Z**, the live smoke check passed: public API schema 1,
 unauthenticated admin rejection (HTTP 401), real SEC retrieval for both issuers

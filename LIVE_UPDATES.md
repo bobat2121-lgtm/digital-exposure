@@ -52,7 +52,41 @@ reconciled. Strive's common-capital VWAP estimate and SATA $100-per-net-new-shar
 assumption remain separate calculations. A monitor outage keeps the last
 retrieved feed, marks it stale, and leaves the financial card unchanged.
 
-## Deployment and live verification
+## Discord notification
+
+After the live Streamlit monitor renders both companies' eligible Monday
+8-Ks, it sends a server-authenticated receipt to the Worker. The Worker checks
+each accession and document hash against its stored SEC records, then posts
+one combined Discord alert for that Monday with the report and filing links.
+The message confirms availability in the filing monitor; it does not announce
+updated financial cards.
+
+Both filings must be primary 8-Ks accepted on the same Monday in New York,
+received within the preceding 14 days, and recognized as weekly BTC updates.
+Initial baseline records, amendments, unrelated filings, missing documents,
+and invalid hashes cannot trigger an alert. Reporting/balance dates can differ
+between the issuers.
+
+Streamlit needs an active browser session to send its receipt. Keep the live
+page open Monday pre-market for prompt confirmation. Once acknowledged,
+Cloudflare owns delivery and retries independently of the browser and the SEC
+polling window. Saved delivery state suppresses normal repeated alerts across
+refreshes and Worker restarts. Discord has no webhook idempotency key, so an
+ambiguous network failure after Discord accepts a message can still cause a
+duplicate retry.
+
+Cloudflare stores `DISCORD_WEBHOOK_URL` and `STREAMLIT_ACK_TOKEN` as secrets.
+Only `STREAMLIT_ACK_TOKEN` is shared with Streamlit's server secret settings;
+the app does not receive the webhook or Worker administrator credential.
+
+An authenticated `POST /api/admin/discord-test` sends one clearly labeled
+setup test, separate from weekly alerts. Repeating that request does not
+send another successful setup message. `POST /api/admin/notifications`
+returns recent delivery states and failures. See the Worker runbook for retry
+behavior and setup commands. The authenticated Streamlit callback is
+`POST /api/streamlit/ack`; all public feed routes remain read-only.
+
+## Initial deployment verification
 
 Worker version: `8c4fcbcb-3ffd-4658-81bd-d9bf828bf2d4`.
 Production secrets were configured in Cloudflare. The live smoke check at

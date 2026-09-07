@@ -4,6 +4,8 @@ import { extractWeekly } from "./parser";
 import { boundedText, fetchSec, MAX_DOCUMENT_BYTES, MAX_SUBMISSIONS_BYTES, parseSubmissions, SecError, validUserAgent } from "./sec";
 import { inPollingWindow, nextAlarmTime, nextWindowStart, POLL_INTERVAL_MS, retryDelay, TIME_ZONE } from "./schedule";
 import { initialState, ISSUERS, type Filing, type PollState, type Ticker } from "./types";
+import { parseAcknowledgement, recentMondays, SETUP_TEST_ID, validateReceipt } from "./notifications";
+export { ReportNotifier } from "./notifications";
 
 const tickers = Object.keys(ISSUERS) as Ticker[];
 function errorMessage(error: unknown): string { return error instanceof Error ? error.message : "Unexpected poll failure"; }
@@ -40,6 +42,10 @@ export class IssuerPoller extends DurableObject<Env> {
   async filings(limit = 100): Promise<Filing[]> {
     return this.ctx.storage.sql.exec<{ body: string }>("SELECT body FROM filings ORDER BY accepted_at DESC LIMIT ?", Math.min(200, Math.max(1, limit)))
       .toArray().map(row => JSON.parse(row.body) as Filing);
+  }
+  async filing(accession: string): Promise<Filing | null> {
+    const row = this.ctx.storage.sql.exec<{ body: string }>("SELECT body FROM filings WHERE accession=?", accession).toArray()[0];
+    return row ? JSON.parse(row.body) as Filing : null;
   }
   async status(ticker: Ticker) {
     const state = this.state(ticker);
@@ -174,9 +180,31 @@ export default {
         return json({ schemaVersion: 1, generatedAt: new Date().toISOString(), publicationMode: "reported_facts_for_review",
           filings: all.sort((a, b) => b.acceptedAt.localeCompare(a.acceptedAt)).slice(0, 100) }, env);
       }
+      if (path === "/api/streamlit/ack") {
+        if (request.method !== "POST") return json({ error: "POST required" }, env, 405, false);
+        if (!(await authorized(request, env.STREAMLIT_ACK_TOKEN))) return json({ error: "Unauthorized" }, env, 401, false);
+        let input: unknown;
+        try { input = JSON.parse(await boundedText(new Response(request.body, { headers: request.headers }), 2048)); }
+        catch { return json({ error: "Acknowledgement requires a bounded JSON body" }, env, 400, false); }
+        const acknowledgements = parseAcknowledgement(input);
+        if (!acknowledgements) return json({ error: "Acknowledgement requires one MSTR and one ASST accession and SHA-256" }, env, 400, false);
+        const receipts = await Promise.all(acknowledgements.map(async ack => validateReceipt(await env.ISSUER_POLLER.getByName(ack.ticker).filing(ack.accession), ack, Date.now())));
+        const [strategy, strive] = receipts;
+        if (!strategy || !strive || strategy.week !== strive.week) return json({ error: "Both matching Monday filing receipts must be available" }, env, 409, false);
+        const notification = await env.REPORT_NOTIFIER.getByName(`week:${strategy.week}`).acknowledge(strategy.week, [strategy.filing, strive.filing]);
+        return json({ schemaVersion: 1, week: strategy.week, outcome: notification.status === "sent" ? "sent" : notification.status === "failed" ? "failed" : "queued",
+          notification: { status: notification.status } }, env, 200, false);
+      }
       if (path.startsWith("/api/admin/")) {
         if (request.method !== "POST") return json({ error: "POST required" }, env, 405, false);
         if (!(await authorized(request, env.ADMIN_TOKEN))) return json({ error: "Unauthorized" }, env, 401, false);
+        if (path === "/api/admin/notifications") {
+          const weeks = await Promise.all(recentMondays(Date.now()).map(async week => ({ week, ...await env.REPORT_NOTIFIER.getByName(`week:${week}`).status() })));
+          return json({ schemaVersion: 1, weeks, setupTest: await env.REPORT_NOTIFIER.getByName(SETUP_TEST_ID).status() }, env, 200, false);
+        }
+        if (path === "/api/admin/discord-test") {
+          return json({ schemaVersion: 1, testId: SETUP_TEST_ID, notification: await env.REPORT_NOTIFIER.getByName(SETUP_TEST_ID).acknowledge("setup", [], true) }, env, 200, false);
+        }
         if (path === "/api/admin/poll") {
           const results = [];
           for (const ticker of tickers) results.push(await env.ISSUER_POLLER.getByName(ticker).poll(ticker, true));

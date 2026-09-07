@@ -2,3 +2,5 @@
 # Production values are installed with wrangler secret put; never commit them.
 SEC_USER_AGENT=""
 ADMIN_TOKEN=""
+STREAMLIT_ACK_TOKEN=""
+DISCORD_WEBHOOK_URL=""
