@@ -31,6 +31,7 @@ for (const [ticker, name] of [["MSTR", "strategy-20260831.html"], ["ASST", "stri
 }
 const feed = await request("/api/filings");
 report.filingCount = feed.filings.length;
-report.passed = report.configured && report.replays.length === 2;
+report.passed = report.configured && report.replays.length === 2
+  && (!report.poll || report.poll.results.every(result => result.outcome === "ok"));
 console.log(JSON.stringify(report, null, 2));
 if (!report.passed) process.exitCode = 1;

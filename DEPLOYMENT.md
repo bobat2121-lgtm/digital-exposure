@@ -1,8 +1,10 @@
 # Digital Credit Report deployment
 
-Deploy the report from this repository to Streamlit Community Cloud. The
-requested app subdomain is `digital-credit-report`; confirm its availability
-in the deployment dialog before treating the resulting URL as live.
+The public report is live at
+[digital-credit-report.streamlit.app](https://digital-credit-report.streamlit.app/).
+It was deployed from this repository to Streamlit Community Cloud and verified
+in the browser on September 7, 2026. The deployment settings below reproduce
+the running app.
 
 ## Deployment settings
 
@@ -16,7 +18,7 @@ in the deployment dialog before treating the resulting URL as live.
 | App access | Public |
 
 At [Streamlit Community Cloud](https://share.streamlit.io/), choose **Create
-app**, then **Yup, I have an app**. Enter the settings above; use **Advanced
+app**, then **Deploy from repo**. Enter the settings above; use **Advanced
 settings** to select Python 3.12. Save and deploy, then watch the build logs.
 The custom subdomain field determines the `streamlit.app` address. See the
 [official deployment steps](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy).
@@ -25,6 +27,29 @@ The deploying Streamlit account must be connected to GitHub and have admin
 permission on the repository. Private repositories require the corresponding
 GitHub authorization. See
 [GitHub account connection](https://docs.streamlit.io/deploy/streamlit-community-cloud/get-started/connect-your-github-account).
+
+## Live Worker deployment
+
+The SEC poller is deployed at
+[capital-report.alatimore06370.workers.dev](https://capital-report.alatimore06370.workers.dev/)
+with version `8c4fcbcb-3ffd-4658-81bd-d9bf828bf2d4`. Production SEC-identification
+and administrator secrets are configured in Cloudflare. The report reads the
+public origin from `data/sec-monitor.json`; `SEC_MONITOR_URL` can override it.
+No Worker administration credential is required in Streamlit.
+
+At **2026-09-07T21:38:50Z**, the live smoke check passed: public API schema 1,
+unauthenticated admin rejection (HTTP 401), real SEC retrieval for both issuers
+(two documents each), both historical parser replays accepted for review, and
+duplicate handling on repeat. The next Monday polling window starts
+**2026-09-14T10:45:00Z / 06:45 EDT**.
+
+Use [status](https://capital-report.alatimore06370.workers.dev/api/status) for
+current readiness, schedule, last successful checks and errors, and
+[filings](https://capital-report.alatimore06370.workers.dev/api/filings) for
+timestamped observations. See [LIVE_UPDATES.md](LIVE_UPDATES.md) and
+[the Worker runbook](worker-capital-report/README.md) for operational details.
+The report's 15-second monitor fragment shows new filing facts while the
+financial card retains verified dated inputs pending complete reconciliation.
 
 ## Runtime and repository contents
 
@@ -44,8 +69,9 @@ Predeployment checks passed on September 7, 2026: Python compilation, installed
 dependency consistency, configuration parsing, timezone lookup, and both
 bundled fonts. A fresh dependency resolution for CPython 3.12 on Linux x86-64
 resolved all 41 packages as binary wheels compatible with manylinux 2.28 or
-older. This verifies package availability; the deployed app still needs the
-browser and startup checks below.
+older. The deployed application also started successfully and rendered both
+company logos, saved market marks, total BTC and QTD/YTD results. Its live SEC
+monitor showed successful MSTR and ASST checks with no source errors.
 
 The shared Streamlit config leaves the bind address to the hosting platform.
 The Windows `launch.ps1` helper explicitly binds local development to

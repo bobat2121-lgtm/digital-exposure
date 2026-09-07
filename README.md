@@ -1,12 +1,23 @@
 # The Monday Capital Report
 
-A local, single-page Streamlit prototype comparing Strategy (MSTR) and Strive
-(ASST). It opens with **Current prices · dated balances**, using the latest
+A single-page Streamlit report comparing Strategy (MSTR) and Strive (ASST),
+live at [digital-credit-report.streamlit.app](https://digital-credit-report.streamlit.app/).
+It opens with **Current prices · dated balances**, using the latest
 saved market quotes and the verified August 30 / August 28 balance snapshots.
 Use **Refresh prices** to update all five market references together. The
 edition selector also preserves the **August 31 historical replay** and
 September 7 **Illustrative example**. See [CURRENT_PRICES.md](CURRENT_PRICES.md)
 for current quote sources, timing and the fixed balance/activity dates.
+
+The live [capital-report SEC monitor](https://capital-report.alatimore06370.workers.dev/api/status)
+checks both issuers every 30 seconds on Mondays, 06:45–09:30 Eastern. Its
+[filing feed](https://capital-report.alatimore06370.workers.dev/api/filings)
+appears under **Sources & input audit** and refreshes every 15 seconds while
+the report session is open. New filings and parsed facts update there;
+**the financial cards retain their verified figures until all required NAV
+inputs and supplemental balances are reconciled**. See
+[LIVE_UPDATES.md](LIVE_UPDATES.md) for timing, parser coverage and limitations,
+and [DEPLOYMENT.md](DEPLOYMENT.md) for the deployed services.
 
 The replay now populates NAV/share, amplification and preferred/BTC using
 reported balances and explicit estimates, marked **≈**. Strategy uses
@@ -19,7 +30,7 @@ math, sources, financing scope and the remaining estimation limits.
 
 ## Run locally
 
-Python 3.11 or newer is required. From this repository:
+Use Python 3.12 to match the deployed environment. From this repository:
 
 In this prepared workspace, `./launch.ps1` reuses the installed local environment.
 For a fresh checkout, use:
@@ -27,13 +38,14 @@ For a fresh checkout, use:
 ```powershell
 python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
-.venv\Scripts\python -m streamlit run app.py
+.venv\Scripts\python -m streamlit run app.py --server.address 127.0.0.1
 ```
 
 On macOS/Linux, use `.venv/bin/python` instead. Open the local URL printed by
-Streamlit (normally http://127.0.0.1:8501). Saved editions run without API keys or
-network access; refreshing current prices or the historical VWAP requires a
-network connection. Market refreshes preserve actual quote timestamps and
+Streamlit (normally http://127.0.0.1:8501). Saved financial cards render without
+API keys or network access. The live monitor and manual price/VWAP refreshes
+use the network; a monitor outage retains the card and last retrieved feed.
+Market refreshes preserve actual quote timestamps and
 replace the saved snapshot only when all quotes validate successfully.
 
 The app opens in **Post view**: a compact 1800 × 1125 card with both companies
@@ -53,8 +65,8 @@ growth from reconciled period baselines. The bottom audit explains Strive's
 Formulas live below the card; VWAP and preferred transactions remain identified
 on it. See [DESIGN_DEMO.md](DESIGN_DEMO.md) for the layout and
 [PERIOD_GROWTH.md](PERIOD_GROWTH.md) for the calculations and source audit, and
-[LIVE_UPDATES.md](LIVE_UPDATES.md) for the offline filing-update rehearsal and
-the work required to connect live filings.
+[LIVE_UPDATES.md](LIVE_UPDATES.md) for the active filing monitor and archived
+offline publication rehearsal.
 You can also export without running Streamlit:
 
 ```powershell
@@ -125,6 +137,9 @@ implemented.
 - `report/post_export.py`: compact post image, using the same formatted figures.
 - `assets/post.css`: scales the post image within the available viewport.
 - `report/methodology.py`: expandable definitions and the underlying input audit.
+- `report/filing_monitor.py`: public feed validation and the 15-second Streamlit fragment.
+- `data/sec-monitor.json`: deployed Worker origin, with no administration credentials.
+- `worker-capital-report/`: SEC discovery, issuer parsers, Durable Object scheduling and tests.
 - `tests/`: expected results, edge cases, and export validation.
 
 Future providers can create the same `Report`, `Company` and `Snapshot` types.
@@ -132,8 +147,11 @@ Persist prior editions with their own prices and quantities. Supply prior
 securities at current prices and foreign preferred claims at current FX for
 constant-price NAV. A combined liquid-asset input supports disclosed totals
 whose cash/securities split is unavailable, without counting reserves twice.
-Only the optional equity-price refresh fetches external data. Automated filing
-ingestion, scheduling and deployment are not included.
+The Cloudflare Worker handles scheduled SEC discovery and supported filing
+extraction. Streamlit reads its public feed and can refresh market quotes on
+demand. Automatic publication of a complete financial card remains separate:
+new filings must be reconciled with every required balance, claim and price
+input before replacing the verified report.
 
 ## Data conventions
 
