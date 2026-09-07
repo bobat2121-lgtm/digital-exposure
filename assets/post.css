@@ -1,0 +1,15 @@
+/* The post is the downloadable PNG itself: screen scaling never changes it. */
+[data-testid="stHeader"] { display: none; }
+.stMainBlockContainer { max-width: 1800px; padding: 12px 24px 0; }
+.stMainBlockContainer [data-testid="stVerticalBlock"] { gap: 10px; }
+[data-testid="stDownloadButton"] { justify-content: flex-end; margin: 0; width: 100%; }
+[data-testid="stDownloadButton"] button { padding: 7px 14px; min-height: 38px; font-size: 13px; }
+[data-testid="stRadio"] { padding: 0; }
+[data-testid="stRadio"] p { font-size: 13px; }
+.post-preview { margin: 0; width: 100%; display: flex; justify-content: center; align-items: flex-start; }
+.post-preview img { display: block; width: auto; height: auto; max-width: 100%; max-height: calc(100vh - 96px); max-height: calc(100dvh - 96px); object-fit: contain; }
+@media (max-width: 600px) {
+  .stMainBlockContainer { padding: 9px 12px 0; }
+  [data-testid="stDownloadButton"] button { padding: 6px 10px; font-size: 12px; }
+  [data-testid="stRadio"] p { font-size: 12px; }
+}

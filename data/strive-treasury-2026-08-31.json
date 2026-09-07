@@ -1,0 +1,141 @@
+{
+  "edition_date": "2026-08-31",
+  "retrieved_on": "2026-09-07",
+  "source_urls": [
+    "https://www.strive.com/treasury/api/dashboard/base-data",
+    "https://www.strive.com/treasury/api/dashboard/calculated?fromDate=2026-08-21&toDate=2026-08-28&currency=USD&stockSymbol=ASST"
+  ],
+  "source_page": "https://www.strive.com/treasury",
+  "reconstruction_note": "Historical financial records retrieved from the public company dashboard after the edition. August 28 cash/debt record was created before the edition cutoff but updated September 6; original pre-update contents are not preserved. Paid-dividend status is retrospectively confirmed and is not a timestamped archive of the original edition.",
+  "base_server_pulled_at_utc": "2026-09-07T15:45:02.9820000+00:00",
+  "calculated_server_pulled_at_utc": "2026-09-07T15:48:16.9930000+00:00",
+  "cash_debt": [
+    {
+      "date": "2026-08-21",
+      "cash": 171900000,
+      "debt": 0,
+      "marketable_securities": 48571000,
+      "created_at": "2026-08-24T12:10:36.00058+00:00",
+      "updated_at": "2026-08-24T12:10:36.00058+00:00"
+    },
+    {
+      "date": "2026-08-28",
+      "cash": 183500000,
+      "debt": 0,
+      "marketable_securities": 49152000,
+      "created_at": "2026-08-31T12:04:10.286514+00:00",
+      "updated_at": "2026-09-06T08:13:07.041147+00:00"
+    }
+  ],
+  "preferred_stocks": [
+    {
+      "ticker": "SATA",
+      "date": "2026-08-28",
+      "shares_outstanding": 9073914,
+      "notional_value": 907391400,
+      "dividend_rate": 0.13,
+      "created_at": "2026-08-31T12:04:49.145181+00:00",
+      "updated_at": "2026-08-31T12:07:55.451393+00:00"
+    }
+  ],
+  "preferred_notional_note": "Reported notional value is shares times $100; it does not establish exact certificate-adjusted liquidation preference. The replay uses a separately labeled conservative $100.01 per-share base preference for August 28.",
+  "preferred_dividends": [
+    {
+      "ticker": "SATA",
+      "payDate": "2026-08-17",
+      "recordDate": "2026-08-14",
+      "exDividendDate": "2026-08-14",
+      "cashAmount": 0.0516,
+      "currency": "USD",
+      "status": "paid"
+    },
+    {
+      "ticker": "SATA",
+      "payDate": "2026-08-18",
+      "recordDate": "2026-08-17",
+      "exDividendDate": "2026-08-17",
+      "cashAmount": 0.0516,
+      "currency": "USD",
+      "status": "paid"
+    },
+    {
+      "ticker": "SATA",
+      "payDate": "2026-08-19",
+      "recordDate": "2026-08-18",
+      "exDividendDate": "2026-08-18",
+      "cashAmount": 0.0516,
+      "currency": "USD",
+      "status": "paid"
+    },
+    {
+      "ticker": "SATA",
+      "payDate": "2026-08-20",
+      "recordDate": "2026-08-19",
+      "exDividendDate": "2026-08-19",
+      "cashAmount": 0.0516,
+      "currency": "USD",
+      "status": "paid"
+    },
+    {
+      "ticker": "SATA",
+      "payDate": "2026-08-21",
+      "recordDate": "2026-08-20",
+      "exDividendDate": "2026-08-20",
+      "cashAmount": 0.0516,
+      "currency": "USD",
+      "status": "paid"
+    },
+    {
+      "ticker": "SATA",
+      "payDate": "2026-08-24",
+      "recordDate": "2026-08-21",
+      "exDividendDate": "2026-08-21",
+      "cashAmount": 0.0516,
+      "currency": "USD",
+      "status": "paid"
+    },
+    {
+      "ticker": "SATA",
+      "payDate": "2026-08-25",
+      "recordDate": "2026-08-24",
+      "exDividendDate": "2026-08-24",
+      "cashAmount": 0.0516,
+      "currency": "USD",
+      "status": "paid"
+    },
+    {
+      "ticker": "SATA",
+      "payDate": "2026-08-26",
+      "recordDate": "2026-08-25",
+      "exDividendDate": "2026-08-25",
+      "cashAmount": 0.0516,
+      "currency": "USD",
+      "status": "paid"
+    },
+    {
+      "ticker": "SATA",
+      "payDate": "2026-08-27",
+      "recordDate": "2026-08-26",
+      "exDividendDate": "2026-08-26",
+      "cashAmount": 0.0516,
+      "currency": "USD",
+      "status": "paid"
+    },
+    {
+      "ticker": "SATA",
+      "payDate": "2026-08-28",
+      "recordDate": "2026-08-27",
+      "exDividendDate": "2026-08-27",
+      "cashAmount": 0.0516,
+      "currency": "USD",
+      "status": "paid"
+    }
+  ],
+  "prior_dividend_status_check": {
+    "ticker": "SATA",
+    "pay_dates_through": "2026-08-28",
+    "records_checked": 59,
+    "records_with_status_other_than_paid": 0
+  },
+  "dividend_claim_basis": "Friday after daily payment at August 21 and August 28. The company history marks those and earlier scheduled payments paid. Certificate section 5(a) starts further accrual on the calendar day after the last date through which dividends were paid, so the next Monday payment is not added to Friday accrued liquidation claims merely because its record date is Friday. No August 31 payment outcome is used."
+}

@@ -203,4 +203,3 @@ and [download button](https://docs.streamlit.io/develop/api-reference/widgets/st
 APIs. The export needs only Pillow and runs without browser automation.
 
 See `VALIDATION.md` for the completed formula, layout and download checks.
-

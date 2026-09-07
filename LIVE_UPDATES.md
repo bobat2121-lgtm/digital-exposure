@@ -1,0 +1,125 @@
+# Testing a filing update before connecting live sources
+
+The app currently refreshes market quotes on demand. Its filing facts and
+balance snapshots are manually verified historical inputs. It does **not**
+discover or parse new 8-Ks, poll the SEC, or deploy a notification service.
+
+Run this offline rehearsal from the repository using the installed environment:
+
+In this prepared Windows workspace, `./replay_filing_update.ps1` automatically
+uses the available environment. Alternatively, with Python activated:
+
+```powershell
+python replay_filing_update.py --output-dir work/filing-replay
+python -m unittest discover -s tests -p test_filing_replay.py -v
+```
+
+In the prepared Windows workspace, use `..\..\work\.venv\Scripts\python.exe`
+in place of `python`. The September 7 rehearsal passed all three scenarios:
+publication took **979.680 ms** locally, duplicate handling **0.742 ms**, and
+incomplete-input rejection **0.072 ms**. Rendering both PNGs took **941.600 ms**
+of the publication phase. The six focused tests also passed, covering missing
+supplemental inputs, rendering failure and atomic-replacement failure. These
+are one machine's rehearsal measurements, not live SEC latency measurements.
+
+Every default run creates a fresh directory containing the valid and invalid
+input fixtures, `published-replay.json`, and readable/JSON results. It exercises:
+
+1. A new accession: parse normalized JSON, validate facts and the complete
+   report candidate, calculate metrics, render both PNG layouts, then publish
+   the complete JSON with one atomic file replacement.
+2. The same accession and content: return `duplicate`, with no recalculation,
+   rendering, rewrite or additional financing flows.
+3. An incomplete new input: reject it and retain the previous publication byte
+   for byte. Conflicting content under an existing accession also fails.
+
+The fixture uses the documented [Strategy August 31 8-K](https://www.sec.gov/Archives/edgar/data/1050446/000119312526375463/mstr-20260831.htm)
+facts: $602.8m ATM proceeds, 1,557,177 STRC shares repurchased for $151.8m, and
+4,603 BTC purchased. This is a **manually normalized JSON fixture**, not an
+HTML extraction test. Other company balances, basic shares, claims estimates,
+market prices and Strive inputs come separately from `historical_report()`;
+the rehearsal does not claim that the weekly filing supplies them all.
+Changed preferred share activity is rejected until its supplemental claims
+schedule is rebuilt, preventing a new count from silently using old claims.
+
+The SEC acceptance timestamp is 08:00:15 ET. Receipt at 08:00:30 is an explicit
+simulation, making detection latency **15 seconds by construction**. Parse,
+validation, rendering and atomic-write durations are measured locally with a
+monotonic clock. The reported combined time mixes that simulated delay with
+measured processing; it is not evidence of live detection speed or a production
+latency guarantee. Phase timings identify what needs measurement next.
+
+The published JSON contains the complete report, calculated metrics, source
+metadata and hashes/sizes of the two PNGs rendered in memory. It is isolated
+from the Streamlit app, its historical fixtures and `data/current-prices.json`.
+To replay an edited fixture against an existing rehearsal directory:
+
+```powershell
+python replay_filing_update.py --input path/to/fixture-valid.json --output-dir path/to/run-directory
+```
+
+Before testing a real release within minutes, production integration still
+needs a permitted filing discovery feed, recorded first-observed and SEC
+acceptance timestamps, accession/amendment handling, retrieval retry/backoff,
+and archived source documents. It also needs a real parser for each issuer's
+tables and footnotes, units/scope and balance reconciliation, provenance for
+supplemental inputs, and a defined policy when a required metric is missing.
+This bounded fixture assumes a simple BTC purchase bridge; disposals and
+transfers require additional rules.
+
+Finally, connect a versioned publication store to the app with a refresh/version
+check. Measure acceptance → first observed → parsed → validated → published →
+actually displayed, including cache invalidation. The rehearsal is single-writer;
+multiple workers would require locking or transactional version checks. None
+of those live components, timers, daemons or notifications are deployed here.
+
+## When to run a real acceptance test
+
+The five August 2026 Monday observations show Strategy's weekly 8-K accepted
+at approximately 08:00:15–16 ET. Strive's usual observations were 07:59:24–49,
+with an earlier **06:59:35 ET on August 10**. These are acceptance times, not
+guaranteed release times or first-public-availability timestamps. Sources:
+[Strategy Aug31 filing detail](https://www.sec.gov/Archives/edgar/data/1050446/000119312526375463/0001193125-26-375463-index.htm),
+[Strive Aug31 filing detail](https://www.sec.gov/Archives/edgar/data/1920406/000162828026059468/0001628280-26-059468-index.htm),
+[Strive Aug10 filing detail](https://www.sec.gov/Archives/edgar/data/1920406/000162828026054983/0001628280-26-054983-index.htm),
+and the official submissions histories for [Strategy](https://data.sec.gov/submissions/CIK0001050446.json)
+and [Strive](https://data.sec.gov/submissions/CIK0001920406.json).
+
+The [SEC Webmaster FAQ](https://www.sec.gov/about/webmaster-frequently-asked-questions)
+describes documents as often available 1–3 minutes after acceptance, potentially
+later under load; the first public availability does not have its own published
+timestamp. The [SEC API documentation](https://www.sec.gov/search-filings/edgar-application-programming-interfaces)
+describes submissions processing as typically under one second **after
+dissemination**. Those are different intervals. A parser cannot process a
+document before the source makes it available.
+
+For a future monitor, start the test window at 06:45 America/New_York and check
+both submissions feeds every 30 seconds, with explicit holiday handling and
+download retries when metadata precedes the document. Use a declared identifying
+User-Agent and comply with the SEC's aggregate request limit in its
+[fair-access guidance](https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data).
+Classify the weekly treasury filing; unrelated 8-Ks should not advance the
+weekly report. This is a proposed test configuration, not an installed schedule.
+
+Acceptance testing should log these stages against the same accession and
+publication version:
+
+1. `accepted_at`: SEC's source timestamp, preserved without modification.
+2. `first_seen`: the monitor's first successful retrieval of public filing
+   metadata; separately record first successful document retrieval.
+3. `parsed_at` and `validated_at`: complete extraction and reconciled report
+   inputs, with missing fields recorded explicitly.
+4. `published_at`: the committed complete version, after calculations and
+   rendering checks succeed.
+5. `browser_displayed_at`: browser verification that the page loaded that exact
+   accession/version, rather than retaining an older cached card.
+
+An initial engineering acceptance target is **p95 ≤120 seconds from the
+monitor's public `first_seen` to verified browser display**, measured across a
+declared sample of real releases. This is a target to test, not a guarantee;
+report sample size, failures, maximum latency and acceptance-to-first-seen
+delay separately. Exercise duplicate notices, partial documents, delayed
+supplemental data, amendments, source failures and browser cache invalidation.
+Any incomplete update must retain the previous complete displayed version and
+surface a clear freshness/error state. The offline test measures only the
+local processing portion of that future end-to-end workflow.

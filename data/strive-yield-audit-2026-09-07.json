@@ -1,0 +1,114 @@
+{
+  "sources": {
+    "base": "https://www.strive.com/treasury/api/dashboard/base-data",
+    "calculated": "https://www.strive.com/treasury/api/dashboard/calculated?fromDate=2025-05-06&toDate=2026-09-07&currency=USD&stockSymbol=ASST"
+  },
+  "retrieved_utc": "2026-09-07T20:58:20.192000+00:00",
+  "latest_balance_date": "2026-08-28",
+  "shares": [
+    {
+      "date": "2026-08-28",
+      "class_a_common": 83470035,
+      "class_b_common": 9792535,
+      "pre_funded_warrants": 0,
+      "options_legacy": 991941,
+      "convertible_bonds": 0,
+      "rsu_rsa": 2268840,
+      "traditional_warrants": 26596010,
+      "issued_shares": 93262570,
+      "fully_diluted_shares": 96523351,
+      "source_url": "https://www.sec.gov/ix?doc=/Archives/edgar/data/0001920406/000162828026059468/asst-20260831.htm",
+      "created_at": "2026-08-31T12:03:10.363618+00:00",
+      "updated_at": "2026-08-31T12:03:10.363618+00:00"
+    },
+    {
+      "date": "2026-06-30",
+      "class_a_common": 72164809,
+      "class_b_common": 9780018,
+      "pre_funded_warrants": 0,
+      "options_legacy": 1004282,
+      "convertible_bonds": 0,
+      "rsu_rsa": 1704019,
+      "traditional_warrants": 26596010,
+      "issued_shares": 81944827,
+      "fully_diluted_shares": 84653128,
+      "source_url": null,
+      "created_at": "2026-06-30T15:33:44.952494+00:00",
+      "updated_at": "2026-08-31T15:50:21.616239+00:00"
+    },
+    {
+      "date": "2025-12-31",
+      "class_a_common": 34936745,
+      "class_b_common": 9776540,
+      "pre_funded_warrants": 53614,
+      "options_legacy": 0,
+      "convertible_bonds": 0,
+      "rsu_rsa": 0,
+      "traditional_warrants": 26594435,
+      "issued_shares": 44766899,
+      "fully_diluted_shares": 44766899,
+      "source_url": null,
+      "created_at": "2026-03-18T21:31:14.788927+00:00",
+      "updated_at": "2026-07-03T23:35:01.918535+00:00"
+    }
+  ],
+  "bitcoin_performance": {
+    "btcHoldings": 23156.234991439997,
+    "satsPerDilutedShare": 23990.293282959057,
+    "satsPerBasicShare": 24829.076650407547,
+    "issuedShares": 93262570,
+    "btcSupplyPercentage": 0.11026778567352379,
+    "holdingsValue": 1834651825.882597,
+    "avgCostPerBtc": 92190.26363954022,
+    "btcYieldYtd": {
+      "value": 40.81516346240643,
+      "referenceDate": "2025-12-31",
+      "currentDate": "2026-09-07",
+      "pastSats": 17036.72579932329,
+      "currentSats": 23990.293282959057
+    },
+    "btcYieldQtd": {
+      "value": 2.2383084272453635,
+      "referenceDate": "2026-06-30",
+      "currentDate": "2026-09-07",
+      "pastSats": 23465.072585811595,
+      "currentSats": 23990.293282959057
+    },
+    "btcYieldSinceInception": null,
+    "btcGainYtd": {
+      "value": 3112.8965322960667,
+      "referenceDate": "2025-12-31",
+      "currentDate": "2026-09-07",
+      "pastHoldings": 7626.81383149,
+      "currentHoldings": 23156.234991439997
+    },
+    "btcGainQtd": {
+      "value": 444.6157490387337,
+      "referenceDate": "2026-06-30",
+      "currentDate": "2026-09-07",
+      "pastHoldings": 19863.91793136,
+      "currentHoldings": 23156.234991439997
+    },
+    "btcGainSinceInception": null,
+    "btcDollarGainYtd": {
+      "value": 246632550.9683141,
+      "referenceDate": "2025-12-31",
+      "currentDate": "2026-09-07",
+      "btcGain": 3112.8965322960667,
+      "currentBtcPrice": 79229.28
+    },
+    "btcDollarGainQtd": {
+      "value": 35226585.67299957,
+      "referenceDate": "2026-06-30",
+      "currentDate": "2026-09-07",
+      "btcGain": 444.6157490387337,
+      "currentBtcPrice": 79229.28
+    }
+  },
+  "reconciliation": {
+    "issuer_ytd_percent": 40.81516346240643,
+    "report_basic_ytd_percent": 45.558976564617204,
+    "rounded_btc_issuer_ytd_percent": 40.81029731602035
+  },
+  "caveat": "December31 API rsu_rsa=0 differs from approximately822000 unvested split-adjusted RSUs in 2025 10-K Note8; cause not reconciled."
+}

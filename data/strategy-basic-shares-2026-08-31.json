@@ -1,0 +1,23 @@
+{
+  "retrieved_on": "2026-09-07",
+  "basis": "Effective Class A plus Class B basic shares; issuer table in thousands",
+  "prior": {
+    "as_of": "2026-08-23",
+    "class_a_thousands": 396289,
+    "class_b_thousands": 19640,
+    "basic_shares_thousands": 415929,
+    "btc_holdings": 840447,
+    "sources": ["https://www.strategy.com/pl/shares", "https://www.strategy.com/zh/shares"],
+    "retrieval_method": "Search-indexed primary company page: exact search for 415,929. Both indexed tables explicitly include the August 23 date and values; opening the mutable URLs can show a newer edition."
+  },
+  "current": {
+    "as_of": "2026-08-30",
+    "class_a_thousands": 400843,
+    "class_b_thousands": 19640,
+    "basic_shares_thousands": 420483,
+    "btc_holdings": 845050,
+    "sources": ["https://www.strategy.com/shares"],
+    "retrieval_method": "Dated column on primary company shares page"
+  },
+  "timing_limitation": "These recovered historical observations do not establish publication before the original Monday 09:00 ET cutoff. Figures are rounded to thousands and are not weighted-average EPS shares."
+}

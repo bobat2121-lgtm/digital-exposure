@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.streamlit/secrets.toml
+*.log
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.wrangler/
+node_modules/
+coverage/
+.DS_Store

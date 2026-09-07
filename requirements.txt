@@ -1,0 +1,4 @@
+streamlit==1.63.0
+Pillow==12.3.0
+exchange_calendars==4.13.2
+tzdata==2026.3
