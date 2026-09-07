@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "capital-report",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-07",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  "durable_objects": {
+    "bindings": [{ "name": "ISSUER_POLLER", "class_name": "IssuerPoller" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["IssuerPoller"] }],
+  "triggers": { "crons": ["* 10-14 * * MON"] },
+  "vars": { "PUBLIC_ORIGIN": "*" },
+  "secrets": { "required": ["SEC_USER_AGENT", "ADMIN_TOKEN"] }
+}

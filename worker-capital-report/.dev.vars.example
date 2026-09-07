@@ -1,0 +1,4 @@
+# Local development only. Set real identity and a random 32+ character token.
+# Production values are installed with wrangler secret put; never commit them.
+SEC_USER_AGENT=""
+ADMIN_TOKEN=""
