@@ -3,8 +3,8 @@
 A single-page Streamlit report comparing Strategy (MSTR) and Strive (ASST).
 The hosted app is at [digital-credit-report.streamlit.app](https://digital-credit-report.streamlit.app/).
 This checkout contains the approved public redesign; see [DEPLOYMENT.md](DEPLOYMENT.md)
-for rollout status. It uses saved market quotes with verified August 30 / August 28
-balance snapshots. The Imprint title, responsive panels, and compact download
+for rollout status. Each page opening or browser reload refreshes the existing market-price
+sources while retaining the verified August 30 / August 28 balance snapshots. The Imprint title, responsive panels, and compact download
 share the same figures. See [PUBLIC_REPORT.md](PUBLIC_REPORT.md) for the design
 and [CURRENT_PRICES.md](CURRENT_PRICES.md) for quote sources and snapshot dates.
 
@@ -41,11 +41,14 @@ python -m venv .venv
 ```
 
 On macOS/Linux, use `.venv/bin/python` instead. Open the local URL printed by
-Streamlit (normally http://127.0.0.1:8501). Saved financial cards render without
-API keys or network access. The read-only filing monitor uses the network;
-a monitor outage retains the card and last retrieved feed. Price and VWAP
-refreshes are local scripts. They preserve provider timestamps and replace
-the saved snapshot only when the complete update validates successfully.
+Streamlit (normally http://127.0.0.1:8501). The report renders without
+API keys. Each new browser session attempts a complete price refresh from the
+existing providers; ordinary reruns, downloads and SEC-feed updates reuse that
+session’s prices. If refresh fails, the app retains the latest complete in-memory
+snapshot or the bundled fallback and shows a short notice with the original
+quote timestamps. It never writes the repository on a public visit. The read-only
+filing monitor also uses the network; its outage retains the card and last feed.
+Local scripts still support maintained quote snapshots and historical VWAP updates.
 
 The public report has one responsive view: two aligned company panels on
 computer screens, stacked panels on phones. A discreet **Download** button at
@@ -112,7 +115,8 @@ implemented.
 - `report/models.py`: immutable provider-neutral input types.
 - `report/historical_data.py`: sourced August 31 balances, flows and labeled estimates.
 - `report/historical_claims.py`: reproducible preferred claims and debt carryforward.
-- `report/current_prices.py`: fetch, validate and atomically save current quotes.
+- `report/current_prices.py`: existing provider fetch/validation and local saved snapshots.
+- `report/price_refresh.py`: fresh fetch per opening with an isolated, complete in-memory fallback.
 - `report/current_report.py`: reprice the dated snapshots without changing flows.
 - `data/current-prices.json`: complete current quote cache with provider timestamps.
 - `pull_vwap.py`: on-demand dated ASST minute-bar estimate refresh.
@@ -141,8 +145,8 @@ securities at current prices and foreign preferred claims at current FX for
 constant-price NAV. A combined liquid-asset input supports disclosed totals
 whose cash/securities split is unavailable, without counting reserves twice.
 The Cloudflare Worker handles scheduled SEC discovery and supported filing
-extraction. Streamlit reads its public feed; local maintenance scripts refresh
-the saved market quotes. Automatic publication of a complete financial card remains separate:
+extraction. Streamlit reads its public feed and refreshes prices when a browser
+session opens; local scripts can maintain the bundled fallback. Automatic publication of a complete financial card remains separate:
 new filings must be reconciled with every required balance, claim and price
 input before replacing the verified report.
 

@@ -6,7 +6,8 @@ The fixed title artwork gives the PNG export the same design on the Linux host.
 See [brand asset notes](assets/BRAND-TITLE.md) for reproduction details.
 
 The responsive report has two aligned company panels on desktop and stacks them
-on phones. It shows the saved current quote snapshot, dated balance and activity
+on phones. Every page opening or browser reload refreshes the existing price
+sources once for that session. The report keeps its dated balance and activity
 periods, and the concise 279-word calculation overview. There are no public
 edition selectors, view tabs, quote refresh controls, or VWAP pull controls.
 The former Sources & input audit section is removed. A separate read-only
@@ -34,3 +35,9 @@ Reported Bitcoin Bought and Bitcoin Sold use separate gross quantities. A
 sales-only week changes the activity label to Bitcoin Sold; a week with both
 shows both. Confirmed zero remains zero; missing activity stays undisclosed.
 No sale is inferred from falling holdings. Fractions retain satoshi precision.
+
+Price refreshes use one complete validated snapshot for both the web report and
+the PNG. Normal reruns, downloads and SEC updates do not trigger another fetch.
+On a provider failure, the latest complete in-memory or bundled snapshot remains
+visible with its original timestamps and a short fallback notice. Public visits
+do not write the repository or alter the balance dates.

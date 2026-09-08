@@ -1,10 +1,13 @@
-# Current-price demo
+# Current prices
 
-The default demo uses the latest fetched stock, Bitcoin, STRC and EUR/USD
-quotes. **Refresh prices** saves a complete new price snapshot; a failed fetch
-retains the previous snapshot. Quotes also refresh through `python refresh_prices.py`.
-The header shows when prices were retrieved, and each quote keeps its source
-timestamp. Closed-market stock prices may be from the last trading session.
+Every page opening or browser reload requests stock, Bitcoin, STRC and EUR/USD
+quotes from the existing sources. One complete snapshot serves both the report
+and its PNG for that session. Ordinary reruns and SEC-feed updates reuse it.
+A failed refresh retains the last complete snapshot and its original timestamps,
+with a brief notice. Public visits do not save to Git or change the bundled data.
+`python refresh_prices.py` remains available to maintain the bundled fallback.
+The header shows retrieval time; each quote retains its source timestamp.
+Closed-market stocks can remain at their last regular-session close.
 
 **Balances remain explicitly dated.** As verified September 7, the latest weekly
 balance disclosures remain Strategy August 30 and Strive August 28. The current

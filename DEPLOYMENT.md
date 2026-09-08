@@ -19,10 +19,15 @@ uses the Imprint dot title, responsive company panels, Market Activity section,
 QTD/YTD panel, concise calculation overview and a discreet PNG download. Phones
 stack the company panels; the downloadable image stays 1800 × 1125.
 
-The report reads committed market snapshots and the public Worker feed. There
-are no public refresh/VWAP controls and no notification credentials in the app.
-The saved market and balance dates remain visible. Refreshing quotes does not
-advance the financial balance dates.
+On each new browser session or page reload, the report requests a complete
+price snapshot from the existing sources. It keeps that snapshot for normal
+reruns, downloads and SEC-feed updates. If a refresh fails, the newest complete
+in-memory snapshot or bundled fallback is retained with its original timestamps
+and a short notice. Public visits do not write repository files.
+
+The public Worker feed remains read-only. There are no public refresh/VWAP
+controls or notification credentials in the app. Refreshing quotes does not
+advance the financial balance dates or alter the Worker polling schedule.
 
 The root entrypoint, requirements, `report/`, `assets/` and `data/` must remain in
 Git. Dependencies are pinned; Lato fonts and fixed title artwork are bundled.
@@ -110,3 +115,15 @@ passed. Sale-only, mixed activity and long fractional quantities fit the
 1800 × 1125 PNG and a 375px phone layout. Production report balances still
 advance after reconciliation. Synthetic sale scenarios were tested locally,
 never published as real filings or sent to the live Discord channel.
+
+## Page-load price refresh — September 7, 2026
+
+Each browser opening/reload fetches the existing five sources once. The shared
+fallback stays in server memory; concurrent requests cannot replace newer
+quotes with older observations. Downloads and normal reruns keep the session's
+complete snapshot. The PNG cache is bounded to 32 entries. No extended-hours
+feed, real-time widget, repository write or Worker change is involved.
+
+All 156 Python tests passed, including 16 focused store/app checks. A live-source
+smoke request returned a complete fresh bundle in about three seconds. Stock
+timestamps correctly remained at the prior regular-session close.
