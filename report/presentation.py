@@ -206,7 +206,7 @@ def company_view(c: Company, m: CompanyMetrics, *, historical: bool = False,
         preferred_ratio=MetricView("Preferred / BTC", valuation(m.preferred_to_btc_pct, number(m.preferred_to_btc_pct, suffix="%"), claims_only=True),
                                    change="Claims unverified" if historical and m.preferred_to_btc_pct is None else f"{valuation(m.preferred_to_btc_change_pp, number(m.preferred_to_btc_change_pp, suffix=' pp', signed=True), claims_only=True)} {preferred_comparison}",
                                    short_change=valuation(m.preferred_to_btc_change_pp, number(m.preferred_to_btc_change_pp, suffix=' pp', signed=True), claims_only=True)),
-        bought=MetricView("New Bitcoin bought", number(m.weekly_btc_purchases, 0, suffix=" BTC")),
+        bought=MetricView("Bitcoin Bought", number(m.weekly_btc_purchases, 0, suffix=" BTC")),
         total_bitcoin=MetricView("Total BTC held", number(m.btc_holdings, 0, suffix=" BTC")),
     )
 

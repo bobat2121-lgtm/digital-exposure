@@ -55,7 +55,7 @@ def _company(c: CompanyView, period: str) -> str:
         <div><h3>Price / basic NAV</h3><strong>{escape(c.price_to_nav)}</strong></div>
       </section>
       <section class="bitcoin-pair">
-        <div><h3>New Bitcoin bought</h3><strong>{escape(btc)}</strong></div>
+        <div><h3>Bitcoin Bought</h3><strong>{escape(btc)}</strong></div>
         <div><h3>Total BTC held</h3><strong>{escape(total)}</strong></div>
       </section>
       <section class="market-activity" aria-label="{escape(c.name)} market activity">

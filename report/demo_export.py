@@ -43,7 +43,7 @@ def _company(canvas: _Canvas, c: CompanyView, index: int, capital_period: str) -
     canvas.right(c.price_to_nav, right, 316, 34, True, width=width * .32)
     draw.line((left, 366, right, 366), fill=LINE)
 
-    bought = c.bought or MetricView("New Bitcoin bought", "Not disclosed")
+    bought = c.bought or MetricView("Bitcoin Bought", "Not disclosed")
     total_bitcoin = c.total_bitcoin or MetricView("Total BTC held", "Not disclosed")
     _text(canvas, bought.label, left, 378, width * .49, size=21, bold=True, color=MUTED)
     _text(canvas, bought.value, left, 407, width * .49, size=28, bold=True)
