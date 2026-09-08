@@ -1,11 +1,11 @@
 import { DurableObject } from "cloudflare:workers";
 import { timingSafeEqual } from "node:crypto";
-import { extractWeekly } from "./parser";
-import { boundedText, fetchSec, MAX_DOCUMENT_BYTES, MAX_SUBMISSIONS_BYTES, parseSubmissions, SecError, validUserAgent } from "./sec";
+import { extractWeekly, PARSER_VERSION } from "./parser";
+import { boundedText, documentUrl, fetchSec, MAX_DOCUMENT_BYTES, MAX_SUBMISSIONS_BYTES, parseSubmissions, SecError, validUserAgent } from "./sec";
 import { inPollingWindow, nextAlarmTime, nextWindowStart, POLL_INTERVAL_MS, retryDelay, TIME_ZONE } from "./schedule";
 import { initialState, ISSUERS, type Filing, type PollState, type Ticker } from "./types";
 import { LEGACY_SETUP_TEST_ID, SETUP_TEST_ID } from "./notifications";
-import { eligiblePublication, publishedFeed, recentMondays, type PublicationEvent } from "./feed";
+import { awareTime, eligiblePublication, publishedFeed, recentMondays, type PublicationEvent } from "./feed";
 export { ReportNotifier } from "./notifications";
 
 const tickers = Object.keys(ISSUERS) as Ticker[];
@@ -17,6 +17,16 @@ async function sha256(text: string): Promise<string> {
 function statusFor(filing: Filing): Filing["status"] {
   if (!filing.extracted || Object.keys(filing.extracted.facts).length === 0) return "not_weekly";
   return filing.extracted.extractionValidated ? "ready_for_review" : "partial";
+}
+/** Bounded parser migrations run through the normal SEC cadence and document retry path. */
+function needsParserUpgrade(filing: Filing, now: number, activation: string): boolean {
+  const previous = /^sec-weekly-v(\d+)$/.exec(filing.extracted?.parserVersion ?? "");
+  const current = /^sec-weekly-v(\d+)$/.exec(PARSER_VERSION);
+  const accepted = awareTime(filing.acceptedAt), seen = awareTime(filing.firstSeenAt), fetched = awareTime(filing.documentFetchedAt), activeAfter = awareTime(activation);
+  return !!previous && !!current && Number(previous[1]) < Number(current[1])
+    && filing.baseline === false && filing.form === "8-K" && ["ready_for_review", "partial", "not_weekly"].includes(filing.status)
+    && [accepted, seen, fetched, activeAfter].every(Number.isFinite)
+    && accepted <= now && now - accepted <= 14 * 86_400_000 && seen >= activeAfter && seen <= now && fetched >= Math.max(activeAfter, accepted) && fetched <= now;
 }
 
 /** One durable coordination boundary per issuer; public reads never call the SEC. */
@@ -47,7 +57,9 @@ export class IssuerPoller extends DurableObject<Env> {
     // Receipt, publication obligation and recovery alarm commit as one SQLite transaction.
     await this.ctx.storage.transaction(async () => {
       this.saveFiling(filing);
-      if (event) this.ctx.storage.sql.exec("INSERT OR IGNORE INTO publication_outbox(accession,body,status,attempts,next_attempt_at) VALUES(?,?,'pending',0,?)",
+      if (event) this.ctx.storage.sql.exec(`INSERT INTO publication_outbox(accession,body,status,attempts,next_attempt_at) VALUES(?,?,'pending',0,?)
+        ON CONFLICT(accession) DO UPDATE SET body=excluded.body,status='pending',attempts=0,next_attempt_at=excluded.next_attempt_at,error=NULL
+        WHERE publication_outbox.body!=excluded.body OR publication_outbox.status='discarded'`,
         filing.accession, JSON.stringify(event), Date.now());
       await this.reschedule(this.state(filing.ticker));
     });
@@ -155,8 +167,10 @@ export class IssuerPoller extends DurableObject<Env> {
       state.lastSuccessAt = new Date(Date.now()).toISOString();
       state.failures = 0; state.backoffUntil = 0; state.error = null;
       this.saveState(state);
-      const pending = (await this.filings(200)).filter(f => (f.status === "pending" || f.status === "document_error") && f.nextDocumentAttemptAt <= Date.now()).slice(0, 2);
+      const pending = (await this.filings(200)).filter(f => (f.status === "pending" || f.status === "document_error"
+        || needsParserUpgrade(f, Date.now(), this.env.NOTIFICATIONS_ACTIVE_AFTER)) && f.nextDocumentAttemptAt <= Date.now()).slice(0, 2);
       for (const filing of pending) {
+        const priorReceipt = needsParserUpgrade(filing, Date.now(), this.env.NOTIFICATIONS_ACTIVE_AFTER) ? structuredClone(filing) : null;
         // Each document attempt is persisted before network I/O, so restarts retain retry provenance.
         filing.attempts++; filing.nextDocumentAttemptAt = Date.now() + POLL_INTERVAL_MS; this.saveFiling(filing);
         try {
@@ -169,9 +183,11 @@ export class IssuerPoller extends DurableObject<Env> {
           filing.nextDocumentAttemptAt = 0; await this.saveReceipt(filing); fetched++;
         } catch (error) {
           const sec = error instanceof SecError ? error : new SecError("Filing parser failed; manual review required");
-          filing.status = "document_error"; filing.error = sec.message;
-          filing.nextDocumentAttemptAt = Date.now() + retryDelay(sec.status, filing.attempts, sec.retryAfter, Date.now());
-          this.saveFiling(filing);
+          const retryReceipt = priorReceipt ?? filing;
+          if (!priorReceipt) retryReceipt.status = "document_error";
+          retryReceipt.attempts = filing.attempts; retryReceipt.error = sec.message;
+          retryReceipt.nextDocumentAttemptAt = Date.now() + retryDelay(sec.status, filing.attempts, sec.retryAfter, Date.now());
+          this.saveFiling(retryReceipt);
           if (sec.status === 403 || sec.status === 429) throw sec;
         }
       }
@@ -197,6 +213,48 @@ export class IssuerPoller extends DurableObject<Env> {
       // An alarm may fire during an in-flight relay/poll. Busy guards must not consume its recovery wake-up.
       const row = this.ctx.storage.sql.exec<{ body: string }>("SELECT body FROM state WHERE id=1").toArray()[0];
       if (row) await this.reschedule(JSON.parse(row.body) as PollState);
+    }
+  }
+  /** Authenticated recovery for one already-known recent receipt; never accepts a caller URL or facts. */
+  async reprocess(ticker: Ticker, accession: string, includeDocument = false) {
+    if (this.busy) return { ticker, accession, outcome: "busy" };
+    const row = this.ctx.storage.sql.exec<{ body: string }>("SELECT body FROM filings WHERE accession=?", accession).toArray()[0];
+    const filing: Filing | null = row ? JSON.parse(row.body) : null;
+    const now = Date.now(), activeAfter = awareTime(this.env.NOTIFICATIONS_ACTIVE_AFTER);
+    if (!filing || filing.ticker !== ticker || filing.cik !== ISSUERS[ticker].cik || filing.form !== "8-K" || filing.baseline !== false
+      || !Number.isFinite(activeAfter) || !Number.isFinite(awareTime(filing.acceptedAt)) || awareTime(filing.acceptedAt) > now
+      || now - awareTime(filing.acceptedAt) > 14 * 86_400_000 || !Number.isFinite(awareTime(filing.firstSeenAt))
+      || awareTime(filing.firstSeenAt) < activeAfter || awareTime(filing.firstSeenAt) > now)
+      return { ticker, accession, outcome: "ineligible" };
+    const primary = new URL(filing.primaryDocumentUrl).pathname.split("/").pop() ?? "";
+    if (filing.primaryDocumentUrl !== documentUrl(ticker, accession, primary)) return { ticker, accession, outcome: "ineligible" };
+    const state = this.state(ticker);
+    if (!validUserAgent(this.env.SEC_USER_AGENT)) return { ticker, accession, outcome: "configuration_required" };
+    const backoffUntil = Math.max(state.backoffUntil, filing.nextDocumentAttemptAt);
+    if (backoffUntil > now) return { ticker, accession, outcome: "backoff", backoffUntil };
+    if (state.lastAttemptAt && now - Date.parse(state.lastAttemptAt) < POLL_INTERVAL_MS - 100) return { ticker, accession, outcome: "not_due" };
+    this.busy = true;
+    state.lastAttemptAt = new Date(now).toISOString(); state.pollCount++; this.saveState(state);
+    filing.attempts++; filing.nextDocumentAttemptAt = now + POLL_INTERVAL_MS; this.saveFiling(filing);
+    try {
+      const document = await fetchSec(filing.primaryDocumentUrl, this.env.SEC_USER_AGENT, MAX_DOCUMENT_BYTES);
+      if (!document.text) throw new SecError("SEC returned no primary document", 404);
+      const fetchedAt = new Date(Date.now()).toISOString(), hash = await sha256(document.text);
+      filing.extracted = extractWeekly(document.text, ticker);
+      filing.documents = [{ url: filing.primaryDocumentUrl, fetchedAt, sha256: hash }];
+      filing.documentFetchedAt = fetchedAt; filing.status = statusFor(filing); filing.error = null; filing.nextDocumentAttemptAt = 0;
+      await this.saveReceipt(filing);
+      state.lastSuccessAt = fetchedAt; state.failures = 0; state.error = null; state.backoffUntil = 0; this.saveState(state);
+      return { ticker, accession, outcome: "reprocessed", filing,
+        ...(includeDocument ? { document: { url: filing.primaryDocumentUrl, sha256: hash, html: document.text } } : {}) };
+    } catch (error) {
+      const sec = error instanceof SecError ? error : new SecError("Filing reprocessing failed");
+      state.failures++; state.error = sec.message;
+      state.backoffUntil = Date.now() + retryDelay(sec.status, state.failures, sec.retryAfter, Date.now()); this.saveState(state);
+      // Preserve the last published receipt when recovery fails. The admin can retry after this cooldown.
+      return { ticker, accession, outcome: "error", error: state.error, backoffUntil: state.backoffUntil };
+    } finally {
+      try { await this.relayPublications(); await this.reschedule(state); } finally { this.busy = false; }
     }
   }
   /** This method is only reachable through an authenticated route in a separate replay namespace. */
@@ -234,7 +292,7 @@ export default {
       if (request.method === "GET" && (path === "/" || path === "/api/status")) {
         const now = Date.now();
         return json({ schemaVersion: 1, generatedAt: new Date(now).toISOString(), service: "capital-report", schedule: {
-          timezone: TIME_ZONE, days: ["Monday"], start: "06:45", end: "09:30", intervalSeconds: 30,
+          timezone: TIME_ZONE, days: ["Monday", "Tuesday after an EDGAR Monday holiday"], start: "06:45", end: "09:30", intervalSeconds: 30,
           active: inPollingWindow(now), nextWindowStart: nextWindowStart(now) },
           publicationMode: "reported_facts_for_review", issuers: await Promise.all(tickers.map(ticker => env.ISSUER_POLLER.getByName(ticker).status(ticker))) }, env);
       }
@@ -258,6 +316,20 @@ export default {
           const results = [];
           for (const ticker of tickers) results.push(await env.ISSUER_POLLER.getByName(ticker).poll(ticker, true));
           return json({ schemaVersion: 1, results }, env, 200, false);
+        }
+        if (path === "/api/admin/reprocess") {
+          let payload: Record<string, unknown>;
+          try {
+            const parsed: unknown = JSON.parse(await boundedText(new Response(request.body), 1024));
+            if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Invalid input");
+            payload = parsed as Record<string, unknown>;
+          } catch { return json({ error: "Reprocess input invalid" }, env, 400, false); }
+          if ((payload.ticker !== "MSTR" && payload.ticker !== "ASST") || typeof payload.accession !== "string"
+            || !/^\d{10}-\d{2}-\d{6}$/.test(payload.accession) || (payload.includeDocument !== undefined && typeof payload.includeDocument !== "boolean")
+            || Object.keys(payload).some(key => !["ticker", "accession", "includeDocument"].includes(key)))
+            return json({ error: "Reprocess requires a known ticker and accession" }, env, 400, false);
+          const result = await env.ISSUER_POLLER.getByName(payload.ticker).reprocess(payload.ticker, payload.accession, payload.includeDocument === true);
+          return json({ schemaVersion: 1, ...result }, env, result.outcome === "ineligible" ? 409 : 200, false);
         }
         if (path === "/api/admin/replay") {
           const raw = await boundedText(new Response(request.body), MAX_DOCUMENT_BYTES + 1024);

@@ -43,7 +43,7 @@ export function discordEndpoint(secret: string | undefined): string | null {
 function discordBody(state: NotificationState) {
   const content = state.kind === "test"
     ? `**Digital Credit Report — setup test**\nDiscord notifications are connected. This is a setup test; no new filing or report update is being announced.\n${REPORT_URL}`
-    : `**Strategy + Strive Monday 8-Ks ingested**\nBoth ${state.week} filings are published to the Digital Credit Report data feed.\n${REPORT_URL}\n${state.filings.map(filing => {
+    : `**Strategy + Strive weekly 8-Ks ingested**\nBoth filings for the week of ${state.week} are published to the Digital Credit Report data feed.\n${REPORT_URL}\n${state.filings.map(filing => {
       const quantity = (value: number) => value > 0 && value < 1e-8 ? "<0.00000001" : new Intl.NumberFormat("en-US", { maximumFractionDigits: 8 }).format(value);
       const activity = [filing.weekly_btc_purchases === undefined ? null : `Bought ${quantity(filing.weekly_btc_purchases)} BTC`,
         filing.weekly_btc_sales === undefined ? null : `Sold ${quantity(filing.weekly_btc_sales)} BTC`].filter(Boolean).join(" · ");

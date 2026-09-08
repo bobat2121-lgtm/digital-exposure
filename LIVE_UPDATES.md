@@ -7,20 +7,19 @@ facts with source links and timestamps:
 - [Monitor status](https://capital-report.alatimore06370.workers.dev/api/status)
 - [Filing feed](https://capital-report.alatimore06370.workers.dev/api/filings)
 
-The Streamlit page reads this public feed in **Latest SEC filings**.
-A fragment refreshes it every **15 seconds** while an
-active report session is open. No administrator token is needed to read it,
-and opening the page does not trigger SEC requests.
+The Streamlit financial panels and **Latest SEC filings** read this public feed
+in one fragment every **15 seconds** while a session is open. Web and PNG use
+the same report and the same page-load quote snapshot. No administrator token
+is needed, and page views never trigger SEC requests.
 
 ## Schedule and behavior
 
 Each issuer has a SQLite Durable Object that owns its polling state, filings,
 deduplication, and retry alarm. SEC polling targets **every 30 seconds on
-Mondays from 06:45 until 09:30 America/New_York**. A minute cron starts and
-repairs the alarm chain; the Eastern-time gate handles daylight saving.
-The schedule stays on Monday during holidays and does not move to Tuesday.
-At the September 7 deployment check, the next window began **September 14,
-2026 at 10:45 UTC / 06:45 EDT**.
+Mondays from 06:45 until 09:30 America/New_York**, shifted to Tuesday when
+Monday is an EDGAR federal holiday. A minute Monday/Tuesday cron repairs the
+alarm chain; the Eastern-time gate handles holidays and daylight saving.
+Ordinary Tuesdays remain inactive.
 
 Source failures can extend the interval. A 403 pauses the issuer for at least
 30 minutes; a 429 honors Retry-After with a five-minute minimum. Other failures
@@ -35,8 +34,8 @@ document-retrieval times, plus the source URL and SHA-256 of retrieved HTML.
 
 ## What updates on the report
 
-New filing observations and extracted facts appear automatically in the
-monitor panel. Supported weekly tables are checked for units and arithmetic.
+New filing observations and extracted facts appear automatically. Supported
+weekly tables and explicit zero-activity prose are checked for units and arithmetic.
 `ready_for_review` and `extractionValidated: true` mean those extraction checks
 passed; they do not establish a complete NAV calculation. Unknown or incomplete
 layouts remain `partial`, `not_weekly`, or `document_error`, with missing inputs
@@ -44,17 +43,32 @@ and errors visible. A primary filing that only links to a press-release exhibit
 is discovered, but requires another parser before those exhibit facts can be
 extracted automatically.
 
-**The financial cards retain their verified, dated balances.** They do not
-advance merely because an 8-K appears. Complete publication still requires the
-matching common-share denominator, cash/securities, debt, preferred-claim
-schedule, current prices and any other required NAV supplements to be
-reconciled. Strive's common-capital VWAP estimate and SATA $100-per-net-new-share
-assumption remain separate calculations. A monitor outage keeps the last
-retrieved feed, marks it stale, and leaves the financial card unchanged.
+**Validated filing pairs now advance the financial cards.** The resolver pairs
+the activity week, preserving each company's balance date. Partial parses,
+changed document hashes and amendments do not silently replace a verified
+edition. Pending or rejected updates have a visible dated notice.
+
+The SEC filing supplies BTC activity, balances and financing disclosures.
+`data/report-supplements.json` supplies separately reconciled, date-specific
+Strategy basic shares and debt, native-currency preferred claims, and Strive
+debt. `data/latest-report-filings.json` is the last verified checkpoint for
+new sessions during a feed outage. A complete new pair can advance reported
+figures without supplemental NAV inputs: affected NAV figures then become
+unavailable with an explicit notice; old claims or denominators are never
+carried forward silently. **Supplement reconciliation is still required for
+fully automatic future NAV editions.**
+
+Strive common capital uses the exact dated saved VWAP; SATA uses net new
+shares × $100. September 8 uses complete five-minute bars because two
+one-minute observations were missing. Prior-week gaps suppress WoW
+calculations; QTD/YTD become unavailable when their configured baseline expires.
+Each candidate is calculated and rendered to both web and PNG before replacing
+the session's report. Feed or rendering failures retain the last successful
+version and show its balance dates.
 
 ## Discord notification
 
-Cloudflare sends one combined alert after both new Monday primary 8-Ks are
+Cloudflare sends one combined alert after both new weekly primary 8-Ks are
 retrieved, recognized as weekly BTC updates and published to the feed used by
 Streamlit. No browser session is required. There is no separate document
 upload into Streamlit: the app reads the Worker feed when opened and refreshes
@@ -66,7 +80,8 @@ extending SEC polling. The Monday coordinator verifies exact accessions,
 SHA-256 hashes and source URLs through the same projection as `/api/filings`.
 It persists the verified pair and publication time before sending Discord.
 
-Both filings must be primary 8-Ks accepted on the same Monday in New York,
+Both filings must be primary 8-Ks accepted in the same scheduled release week
+(Monday, or Tuesday after an EDGAR Monday holiday),
 received within 14 days and contain nonnegative BTC holdings plus an explicit
 nonnegative weekly purchase or sale quantity. Sales-only filings and zero
 holdings after liquidation qualify. Gross `weekly_btc_purchases` and optional
@@ -86,6 +101,24 @@ verification. Existing confirmed sends and Discord retry deadlines survive
 deployments. Discord retries continue independently of SEC polling. A rare
 ambiguous network failure after Discord accepts a message may still duplicate
 an unconfirmed delivery; confirmed sends remain deduplicated.
+
+## September 8 recovery
+
+The initial deployment skipped Labor Day's Tuesday releases, and the public
+panels were still wired to the August 31 reconstruction. Both gaps were
+corrected. The Strategy parser also now handles “approximately” before BTC
+holdings and explicit zero BTC/ATM trading outside the usual tables.
+
+Recovered filings: Strategy `0001193125-26-384402`, Strive
+`0001628280-26-060809`. Strategy reports 845,050 BTC, no BTC trades or ATM sales,
+and 1,810,885 STRC shares repurchased for $176.3m. Strive reports 24,531 BTC,
+1,375 BTC bought, 94,934,558 effective common shares and 9,995,425 SATA shares.
+The combined alert was confirmed sent at **2026-09-08T12:35:26.197Z**, attempt 1.
+
+The dated NAV reconciliation includes STRF's $101.993 base preference,
+newly declared accrued STRD dividends, and the scheduled STRC payment reset
+assumption. Strive's September 4 SATA preference is $100 under both
+certificate branches. Full audit inputs are committed in the dated JSON files.
 
 Only Cloudflare stores `DISCORD_WEBHOOK_URL`. Streamlit requires no notification
 secret. The old `/api/streamlit/ack` route is retired and returns 404, and
@@ -184,8 +217,9 @@ python replay_filing_update.py --input path/to/fixture-valid.json --output-dir p
 
 The live Worker now supplies discovery, source timestamps, accession/amendment
 handling, retry/backoff, primary-document hashes and supported issuer parsers.
-Complete-report publication still needs reconciled supplemental inputs and
-a versioned publication store consumed by the financial cards. This archived
+The archived rehearsal needed reconciled supplemental inputs and
+a publication store consumed by the financial cards; the live consumer is
+described above. This archived
 fixture assumes a simple BTC purchase bridge; disposals and transfers require
 additional rules. Its local publisher is single-writer.
 

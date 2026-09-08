@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "revision": "2026-09-08.1",
+  "basis": "Dated supplemental inputs; NAV estimates use ending preferred shares and ordinary accrued dividends. No supplement automatically rolls into a newer balance date.",
+  "balances": {
+    "MSTR": {
+      "2026-08-30": {
+        "btc_holdings": 845050,
+        "effective_common_shares": 420483000,
+        "combined_liquid_assets": 6710000000,
+        "debt_principal": 6753703000,
+        "preferred_claims_usd": 13994091758.5,
+        "preferred_claims_eur": 787916666.6666666
+      },
+      "2026-09-07": {
+        "btc_holdings": 845050,
+        "effective_common_shares": 420497000,
+        "debt_principal": 6753703000,
+        "preferred_claims_usd": 13842771262.388111,
+        "preferred_claims_eur": 789423611.1111112,
+        "share_basis": "Dated Strategy table, Class A 400857000 + Class B 19640000, rounded to thousands",
+        "sources": [
+          "https://www.strategy.com/shares",
+          "https://www.sec.gov/Archives/edgar/data/1050446/000105044626000044/mstr-20260630.htm"
+        ],
+        "limitations": "Debt principal retains June 30 carryforward. Preferred estimate assumes scheduled dividend payments and no unreported issuance; designated liquidity excludes operating assets."
+      }
+    },
+    "ASST": {
+      "2026-08-28": {
+        "debt_principal": 0,
+        "preferred_claims_usd": 907482139.14,
+        "preferred_claims_eur": 0
+      },
+      "2026-09-04": {
+        "debt_principal": 0,
+        "preferred_claims_usd": 999542500,
+        "preferred_claims_eur": 0,
+        "sources": [
+          "https://www.strive.com/treasury/api/dashboard/base-data",
+          "https://www.sec.gov/Archives/edgar/data/1920406/000162828026034802/certi1.htm"
+        ],
+        "limitations": "Friday after-payment convention; $100 certificate-derived preference. Common capital remains a net-share VWAP proxy."
+      }
+    }
+  },
+  "comparison_btc_prices": {
+    "2026-08-30": 78414.14
+  },
+  "comparison_release_dates": {
+    "2026-08-30": "2026-08-31"
+  },
+  "balance_marks": {
+    "2026-08-30": {
+      "EURUSD=X": 1.1643
+    },
+    "2026-08-28": {
+      "STRC": 97.33069306930693
+    }
+  },
+  "preferred_audit_files": [
+    "preferred-claims-2026-09-08.json",
+    "strive-supplements-2026-09-08.json"
+  ]
+}

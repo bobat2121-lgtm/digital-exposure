@@ -5,6 +5,7 @@ these calculations. Financing flows are never added to a balance snapshot.
 """
 
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 from math import isclose, isfinite
 
@@ -104,6 +105,17 @@ def _quote_price(prices: dict, symbol: str) -> float:
 
 def _market_marks(report: Report, prices: dict | None) -> tuple[float, float]:
     companies = {company.ticker: company for company in report.companies}
+    if report.edition_id == "live-prices":
+        if prices is None or not report.valuation_marks:
+            raise ValueError("Live period growth requires the report's exact market marks")
+        marks = dict(report.valuation_marks)
+        for symbol in ("BTC-USD", "STRC", "EURUSD=X"):
+            actual = _quote_price(prices, symbol)
+            if symbol not in marks or not isclose(actual, marks[symbol], rel_tol=1e-12):
+                raise ValueError("Period growth prices do not match the live report")
+        if report.current_btc_price != marks["BTC-USD"]:
+            raise ValueError("Live BTC price does not match its valuation marks")
+        return marks["EURUSD=X"], marks["STRC"]
     if report.edition_id == "current-prices":
         prices = load_current_prices() if prices is None else prices
         if prices is None:
@@ -141,5 +153,14 @@ def get_period_growth(report: Report, prices: dict | None = None) -> dict[str, d
     fx, strc = _market_marks(report, prices)
     baselines = {"MSTR": _strategy_baselines(report.current_btc_price, fx),
                  "ASST": _strive_baselines(strc)}
-    return {company.ticker: calculate_period_growth(company.current, baselines[company.ticker], report.current_btc_price)
-            for company in report.companies}
+    result = {}
+    for company in report.companies:
+        applicable = dict(baselines[company.ticker])
+        if company.balance_date:
+            measurement = date.fromisoformat(company.balance_date)
+            if measurement.year != 2026:
+                applicable["YTD"] = None
+            if not date(2026, 7, 1) <= measurement <= date(2026, 9, 30):
+                applicable["QTD"] = None
+        result[company.ticker] = calculate_period_growth(company.current, applicable, report.current_btc_price)
+    return result

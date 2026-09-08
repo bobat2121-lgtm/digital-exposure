@@ -1,16 +1,13 @@
 import { documentUrl } from "./sec";
 import { ISSUERS, type BitcoinActivity, type Filing, type Ticker } from "./types";
+import { easternDay, weeklyReleaseWeek } from "./schedule";
+export { easternDay } from "./schedule";
 const DAY = 86_400_000;
 export interface ReceiptKey { ticker: Ticker; accession: string; sha256: string }
 export interface NotificationFiling extends ReceiptKey, BitcoinActivity { url: string }
 export interface PublicationEvent { week: string; filing: NotificationFiling }
 export function awareTime(value: string | null | undefined): number {
   return typeof value === "string" && /(Z|[+-]\d{2}:\d{2})$/.test(value) ? Date.parse(value) : NaN;
-}
-export function easternDay(time: number): { date: string; weekday: string } {
-  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", weekday: "short" }).formatToParts(time);
-  const value = (key: string) => parts.find(part => part.type === key)?.value ?? "";
-  return { date: `${value("year")}-${value("month")}-${value("day")}`, weekday: value("weekday") };
 }
 export function recentMondays(now: number): string[] {
   return Array.from({ length: 15 }, (_, i) => easternDay(now - i * DAY)).filter(day => day.weekday === "Mon").map(day => day.date);
@@ -21,11 +18,17 @@ export function validateReceipt(filing: Filing | null, ack: ReceiptKey, now: num
     || filing.cik !== ISSUERS[ack.ticker].cik || !["ready_for_review", "partial"].includes(filing.status)) return null;
   const accepted = awareTime(filing.acceptedAt), fetched = awareTime(filing.documentFetchedAt);
   if (!Number.isFinite(accepted) || !Number.isFinite(fetched) || accepted > now || fetched > now || fetched < accepted || now - accepted > 14 * DAY) return null;
-  const day = easternDay(accepted);
-  if (day.weekday !== "Mon") return null;
+  const week = weeklyReleaseWeek(accepted);
+  if (!week) return null;
   const facts = filing.extracted?.facts;
   const activityKeys = ["weekly_btc_purchases", "weekly_btc_sales"] as const;
-  if (!facts || !Number.isFinite(facts.btc_holdings) || facts.btc_holdings < 0
+  // A dated treasury report may explicitly state both gross directions are zero and omit holdings.
+  // Do not fabricate a holdings balance; positive activity still requires a reported balance.
+  const noTrades = facts?.weekly_btc_purchases === 0 && facts?.weekly_btc_sales === 0
+    && !!filing.extracted?.periodStart && !!filing.extracted?.periodEnd && !!filing.extracted?.balanceDate
+    && Number.isFinite(facts.common_issued_shares) && facts.common_issued_shares >= 0
+    && Number.isFinite(facts.common_issuance_proceeds_usd) && facts.common_issuance_proceeds_usd >= 0;
+  if (!facts || (Object.hasOwn(facts, "btc_holdings") ? !Number.isFinite(facts.btc_holdings) || facts.btc_holdings < 0 : !noTrades)
     || !activityKeys.some(key => Object.hasOwn(facts, key))
     || activityKeys.some(key => Object.hasOwn(facts, key) && (typeof facts[key] !== "number" || !Number.isFinite(facts[key]) || facts[key]! < 0))
     || filing.extracted?.issues.some(issue => /weekly_btc_(?:purchases|sales)|btc_holdings|BTC activity:|reporting period|period dates disagree/i.test(issue))) return null;
@@ -35,7 +38,7 @@ export function validateReceipt(filing: Filing | null, ack: ReceiptKey, now: num
     const primary = new URL(filing.primaryDocumentUrl).pathname.split("/").pop() ?? "";
     if (filing.primaryDocumentUrl !== documentUrl(ack.ticker, ack.accession, primary)) return null;
   } catch { return null; }
-  return { week: day.date, filing: { ...ack, url: filing.primaryDocumentUrl } };
+  return { week, filing: { ...ack, url: filing.primaryDocumentUrl } };
 }
 
 /** Same bounded projection for the public API and internal publication checks. */

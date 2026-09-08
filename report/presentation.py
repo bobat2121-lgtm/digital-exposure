@@ -238,11 +238,11 @@ def build_report_view(report: Report, *, prices: dict | None = None) -> ReportVi
     for field, value in (("label", report.data_label), ("footer", report.footer), ("subtitle", report.subtitle)):
         if value is not None:
             metadata[field] = value
-    if report.edition_id == "current-prices" and not report.illustrative:
+    if report.edition_id in ("current-prices", "live-prices") and not report.illustrative:
         metadata["label"] = ""
         metadata["footer"] = "Dated balances at the displayed market prices · ≈ estimates. Calculation overview on Streamlit."
     from .period_growth import get_period_growth
-    period_growth = get_period_growth(report, prices) if report.edition_id in ("current-prices", "2026-08-31") and not report.illustrative else {}
+    period_growth = get_period_growth(report, prices) if report.edition_id in ("current-prices", "live-prices", "2026-08-31") and not report.illustrative else {}
 
     def tone(value):
         return "positive" if value is not None and value > 0 else "negative" if value is not None and value < 0 else "neutral"

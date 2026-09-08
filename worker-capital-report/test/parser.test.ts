@@ -2,7 +2,27 @@ import { describe, expect, it } from "vitest";
 import { extractWeekly } from "../src/parser";
 import strategy from "./fixtures/strategy-20260831.html?raw";
 import strive from "./fixtures/strive-20260831.html?raw";
+import strategyHoliday from "./fixtures/strategy-20260908.html?raw";
+import striveHoliday from "./fixtures/strive-20260908.html?raw";
 describe("actual SEC weekly HTML fixtures", () => {
+  it("extracts Strategy's holiday zero-ATM and zero-BTC disclosure with approximate ending holdings", () => {
+    const result = extractWeekly(strategyHoliday, "MSTR");
+    expect(result.issues).toEqual([]); expect(result.missing).toEqual([]); expect(result.extractionValidated).toBe(true);
+    expect(result.periodStart).toBe("2026-08-31"); expect(result.balanceDate).toBe("2026-09-07");
+    expect(result.facts).toMatchObject({ btc_holdings: 845050, weekly_btc_purchases: 0, weekly_btc_sales: 0,
+      common_issued_shares: 0, common_issuance_proceeds_usd: 0, usd_reserve_usd: 5100000000, usd_cash_usd: 1440000000 });
+    for (const ticker of ["MSTR", "STRC", "STRF", "STRK", "STRD"]) expect(result.securities[ticker]).toMatchObject({ issuedShares: 0, netIssuanceProceedsUsd: 0 });
+    expect(result.securities.STRC).toMatchObject({ repurchasedShares: 1810885, repurchaseCashUsd: 176300000 });
+    expect(result.facts).not.toHaveProperty("effective_common_shares");
+  });
+  it("extracts Strive's actual holiday report and keeps both dated balances reconciled", () => {
+    const result = extractWeekly(striveHoliday, "ASST");
+    expect(result.issues).toEqual([]); expect(result.missing).toEqual([]); expect(result.extractionValidated).toBe(true);
+    expect(result.priorBalanceDate).toBe("2026-08-28"); expect(result.balanceDate).toBe("2026-09-04");
+    expect(result.facts).toMatchObject({ btc_holdings: 24531, weekly_btc_purchases: 1375 });
+    expect(result.priorFacts).toMatchObject({ btc_holdings: 23156, effective_common_shares: 93262570 });
+    expect(result.facts).not.toHaveProperty("weekly_btc_sales");
+  });
   it("extracts Strategy holdings and both issuance and repurchase tables", () => {
     const result = extractWeekly(strategy, "MSTR");
     expect(result.issues).toEqual([]); expect(result.missing).toEqual([]);

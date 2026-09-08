@@ -1,0 +1,293 @@
+{
+  "retrievedAt": "2026-09-08T12:31:06.898862+00:00",
+  "date": "2026-09-07",
+  "last_business_day": "2026-09-04",
+  "price_windows": {
+    "STRF": {
+      "source": "https://query1.finance.yahoo.com/v8/finance/chart/STRF?period1=1786334400&period2=1788580800&interval=1d&includePrePost=false&includeAdjustedClose=false&events=div%2Csplits",
+      "preceding_ten_sessions": [
+        {
+          "date": "2026-08-21",
+          "close": 99.57
+        },
+        {
+          "date": "2026-08-24",
+          "close": 101.0
+        },
+        {
+          "date": "2026-08-25",
+          "close": 100.89
+        },
+        {
+          "date": "2026-08-26",
+          "close": 101.55
+        },
+        {
+          "date": "2026-08-27",
+          "close": 102.58
+        },
+        {
+          "date": "2026-08-28",
+          "close": 101.65
+        },
+        {
+          "date": "2026-08-31",
+          "close": 102.44
+        },
+        {
+          "date": "2026-09-01",
+          "close": 102.84
+        },
+        {
+          "date": "2026-09-02",
+          "close": 103.01
+        },
+        {
+          "date": "2026-09-03",
+          "close": 104.4
+        }
+      ],
+      "preceding_ten_close_mean": 101.993,
+      "prior_close": 104.4,
+      "last_business_day_close": 104.3,
+      "base_without_issuance_branch": 101.993,
+      "price_events": {}
+    },
+    "STRC": {
+      "source": "https://query1.finance.yahoo.com/v8/finance/chart/STRC?period1=1786334400&period2=1788580800&interval=1d&includePrePost=false&includeAdjustedClose=false&events=div%2Csplits",
+      "preceding_ten_sessions": [
+        {
+          "date": "2026-08-21",
+          "close": 96.18
+        },
+        {
+          "date": "2026-08-24",
+          "close": 97.21
+        },
+        {
+          "date": "2026-08-25",
+          "close": 97.15
+        },
+        {
+          "date": "2026-08-26",
+          "close": 97.16
+        },
+        {
+          "date": "2026-08-27",
+          "close": 98.0
+        },
+        {
+          "date": "2026-08-28",
+          "close": 97.33
+        },
+        {
+          "date": "2026-08-31",
+          "close": 97.1
+        },
+        {
+          "date": "2026-09-01",
+          "close": 96.8
+        },
+        {
+          "date": "2026-09-02",
+          "close": 97.07
+        },
+        {
+          "date": "2026-09-03",
+          "close": 97.82
+        }
+      ],
+      "preceding_ten_close_mean": 97.182,
+      "prior_close": 97.82,
+      "last_business_day_close": 97.75,
+      "base_without_issuance_branch": 100.0,
+      "price_events": {
+        "dividends": {
+          "1786714200": {
+            "amount": 0.5,
+            "date": 1786714200
+          },
+          "1788183000": {
+            "amount": 0.5,
+            "date": 1788183000
+          }
+        }
+      }
+    },
+    "STRK": {
+      "source": "https://query1.finance.yahoo.com/v8/finance/chart/STRK?period1=1786334400&period2=1788580800&interval=1d&includePrePost=false&includeAdjustedClose=false&events=div%2Csplits",
+      "preceding_ten_sessions": [
+        {
+          "date": "2026-08-21",
+          "close": 72.26
+        },
+        {
+          "date": "2026-08-24",
+          "close": 72.75
+        },
+        {
+          "date": "2026-08-25",
+          "close": 73.38
+        },
+        {
+          "date": "2026-08-26",
+          "close": 73.95
+        },
+        {
+          "date": "2026-08-27",
+          "close": 73.75
+        },
+        {
+          "date": "2026-08-28",
+          "close": 71.73
+        },
+        {
+          "date": "2026-08-31",
+          "close": 72.65
+        },
+        {
+          "date": "2026-09-01",
+          "close": 73.26
+        },
+        {
+          "date": "2026-09-02",
+          "close": 74.26
+        },
+        {
+          "date": "2026-09-03",
+          "close": 77.1
+        }
+      ],
+      "preceding_ten_close_mean": 73.509,
+      "prior_close": 77.1,
+      "last_business_day_close": 77.77,
+      "base_without_issuance_branch": 100.0,
+      "price_events": {}
+    },
+    "STRD": {
+      "source": "https://query1.finance.yahoo.com/v8/finance/chart/STRD?period1=1786334400&period2=1788580800&interval=1d&includePrePost=false&includeAdjustedClose=false&events=div%2Csplits",
+      "preceding_ten_sessions": [
+        {
+          "date": "2026-08-21",
+          "close": 72.5
+        },
+        {
+          "date": "2026-08-24",
+          "close": 72.69
+        },
+        {
+          "date": "2026-08-25",
+          "close": 73.22
+        },
+        {
+          "date": "2026-08-26",
+          "close": 73.03
+        },
+        {
+          "date": "2026-08-27",
+          "close": 73.84
+        },
+        {
+          "date": "2026-08-28",
+          "close": 72.05
+        },
+        {
+          "date": "2026-08-31",
+          "close": 72.5
+        },
+        {
+          "date": "2026-09-01",
+          "close": 72.85
+        },
+        {
+          "date": "2026-09-02",
+          "close": 73.265
+        },
+        {
+          "date": "2026-09-03",
+          "close": 75.85
+        }
+      ],
+      "preceding_ten_close_mean": 73.1795,
+      "prior_close": 75.85,
+      "last_business_day_close": 75.9,
+      "base_without_issuance_branch": 100.0,
+      "price_events": {}
+    }
+  },
+  "claims": {
+    "STRF": {
+      "shares": 12839689,
+      "currency": "USD",
+      "base_preference_per_share": 101.993,
+      "base_claims": 1309558400.177,
+      "annual_dividend_per_share": 10,
+      "accrued_30_360_days": 67,
+      "estimated_accrued_dividends": 23896087.861111112,
+      "estimated_native_claims": 1333454488.0381112
+    },
+    "STRC": {
+      "shares": 96353618,
+      "currency": "USD",
+      "base_preference_per_share": 100.0,
+      "base_claims": 9635361800.0,
+      "annual_dividend_per_share": 12,
+      "accrued_30_360_days": 7,
+      "estimated_accrued_dividends": 22482510.866666667,
+      "estimated_native_claims": 9657844310.866667
+    },
+    "STRK": {
+      "shares": 14020744,
+      "currency": "USD",
+      "base_preference_per_share": 100.0,
+      "base_claims": 1402074400.0,
+      "annual_dividend_per_share": 8,
+      "accrued_30_360_days": 67,
+      "estimated_accrued_dividends": 20875329.955555554,
+      "estimated_native_claims": 1422949729.9555554
+    },
+    "STRD": {
+      "shares": 14024221,
+      "currency": "USD",
+      "base_preference_per_share": 100.0,
+      "base_claims": 1402422100.0,
+      "annual_dividend_per_share": 10,
+      "accrued_30_360_days": 67,
+      "estimated_accrued_dividends": 26100633.527777776,
+      "estimated_native_claims": 1428522733.5277777
+    },
+    "STRE": {
+      "shares": 7750000,
+      "currency": "EUR",
+      "base_preference_per_share": 100.0,
+      "base_claims": 775000000.0,
+      "annual_dividend_per_share": 10,
+      "accrued_30_360_days": 67,
+      "estimated_accrued_dividends": 14423611.111111112,
+      "estimated_native_claims": 789423611.1111112
+    }
+  },
+  "estimated_native_claim_totals": {
+    "USD": 13842771262.388111,
+    "EUR": 789423611.1111112
+  },
+  "source_notes": {
+    "strc_count_rollforward": "104,894,705 at June 30 less reported repurchases of 288,930 + 912,143 + 1,152,020 + 1,388,720 + 1,431,212 + 1,557,177 + 1,810,885 = 96,353,618. The September 8 primary states no shares were sold under the ATM during August 31\u2013September 7; the repurchase table has zero for STRF, STRK, STRD and MSTR. No unreported non-ATM preferred issuance is assumed.",
+    "strc_payment": "Assumes the scheduled August 31 $0.50 dividend was paid; ordinary inclusive accrual September 1\u20137 is 7 days. The August 3 filing established August 31 and September 15 payouts at $0.50. A future declared September 15 dividend is not added in full. Direct company paid-status confirmation was not located; the public STRC page was dynamically rendered via web and returned HTTP403 to direct HTTP, so no further direct requests were attempted.",
+    "strc_dividend_rate": "September 1 8-K maintains 12% for semi-monthly periods starting September 16; the preexisting 12% rate continues for September 1\u201315.",
+    "strd_declaration": "September 1 8-K reports the board declared the September-quarter $2.50 per share on August 31. Section 6(a)(ii) includes declared and unpaid dividends accrued to the measurement date: 67/360 of annual $10, rather than the full $2.50.",
+    "quarterly_accrual": "June 30 to September 7 is 67 days under the existing 30/360 certificate convention for STRF, STRK, STRE and newly declared STRD.",
+    "base_pref": "September 7 is a Federal Reserve holiday; the last business-day adjustment is September 4. STRF $101.993 is the preceding ten-close mean assuming no issuance in the current or prior ten-session window; the conditional prior-close branch would be $104.40 if triggered. Other US series remain $100. STRE stays at EUR100 under the no post-IPO issuance premise.",
+    "limitations": "Ending-count accrual is a reproducible estimate, not a paying-agent reconciliation; dividend record holders may retain rights after repurchases. No additional cash deductions are inferred. Counts except STRC carry June 30 until later changes are verified.",
+    "latest_primary_confirmation": "Parent recovered the SEC primary through the authenticated Worker reprocess route and saved work/sep8-MSTR.html. Worker author confirmed explicit no ATM sales, no BTC purchases or sales, approximately 845,050 BTC held, and 1,810,885 STRC shares repurchased for $176.3m. No explicit dividend-paid statement is present."
+  },
+  "sources": {
+    "weekly_8k": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526384402/mstr-20260831.htm",
+    "dividend_8k": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526377583/mstr-20260831.htm",
+    "STRF_certificate": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525062523/d943742dex31.htm",
+    "STRC_certificate": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526270366/d144149dex31.htm",
+    "STRD_certificate": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525138477/d941529dex31.htm",
+    "STRE_certificate": "https://www.sec.gov/Archives/edgar/data/1050446/000119312525280178/d205736dex31.htm",
+    "scheduled_august31_strc_dividend": "https://assets.contentstack.io/v3/assets/bltf8d808d9b8cebd37/blt4e80364948bf437c/6a6ff89f0da6737125578aab/form-8-k_08-03-2026.pdf"
+  }
+}

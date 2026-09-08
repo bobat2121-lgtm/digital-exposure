@@ -50,12 +50,15 @@ def select_sessions(edition_date: date, window: str) -> list[dict]:
 
 
 def parse_estimate(payloads, sessions, *, symbol: str, edition_date: date,
-                   window: str, request_urls=(), fetched_at=None) -> dict:
+                   window: str, request_urls=(), fetched_at=None, interval="1m") -> dict:
     """Validate full minute coverage and summarize supplied Yahoo payloads.
 
     Sessions are dictionaries with date and timezone-aware open/close values.
     No request, wall-clock window selection, or invented fill happens here.
     """
+    if interval not in ("1m", "5m"):
+        raise ValueError("Unsupported VWAP bar interval")
+    step = 60 if interval == "1m" else 300
     if not sessions:
         raise ValueError("No completed sessions were supplied.")
     expected, bounds, daily_parts = {}, [], {}
@@ -68,11 +71,11 @@ def parse_estimate(payloads, sessions, *, symbol: str, edition_date: date,
         if day in daily_parts:
             raise ValueError(f"Duplicate scheduled session: {day}.")
         start, end = int(opening.timestamp()), int(closing.timestamp())
-        if start % 60 or end % 60:
-            raise ValueError("Session boundaries must align to whole minutes.")
+        if start % 60 or end % 60 or (end - start) % step:
+            raise ValueError("Session boundaries must align to whole bars.")
         bounds.append((start, end))
         daily_parts[day] = []
-        for stamp in range(start, end, 60):
+        for stamp in range(start, end, step):
             if stamp in expected:
                 raise ValueError("Overlapping scheduled sessions.")
             expected[stamp] = day
@@ -87,8 +90,8 @@ def parse_estimate(payloads, sessions, *, symbol: str, edition_date: date,
             meta = result.get("meta", {})
             if meta.get("symbol", symbol).upper() != symbol.upper():
                 raise ValueError("Returned symbol does not match the requested equity.")
-            if meta.get("dataGranularity", "1m") != "1m":
-                raise ValueError("The response does not contain 1-minute bars.")
+            if meta.get("dataGranularity", "1m") != interval:
+                raise ValueError("The response does not contain the requested bar interval.")
             if meta.get("currency", "USD") != "USD":
                 raise ValueError("Equity estimate requires USD prices.")
             timestamps = result["timestamp"]
@@ -135,18 +138,21 @@ def parse_estimate(payloads, sessions, *, symbol: str, edition_date: date,
     numerator = fsum(day["weighted_numerator"] for day in daily)
     return {
         "symbol": symbol.upper(), "edition_date": edition_date.isoformat(),
-        "value": numerator / total_volume, "method": "hlc3_1m", "label": "1-minute VWAP estimate",
+        "value": numerator / total_volume, "method": f"hlc3_{interval}",
+        "label": f"{step // 60}-minute VWAP estimate",
         "window": window, "session_start": daily[0]["date"], "session_end": daily[-1]["date"],
         "sessiondates": [day["date"] for day in daily], "bar_count": len(seen),
         "total_volume": total_volume, "weighted_numerator": numerator, "daily": daily,
         "bars": sorted(normalized_bars, key=lambda bar: bar["timestamp"]),
         "request_urls": list(request_urls),
         "fetched_at": fetched_at or datetime.now(timezone.utc).isoformat(),
-        "excluded_bar_count": excluded, "source_note": SOURCE_NOTE,
+        "excluded_bar_count": excluded,
+        "source_note": (SOURCE_NOTE.replace("1-minute", "5-minute").replace("minute volume", "bar volume")
+                        .replace("the minute beginning", "the bar beginning")) if interval == "5m" else SOURCE_NOTE,
     }
 
 
-def _fetch_window(symbol, sessions):
+def _fetch_window(symbol, sessions, interval="1m"):
     payloads, urls, remaining = [], [], list(sessions)
     while remaining:
         first = date.fromisoformat(remaining[0]["date"])
@@ -155,7 +161,7 @@ def _fetch_window(symbol, sessions):
         last = date.fromisoformat(group[-1]["date"]) + timedelta(days=1)
         params = {"period1": int(datetime.combine(first, time(), NEW_YORK).timestamp()),
                   "period2": int(datetime.combine(last, time(), NEW_YORK).timestamp()),
-                  "interval": "1m", "includePrePost": "false", "includeAdjustedClose": "false"}
+                  "interval": interval, "includePrePost": "false", "includeAdjustedClose": "false"}
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{quote(symbol.upper(), safe='')}?{urlencode(params)}"
         request = Request(url, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
         try:

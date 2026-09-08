@@ -90,6 +90,8 @@ class Company:
     valuation_note: str | None = None
     # Explicit gross BTC sold during the reporting period, never a holdings delta.
     weekly_btc_sales: float | None = None
+    balance_date: str | None = None
+    prior_balance_date: str | None = None
 
 
 @dataclass(frozen=True)
@@ -107,6 +109,8 @@ class Report:
     subtitle: str | None = None
     capital_period_label: str = "Capital this week"
     prior_comparison_date: str | None = None
+    # Marks used to build a live filing edition; period comparisons must match.
+    valuation_marks: tuple[tuple[str, float], ...] = ()
 
 
 @dataclass(frozen=True)

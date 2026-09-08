@@ -9,6 +9,49 @@ from report import filing_monitor as monitor
 
 
 class PublicMonitorTests(unittest.TestCase):
+    def fake_streamlit(self):
+        return SimpleNamespace(
+            cache_data=lambda **_: lambda function: function,
+            session_state={}, caption=Mock(), warning=Mock(), dataframe=Mock(),
+            column_config=SimpleNamespace(LinkColumn=lambda label: label),
+        )
+
+    def test_cards_and_details_reuse_the_same_snapshot_without_a_second_request(self):
+        st = self.fake_streamlit()
+        snapshot = monitor.MonitorSnapshot({'schemaVersion': 1, 'issuers': []},
+                                           {'schemaVersion': 1, 'filings': []})
+        with patch.dict('sys.modules', {'streamlit': st}), \
+             patch.object(monitor, 'read_monitor', side_effect=AssertionError('Must reuse card snapshot')) as read:
+            monitor.render_monitor(snapshot)
+        read.assert_not_called()
+        self.assertTrue(any('No filing observations' in call.args[0] for call in st.caption.call_args_list))
+
+    def test_feed_failure_returns_last_successful_snapshot_as_stale(self):
+        st = self.fake_streamlit()
+        status = {'schemaVersion': 1, 'issuers': []}
+        feed = {'schemaVersion': 1, 'filings': [{'accession': 'latest-complete'}]}
+        with patch.dict('sys.modules', {'streamlit': st}), \
+             patch.object(monitor, 'monitor_url', return_value='https://report.example.workers.dev'), \
+             patch.object(monitor, 'read_monitor', side_effect=[(status, feed), OSError('Timed out')]):
+            first = monitor.load_monitor_snapshot()
+            second = monitor.load_monitor_snapshot()
+        self.assertFalse(first.stale)
+        self.assertTrue(second.stale)
+        self.assertEqual(second.feed, first.feed)
+        self.assertEqual(second.status, first.status)
+        self.assertEqual(second.notice, 'SEC refresh unavailable.')
+
+    def test_disconnected_monitor_is_explicit_and_does_not_fetch(self):
+        st = self.fake_streamlit()
+        with patch.dict('sys.modules', {'streamlit': st}), \
+             patch.object(monitor, 'monitor_url', return_value=None), \
+             patch.object(monitor, 'read_monitor') as read:
+            result = monitor.load_monitor_snapshot()
+        self.assertTrue(result.stale)
+        self.assertIsNone(result.feed)
+        self.assertIn('not connected', result.notice)
+        read.assert_not_called()
+
     def test_filing_rows_keep_bought_and_sold_separate_without_inventing_zeros(self):
         base = {
             'ticker': 'ASST', 'form': '8-K', 'baseline': False,

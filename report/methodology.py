@@ -15,7 +15,7 @@ BTC/common share is holdings divided by shares, in sats (100 million/BTC).
 
 **Market activity.** Strategy common capital uses disclosed net proceeds less buybacks.
 Average sale price = net issuance proceeds ÷ shares sold, after fees.
-Strive uses net new shares × prior-week equity VWAP, estimated from one-minute
+Strive uses net new shares × prior-week equity VWAP, estimated from intraday
 bars, before fees; noncash share changes can affect this proxy. Preferred capital
 uses issuance cash less repurchases; SATA uses net new shares × $100 before
 fees. Repurchase average = repurchase cash ÷ shares repurchased.
@@ -33,8 +33,14 @@ in multiples and percentage points respectively.
 June 30 debt carryforward. Quotes can be newer than balances. Missing inputs
 stay unavailable. Price/NAV and amplification are N/M when NAV ≤ 0.
 
-**Strive YTD, August 28.** Its 40.8% uses assumed dilution; our 45.56% uses basic
-shares. The issuer's year-end award count remains unreconciled.
+**Data updates.** SEC filings refresh every 15 seconds while this page is open.
+NAV requires dated share, debt and preferred-claim inputs; missing inputs stay
+unavailable. September 8 uses complete five-minute ASST bars because two
+one-minute observations were missing. Strategy's September claims assume
+scheduled dividend payments and include the newly declared STRD accrual.
+
+**Strive yield.** The company uses assumed dilution; this report uses basic
+shares. Its year-end award count remains unreconciled.
 """
 
 POST_METHODOLOGY = """

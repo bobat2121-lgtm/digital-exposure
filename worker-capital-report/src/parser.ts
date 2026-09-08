@@ -1,7 +1,7 @@
 import { load } from "cheerio/slim";
 import type { Extraction, Facts, Ticker } from "./types";
 
-export const PARSER_VERSION = "sec-weekly-v2";
+export const PARSER_VERSION = "sec-weekly-v4";
 const MONTH = "(?:January|February|March|April|May|June|July|August|September|October|November|December)";
 const DATE = `${MONTH}\\s+\\d{1,2},\\s+\\d{4}`;
 const compact = (text: string): string => text.replace(/[\u00a0\u200b]/g, " ").replace(/\s+/g, " ").trim();
@@ -106,11 +106,16 @@ function bitcoinProse(e: Extraction, paragraphs: string[], ticker: Ticker): void
   if (!e.periodStart || !e.periodEnd) return;
   const issuer = ticker === "MSTR" ? "(?:Strategy|MicroStrategy|the Company)" : "(?:Strive|the Company)";
   for (const paragraph of paragraphs) {
-    const holding = paragraph.match(new RegExp(`As of\\s+(${DATE}),?\\s+${issuer}\\s+(?:held|holds)\\s+([^\\s]+)\\s+(?:bitcoins?|BTC)\\b`, "i"));
+    const holding = paragraph.match(new RegExp(`As of\\s+(${DATE}),?\\s+${issuer}\\s+(?:held|holds)\\s+(?:approximately\\s+)?([^\\s]+)\\s+(?:bitcoins?|BTC)\\b`, "i"));
     if (holding && isoDate(holding[1]) === e.balanceDate) putBitcoin(e, "btc_holdings", holding[2]);
     const weekly = /\bduring (?:the )?(?:reporting )?(?:period|week)\b|\bfor the week ended\b/i.test(paragraph);
     // Historical/cumulative and prospective statements are not this week's gross trades.
     if (!weekly || /since inception|year.to.date|quarter.to.date|cumulative|historically|intends? to|plans? to|expects? to/i.test(paragraph)) continue;
+    const noTrades = new RegExp(`\\b${issuer}\\s+(?:did not sell any shares under its at-the-market offering program and\\s+)?did not (?:purchase|buy|acquire) or sell any (?:bitcoins?|BTC)\\b`, "i");
+    if (noTrades.test(paragraph)) {
+      put(e.facts, "weekly_btc_purchases", 0, e.issues);
+      put(e.facts, "weekly_btc_sales", 0, e.issues);
+    }
     const statement = new RegExp(`\\b${issuer}\\s+(?:has\\s+)?(sold|purchased|bought|acquired)\\s+(?:(?:an aggregate|a total) of\\s+)?(?:approximately\\s+)?([^\\s]+)\\s+(?:bitcoins?|BTC)\\b`, "gi");
     for (const match of paragraph.matchAll(statement)) {
       putBitcoin(e, match[1].toLowerCase() === "sold" ? "weekly_btc_sales" : "weekly_btc_purchases", match[2]);
@@ -124,7 +129,7 @@ export function extractWeekly(html: string, ticker: Ticker): Extraction {
   const e: Extraction = { parserVersion: PARSER_VERSION, periodStart: null, periodEnd: null,
     priorBalanceDate: null, balanceDate: null, facts: {}, priorFacts: {}, securities: {},
     missing: [], issues: [], extractionValidated: false };
-  const dates = [...text.matchAll(new RegExp(`(?:During Period|period from)\\s+(${DATE})\\s+(?:to|through)\\s+(${DATE})`, "gi"))];
+  const dates = [...text.matchAll(new RegExp(`(?:During Period|period from|period between)\\s+(${DATE})\\s+(?:to|through|and)\\s+(${DATE})`, "gi"))];
   if (dates.length) {
     e.periodStart = isoDate(dates[0][1]); e.periodEnd = isoDate(dates[0][2]); e.balanceDate = e.periodEnd;
     if (dates.some(match => isoDate(match[1]) !== e.periodStart || isoDate(match[2]) !== e.periodEnd))
@@ -204,6 +209,18 @@ export function extractWeekly(html: string, ticker: Ticker): Extraction {
   }
   const cash = text.match(/balances of the USD Reserve and USD Cash were \$([\d,.]+) billion and \$([\d,.]+) billion, respectively/i);
   if (cash) { e.facts.usd_reserve_usd = Number(cash[1].replaceAll(",", "")) * 1e9; e.facts.usd_cash_usd = Number(cash[2].replaceAll(",", "")) * 1e9; }
+  const noAtm = e.periodStart && e.periodEnd && paragraphs.some(paragraph =>
+    /\bduring (?:the )?(?:reporting )?period\b/i.test(paragraph)
+    && !/since inception|year.to.date|quarter.to.date|cumulative|historically|intends? to|plans? to|expects? to/i.test(paragraph)
+    && /\b(?:Strategy|MicroStrategy|the Company) did not sell any shares under its at-the-market offering program\b/i.test(paragraph));
+  if (noAtm) {
+    // This explicit statement covers the issuer's ATM, including the securities reported in its activity tables.
+    for (const security of new Set(["MSTR", ...Object.keys(e.securities)])) {
+      const activity = e.securities[security] ?? {};
+      if ((activity.issuedShares ?? 0) !== 0 || (activity.netIssuanceProceedsUsd ?? 0) !== 0) e.issues.push(`Conflicting ${security} no-issuance statement`);
+      else e.securities[security] = { ...activity, issuedShares: 0, netIssuanceProceedsUsd: 0 };
+    }
+  }
   const common = e.securities.MSTR;
   if (common?.issuedShares !== undefined) e.facts.common_issued_shares = common.issuedShares;
   if (common?.netIssuanceProceedsUsd !== undefined) e.facts.common_issuance_proceeds_usd = common.netIssuanceProceedsUsd;

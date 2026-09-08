@@ -1,5 +1,7 @@
 """Read public SEC filing observations without credentials or write requests."""
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from http.client import HTTPException
 import json
 import os
 from pathlib import Path
@@ -97,37 +99,53 @@ def filing_rows(feed: dict) -> list[dict]:
     return rows
 
 
-def render_monitor() -> None:
-    """A Streamlit fragment polls the cached feed every 15s in active sessions."""
+@dataclass(frozen=True)
+class MonitorSnapshot:
+    status: dict | None
+    feed: dict | None
+    stale: bool = False
+    notice: str | None = None
+
+
+def load_monitor_snapshot() -> MonitorSnapshot:
+    """One cached public feed for the financial cards and their filing details."""
     import streamlit as st
 
-    @st.cache_data(ttl=15, show_spinner=False)
+    @st.cache_data(ttl=15, max_entries=4, show_spinner=False)
     def cached_feed(origin):
         return read_monitor(origin)
 
-    @st.fragment(run_every="15s")
-    def monitor_fragment():
-        try:
-            origin = monitor_url()
-            if not origin:
-                st.caption("The SEC monitor is not connected in this environment.")
-                return
-            status, feed = cached_feed(origin)
-            st.session_state["last_sec_monitor"] = (status, feed)
-        except (OSError, ValueError, TypeError, KeyError):
-            st.warning("Latest filings are temporarily unavailable. Verified report balances are retained.")
-            previous = st.session_state.get("last_sec_monitor")
-            if not previous:
-                return
-            status, feed = previous
-            st.caption("Last successfully retrieved feed; it may be stale.")
-        st.caption("SEC checks: Mondays, 6:45–9:30 a.m. ET. Discord alerts run independently of this page.")
-        st.caption("Polling window active." if status.get("schedule", {}).get("active") else "Outside the Monday polling window; saved observations are shown.")
-        st.caption("Filings appear after ingestion. Report balances advance after reconciliation.")
-        rows = filing_rows(feed)
-        if rows:
-            st.dataframe(rows[:20], hide_index=True, column_config={"Filing": st.column_config.LinkColumn("SEC filing")})
-        else:
-            st.caption("No filing observations recorded yet.")
+    try:
+        origin = monitor_url()
+        if not origin:
+            return MonitorSnapshot(None, None, stale=True, notice="SEC monitor is not connected.")
+        status, feed = cached_feed(origin)
+        st.session_state["last_sec_monitor"] = (status, feed)
+        return MonitorSnapshot(status, feed)
+    except (OSError, ValueError, TypeError, KeyError, HTTPException):
+        previous = st.session_state.get("last_sec_monitor")
+        status, feed = previous if previous else (None, None)
+        return MonitorSnapshot(status, feed, stale=True, notice="SEC refresh unavailable.")
 
-    monitor_fragment()
+
+def render_monitor(snapshot: MonitorSnapshot | None = None) -> None:
+    """Render the same snapshot used by the cards; the app owns the refresh loop."""
+    import streamlit as st
+
+    snapshot = snapshot or load_monitor_snapshot()
+    if snapshot.stale:
+        st.caption(snapshot.notice or "SEC refresh unavailable.")
+        if snapshot.feed is not None:
+            st.caption("Last successfully retrieved feed; it may be stale.")
+    if snapshot.status is None or snapshot.feed is None:
+        return
+    schedule = snapshot.status.get("schedule") or {}
+    if not isinstance(schedule, dict):
+        schedule = {}
+    st.caption("SEC checks: Monday, 6:45–9:30 a.m. ET; Tuesday after an EDGAR Monday holiday. Discord runs independently.")
+    st.caption("Polling window active." if schedule.get("active") else "Outside the weekly polling window; saved observations are shown.")
+    rows = filing_rows(snapshot.feed)
+    if rows:
+        st.dataframe(rows[:20], hide_index=True, column_config={"Filing": st.column_config.LinkColumn("SEC filing")})
+    else:
+        st.caption("No filing observations recorded yet.")

@@ -1,0 +1,231 @@
+{
+  "retrievedAt": "2026-09-08T12:28:43.673575+00:00",
+  "baseDataSource": "https://www.strive.com/treasury/api/dashboard/base-data",
+  "calculatedSource": "https://www.strive.com/treasury/api/dashboard/calculated?fromDate=2026-08-28&toDate=2026-09-04&currency=USD&stockSymbol=ASST",
+  "preferredStocks": [
+    {
+      "ticker": "SATA",
+      "notional_value": 999542500,
+      "dividend_rate": 0.13,
+      "created_at": "2026-09-08T12:04:08.980007+00:00",
+      "updated_at": "2026-09-08T12:04:15.411354+00:00",
+      "stated_range_min": 99,
+      "stated_range_max": 101,
+      "date": "2026-09-04",
+      "shares_outstanding": 9995425
+    }
+  ],
+  "latestCashDebt": [
+    {
+      "date": "2026-08-21",
+      "cash": 171900000,
+      "debt": 0,
+      "created_at": "2026-08-24T12:10:36.00058+00:00",
+      "updated_at": "2026-08-24T12:10:36.00058+00:00",
+      "dividend_reserve_months": 18,
+      "marketable_securities": 48571000
+    },
+    {
+      "date": "2026-08-28",
+      "cash": 183500000,
+      "debt": 0,
+      "created_at": "2026-08-31T12:04:10.286514+00:00",
+      "updated_at": "2026-09-06T08:13:07.041147+00:00",
+      "dividend_reserve_months": 18,
+      "marketable_securities": 49152000
+    },
+    {
+      "date": "2026-09-04",
+      "cash": 202600000,
+      "debt": 0,
+      "created_at": "2026-09-08T12:03:13.827173+00:00",
+      "updated_at": "2026-09-08T12:03:36.539605+00:00",
+      "dividend_reserve_months": 18,
+      "marketable_securities": 49364000
+    }
+  ],
+  "dividends": [
+    {
+      "ticker": "SATA",
+      "payDate": "2026-08-28",
+      "recordDate": "2026-08-27",
+      "cashAmount": 0.0516,
+      "currency": "USD",
+      "status": "paid"
+    },
+    {
+      "ticker": "SATA",
+      "payDate": "2026-08-31",
+      "recordDate": "2026-08-28",
+      "cashAmount": 0.0516,
+      "currency": "USD",
+      "status": "paid"
+    },
+    {
+      "ticker": "SATA",
+      "payDate": "2026-09-01",
+      "recordDate": "2026-08-31",
+      "cashAmount": 0.0516,
+      "currency": "USD",
+      "status": "paid"
+    },
+    {
+      "ticker": "SATA",
+      "payDate": "2026-09-02",
+      "recordDate": "2026-09-01",
+      "cashAmount": 0.0516,
+      "currency": "USD",
+      "status": "paid"
+    },
+    {
+      "ticker": "SATA",
+      "payDate": "2026-09-03",
+      "recordDate": "2026-09-02",
+      "cashAmount": 0.0516,
+      "currency": "USD",
+      "status": "paid"
+    },
+    {
+      "ticker": "SATA",
+      "payDate": "2026-09-04",
+      "recordDate": "2026-09-03",
+      "cashAmount": 0.0516,
+      "currency": "USD",
+      "status": "paid"
+    },
+    {
+      "ticker": "SATA",
+      "payDate": "2026-09-08",
+      "recordDate": "2026-09-04",
+      "cashAmount": 0.0516,
+      "currency": "USD",
+      "status": "paid"
+    }
+  ],
+  "sata_raw_close_source": "https://query1.finance.yahoo.com/v8/finance/chart/SATA?period1=1786334400&period2=1788580800&interval=1d&includePrePost=false&includeAdjustedClose=false&events=div%2Csplits",
+  "sata_raw_close_windows": {
+    "2026-08-28": {
+      "preceding_ten_sessions": [
+        {
+          "date": "2026-08-14",
+          "close": 99.26
+        },
+        {
+          "date": "2026-08-17",
+          "close": 99.48
+        },
+        {
+          "date": "2026-08-18",
+          "close": 99.69
+        },
+        {
+          "date": "2026-08-19",
+          "close": 99.94
+        },
+        {
+          "date": "2026-08-20",
+          "close": 99.91
+        },
+        {
+          "date": "2026-08-21",
+          "close": 100.01
+        },
+        {
+          "date": "2026-08-24",
+          "close": 100.0
+        },
+        {
+          "date": "2026-08-25",
+          "close": 100.0
+        },
+        {
+          "date": "2026-08-26",
+          "close": 100.01
+        },
+        {
+          "date": "2026-08-27",
+          "close": 100.01
+        }
+      ],
+      "preceding_ten_close_mean": 99.831,
+      "prior_close": 100.01,
+      "base_without_same_day_issuance": 100.0,
+      "base_if_same_day_issuance": 100.01,
+      "base_range": [
+        100.0,
+        100.01
+      ]
+    },
+    "2026-09-04": {
+      "preceding_ten_sessions": [
+        {
+          "date": "2026-08-21",
+          "close": 100.01
+        },
+        {
+          "date": "2026-08-24",
+          "close": 100.0
+        },
+        {
+          "date": "2026-08-25",
+          "close": 100.0
+        },
+        {
+          "date": "2026-08-26",
+          "close": 100.01
+        },
+        {
+          "date": "2026-08-27",
+          "close": 100.01
+        },
+        {
+          "date": "2026-08-28",
+          "close": 99.75
+        },
+        {
+          "date": "2026-08-31",
+          "close": 100.01
+        },
+        {
+          "date": "2026-09-01",
+          "close": 99.95
+        },
+        {
+          "date": "2026-09-02",
+          "close": 100.0
+        },
+        {
+          "date": "2026-09-03",
+          "close": 100.0
+        }
+      ],
+      "preceding_ten_close_mean": 99.974,
+      "prior_close": 100.0,
+      "base_without_same_day_issuance": 100.0,
+      "base_if_same_day_issuance": 100.0,
+      "base_range": [
+        100.0,
+        100.0
+      ]
+    }
+  },
+  "certificate_source": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026034802/certi1.htm",
+  "certificate_assumption_from_historical_sources": "Section 1 Liquidation Preference definition, confirmed against the SEC certificate: per-share base is max($100 stated amount, preceding ten trading-day closing-sale-price mean, prior trading-day close only if an issuance sale occurs on the target business day). After-close September 4 inputs establish $100 regardless of unknown same-day issuance; not a financing-proceeds assumption.",
+  "claim_estimate": {
+    "date": "2026-09-04",
+    "shares": 9995425,
+    "base_preference_lower": 100.0,
+    "base_preference_upper": 100.0,
+    "ordinary_accrued_unpaid_dividends": 0,
+    "dividend_snapshot_basis": "Friday after payment; company payment history marks scheduled daily installments through September 4 paid. Retrospective status confirmation, not an archived September 4 snapshot; no September 8 payment outcome used for Friday claims.",
+    "total_claim_lower": 999542500.0,
+    "total_claim_upper": 999542500.0,
+    "financing_proxy_is_distinct": true,
+    "basis_status": "Certificate-derived $100 base using Yahoo unadjusted Nasdaq historical closes; ordinary accrual zero under Friday after-payment convention, with company retrospective paid status. Not an exact paying-agent liability reconciliation."
+  },
+  "certificate_sections": [
+    "Section 1: Liquidation Preference, Last Reported Sale Price and Stated Amount definitions",
+    "Section 5(a): Regular Dividends",
+    "Section 6(a): Rights upon liquidation"
+  ]
+}

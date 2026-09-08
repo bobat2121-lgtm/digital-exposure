@@ -10,7 +10,7 @@
     "bindings": [{ "name": "ISSUER_POLLER", "class_name": "IssuerPoller" }, { "name": "REPORT_NOTIFIER", "class_name": "ReportNotifier" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["IssuerPoller"] }, { "tag": "v2", "new_sqlite_classes": ["ReportNotifier"] }],
-  "triggers": { "crons": ["* 10-14 * * MON"] },
+  "triggers": { "crons": ["* 10-14 * * MON,TUE"] },
   "vars": { "PUBLIC_ORIGIN": "*", "NOTIFICATIONS_ACTIVE_AFTER": "2026-09-08T00:00:00Z" },
   "secrets": { "required": ["SEC_USER_AGENT", "ADMIN_TOKEN", "DISCORD_WEBHOOK_URL"] }
 }

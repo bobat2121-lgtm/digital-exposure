@@ -31,6 +31,20 @@ def summarize(data, sessions=SESSIONS):
 
 
 class EquityVwapTests(unittest.TestCase):
+    def test_five_minute_estimate_requires_complete_grid_and_labels_resolution(self):
+        session = [{"date": "2026-08-28", "open": "2026-08-28T13:30:00+00:00",
+                    "close": "2026-08-28T13:40:00+00:00"}]
+        data = payload(stamps=[START, START + 300])
+        data["chart"]["result"][0]["meta"]["dataGranularity"] = "5m"
+        kwargs = dict(symbol="ASST", edition_date=date(2026, 8, 31), window="prior_week", interval="5m")
+        estimate = parse_estimate(data, session, **kwargs)
+        self.assertEqual(estimate["value"], 17.5)
+        self.assertEqual(estimate["method"], "hlc3_5m")
+        self.assertEqual(estimate["label"], "5-minute VWAP estimate")
+        data["chart"]["result"][0]["timestamp"][1] = START + 60
+        with self.assertRaisesRegex(ValueError, "grid"):
+            parse_estimate(data, session, **kwargs)
+
     def test_uses_minute_hlc3_and_unequal_volume_weights(self):
         result = summarize(payload(closes=[12, 18]))
         self.assertAlmostEqual(result["value"], ((12 + 8 + 12) / 3 + (22 + 18 + 18)) / 4)

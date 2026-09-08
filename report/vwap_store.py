@@ -20,7 +20,7 @@ def validate_estimate(estimate: dict, symbol: str, edition: date) -> dict:
     value = estimate.get("value")
     if not isinstance(value, (float, int)) or not isfinite(value) or value <= 0:
         raise ValueError("Saved VWAP must be a positive finite price")
-    if estimate.get("method") != "hlc3_1m" or not estimate.get("daily"):
+    if estimate.get("method") not in ("hlc3_1m", "hlc3_5m") or not estimate.get("daily"):
         raise ValueError("Saved VWAP is missing its estimation method or daily audit")
     if not (date.fromisoformat(estimate["session_start"]) <= date.fromisoformat(estimate["session_end"]) < edition):
         raise ValueError("Saved VWAP contains dates outside the historical cutoff")

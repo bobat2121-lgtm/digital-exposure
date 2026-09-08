@@ -1,8 +1,10 @@
 """Every browser opening gets one complete quote refresh shared by web and PNG."""
 from copy import deepcopy
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -10,6 +12,8 @@ import streamlit as st
 from streamlit.testing.v1 import AppTest
 
 from report.current_prices import SOURCE_URLS, load_current_prices, save_current_prices
+from report.current_report import current_report
+from report.filing_monitor import MonitorSnapshot
 from report.post_export import render_post_png
 from report.public_page import render_public_report
 
@@ -26,6 +30,10 @@ class PublicAppTests(unittest.TestCase):
         self.quote_network = self.start_patch("report.current_prices.urlopen", side_effect=AssertionError("Tests must not call a market provider"))
         self.monitor_network = self.start_patch("report.filing_monitor.urlopen", side_effect=AssertionError("Tests must not call the live SEC monitor"))
         self.monitor_render = self.start_patch("report.filing_monitor.render_monitor")
+        self.feed = {"schemaVersion": 1, "filings": [], "version": "saved"}
+        self.snapshot = MonitorSnapshot({"schemaVersion": 1, "issuers": []}, self.feed)
+        self.feed_read = self.start_patch("report.filing_monitor.load_monitor_snapshot", return_value=self.snapshot)
+        self.resolve = self.start_patch("report.live_report.resolve_live_report", side_effect=self.resolve_report)
         st.cache_data.clear()
         st.cache_resource.clear()
         self.addCleanup(st.cache_data.clear)
@@ -59,6 +67,19 @@ class PublicAppTests(unittest.TestCase):
 
     def open_app(self):
         return AppTest.from_file(str(self.app_path)).run(timeout=30)
+
+    def resolve_report(self, prices, feed):
+        """A deterministic resolver contract; live-report math has its own tests."""
+        report = current_report(prices)
+        if feed.get("version") == "advanced":
+            first, second = report.companies
+            first = replace(first, current=replace(first.current, btc_holdings=first.current.btc_holdings + 1_000),
+                            weekly_btc_purchases=1_000)
+            report = replace(report, companies=(first, second),
+                             subtitle="Balance dates: Strategy Sep 6 · Strive Aug 28",
+                             capital_period_label="Market Activity · Aug 31–Sep 6")
+        return SimpleNamespace(report=report, version=feed.get("version", "saved"),
+                               notice=None if feed.get("version") == "advanced" else "Saved balance dates: Strategy Aug 30 · Strive Aug 28.")
 
     def assert_unavailable(self, app):
         self.assertEqual(len(app.exception), 0)
@@ -195,6 +216,83 @@ class PublicAppTests(unittest.TestCase):
         self.assert_unavailable(app)
         self.assertEqual(self.cache_path.read_bytes(), original)
         self.assertNotIn("Private", app.error[0].value)
+
+    def test_new_feed_advances_cards_and_download_together_without_refetching_prices(self):
+        with patch("report.public_page.render_public_report", wraps=render_public_report) as web, \
+             patch("report.post_export.render_post_png", wraps=render_post_png) as export:
+            app = self.open_app()
+            first_view = web.call_args.args[0]
+            first_download = app.get("download_button")[0].proto.url
+            advanced = dict(self.feed, version="advanced", filings=[{"accession": "new-week"}])
+            self.feed_read.return_value = MonitorSnapshot(self.snapshot.status, advanced)
+            app.run(timeout=30)
+            self.assertEqual(len(app.exception), 0)
+            latest_view = web.call_args.args[0]
+            self.assertEqual(export.call_args.args[0], latest_view)
+            self.assertNotEqual(latest_view.companies[0].total_bitcoin.value, first_view.companies[0].total_bitcoin.value)
+            self.assertNotEqual(latest_view.companies[0].nav_per_share, first_view.companies[0].nav_per_share)
+            self.assertNotEqual(app.get("download_button")[0].proto.url, first_download)
+            self.assertIn("846,050", self.report_html(app))
+            self.assertIn("Strategy Sep 6", self.report_html(app))
+            self.assertEqual(latest_view.report_time, first_view.report_time)
+            self.assertEqual(latest_view.btc_price, first_view.btc_price)
+            self.pull.assert_called_once_with()
+            self.assertEqual(self.monitor_render.call_args.args[0].feed, advanced)
+
+    def test_feed_outage_preserves_latest_cards_and_png_with_dated_stale_notice(self):
+        advanced = dict(self.feed, version="advanced", filings=[{"accession": "new-week"}])
+        self.feed_read.return_value = MonitorSnapshot(self.snapshot.status, advanced)
+        app = self.open_app()
+        previous_html = self.report_html(app)
+        previous_download = app.get("download_button")[0].proto.url
+        self.feed_read.return_value = MonitorSnapshot(self.snapshot.status, advanced, stale=True,
+                                                      notice="SEC refresh unavailable.")
+        self.resolve.side_effect = AssertionError("A stale feed must not replace the retained report")
+        app.run(timeout=30)
+        self.assertEqual(len(app.exception), 0)
+        self.assertEqual(self.report_html(app), previous_html)
+        self.assertEqual(app.get("download_button")[0].proto.url, previous_download)
+        notices = " ".join(caption.value for caption in app.caption)
+        self.assertIn("SEC refresh unavailable", notices)
+        self.assertIn("Retained report", notices)
+        self.assertIn("Strategy Sep 6", notices)
+        self.pull.assert_called_once_with()
+
+    def test_unreconciled_new_feed_retains_last_working_card_and_discloses_failure(self):
+        app = self.open_app()
+        previous_html = self.report_html(app)
+        previous_download = app.get("download_button")[0].proto.url
+        self.resolve.side_effect = ValueError("New filing cannot establish a full denominator")
+        app.run(timeout=30)
+        self.assertEqual(len(app.exception), 0)
+        self.assertEqual(self.report_html(app), previous_html)
+        self.assertEqual(app.get("download_button")[0].proto.url, previous_download)
+        self.assertTrue(any("New filing update could not be applied" in caption.value for caption in app.caption))
+        self.pull.assert_called_once_with()
+
+    def test_first_visit_feed_outage_identifies_the_retained_balance_dates(self):
+        self.feed_read.return_value = MonitorSnapshot(None, None, stale=True, notice="SEC refresh unavailable.")
+        app = self.open_app()
+        self.assertEqual(len(app.exception), 0)
+        self.assertEqual(len(app.error), 0)
+        notices = " ".join(caption.value for caption in app.caption)
+        self.assertIn("SEC refresh unavailable", notices)
+        self.assertIn("Strategy Aug 30", notices)
+        self.assertIn("Strive Aug 28", notices)
+        self.assertEqual(self.resolve.call_args.args[1], {"schemaVersion": 1, "filings": []})
+
+    def test_png_failure_does_not_publish_a_new_web_snapshot_alone(self):
+        app = self.open_app()
+        previous_html = self.report_html(app)
+        previous_download = app.get("download_button")[0].proto.url
+        advanced = dict(self.feed, version="advanced")
+        self.feed_read.return_value = MonitorSnapshot(self.snapshot.status, advanced)
+        with patch("report.post_export.render_post_png", side_effect=ValueError("New disclosure does not fit")):
+            app.run(timeout=30)
+        self.assertEqual(len(app.exception), 0)
+        self.assertEqual(self.report_html(app), previous_html)
+        self.assertEqual(app.get("download_button")[0].proto.url, previous_download)
+        self.assertTrue(any("could not be applied" in caption.value for caption in app.caption))
 
 
 if __name__ == "__main__":
