@@ -1,92 +1,48 @@
-"""The public Digital Credit Report: python -m streamlit run app.py."""
+"""Public Monday and Friday reports sharing one Streamlit entrypoint."""
+from pathlib import Path
+import sys
+
 import streamlit as st
 
-from report.current_report import current_report
-from report.filing_monitor import load_monitor_snapshot, render_monitor
-from report.live_report import resolve_live_report
-from report.methodology import PUBLIC_METHODOLOGY
-from report.post_export import render_post_png
-from report.price_refresh import PriceStore
-from report.presentation import build_report_view
-from report.public_page import public_stylesheet, render_public_report
+ROOT = Path(__file__).resolve().parent
+friday_source = ROOT / "sources" / "friday"
+if str(friday_source) not in sys.path:
+    sys.path.insert(0, str(friday_source))
 
-st.set_page_config(page_title="The Digital Credit Report", page_icon="₿", layout="wide")
+st.set_page_config(page_title="Weekly Reports | Digital Credit", page_icon="₿", layout="wide")
 
+MONDAY = "Monday · Digital Credit"
+FRIDAY = "Friday · Bitcoin & Digital Credit"
+if "weekly_report_tabs" not in st.session_state:
+    st.session_state["weekly_report_tabs"] = FRIDAY if st.query_params.get("report") == "friday" else MONDAY
 
-@st.cache_data(show_spinner=False, max_entries=32)
-def downloadable_report(view):
-    return render_post_png(view)
+monday, friday = st.tabs([MONDAY, FRIDAY], key="weekly_report_tabs", on_change="rerun")
+active = "Friday" if friday.open else "Monday"
+st.session_state["weekly_active_report"] = active
+if st.query_params.get("report") != active.lower():
+    st.query_params["report"] = active.lower()
 
+dark = active == "Friday"
+colors = {
+    "background": "#0b0d0f" if dark else "#f5f3ed",
+    "card": "#15191d" if dark else "#ffffff",
+    "text": "#f5f3ed" if dark else "#1b2c34",
+    "muted": "#b1b9bf" if dark else "#627078",
+    "border": "#30363c" if dark else "#dce1de",
+    "hover": "#242a30" if dark else "#eceee9",
+    "scheme": "dark" if dark else "light",
+}
+shell_css = (ROOT / "assets" / "shell.css").read_text(encoding="utf-8")
+for name, value in colors.items():
+    shell_css = shell_css.replace("{{" + name + "}}", value)
+st.html("<style>" + shell_css + "</style>")
 
-@st.cache_resource(show_spinner=False)
-def price_store():
-    return PriceStore()
-
-
-st.html(public_stylesheet())
-if "page_prices" not in st.session_state:
-    # Browser reloads create a new session; SEC refreshes retain its quote marks.
-    with st.spinner("Updating prices…"):
-        st.session_state["page_prices"] = price_store().refresh()
-price_result = st.session_state["page_prices"]
-if price_result.prices is None:
-    st.error("The report is temporarily unavailable. Please try again shortly.")
-    st.stop()
-
-
-def prepare_report(report, *, notice=None, version="saved"):
-    """Only publish a new snapshot after both its web view and PNG are valid."""
-    view = build_report_view(report, prices=price_result.prices)
-    html = render_public_report(view)
-    return {"report": report, "view": view, "html": html, "png": downloadable_report(view),
-            "notice": notice, "version": version}
-
-
-@st.fragment(run_every="15s")
-def financial_report():
-    snapshot = load_monitor_snapshot()
-    previous = st.session_state.get("last_prepared_report")
-    problem = None
-    if snapshot.stale and previous is not None:
-        prepared = previous
-    else:
-        try:
-            feed = snapshot.feed or {"schemaVersion": 1, "filings": []}
-            result = resolve_live_report(price_result.prices, feed)
-            prepared = prepare_report(result.report, notice=result.notice, version=result.version)
-            st.session_state["last_prepared_report"] = prepared
-        except (ValueError, OSError, TypeError, KeyError):
-            problem = "New filing update could not be applied."
-            if previous is not None:
-                prepared = previous
-            else:
-                try:
-                    prepared = prepare_report(current_report(price_result.prices))
-                    st.session_state["last_prepared_report"] = prepared
-                except (ValueError, OSError, TypeError, KeyError):
-                    st.error("The report is temporarily unavailable. Please try again shortly.")
-                    return
-
-    st.html(prepared["html"])
-    if price_result.using_saved_prices:
-        st.caption("Price refresh unavailable · showing last saved quotes.")
-    if snapshot.stale or problem:
-        reason = problem or snapshot.notice or "SEC refresh unavailable."
-        st.caption(f"{reason} Retained report · {prepared['view'].subtitle}.")
-    if prepared["notice"]:
-        st.caption(prepared["notice"])
-
-    with st.expander("Calculation overview", expanded=False):
-        st.markdown(PUBLIC_METHODOLOGY.replace("$", r"\$"))
-
-    with st.expander("Latest SEC filings", expanded=False):
-        render_monitor(snapshot)
-
-    st.download_button(
-        "Download", data=prepared["png"], file_name="digital-credit-report.png", mime="image/png",
-        icon=":material/download:", type="tertiary",
-        help="Save the 1800 × 1125 report image for a post.", on_click="ignore",
-    )
-
-
-financial_report()
+# Hidden pages never render charts, poll providers, or register timers.
+if monday.open:
+    with monday:
+        from monday_page import render
+        render()
+elif friday.open:
+    with friday:
+        from friday_page import render
+        render()

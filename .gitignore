@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.cache/
 .streamlit/secrets.toml
 *.log
 .env

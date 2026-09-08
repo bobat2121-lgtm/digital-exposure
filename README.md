@@ -1,12 +1,13 @@
-# The Digital Credit Report
+# Bitcoin & Digital Credit Reports
 
-A single-page Streamlit report comparing Strategy (MSTR) and Strive (ASST).
+A Streamlit page with switchable Monday and Friday reports.
 The hosted app is at [digital-credit-report.streamlit.app](https://digital-credit-report.streamlit.app/).
-This checkout contains the approved public redesign; see [DEPLOYMENT.md](DEPLOYMENT.md)
-for rollout status. Each page opening or browser reload refreshes the existing market-price
-sources while retaining the verified August 30 / August 28 balance snapshots. The Imprint title, responsive panels, and compact download
-share the same figures. See [PUBLIC_REPORT.md](PUBLIC_REPORT.md) for the design
-and [CURRENT_PRICES.md](CURRENT_PRICES.md) for quote sources and snapshot dates.
+Monday compares Strategy (MSTR) and Strive (ASST) using validated SEC filing
+pairs. Friday adds weekly dollar liquidity, BTC performance, Price/NAV,
+supply in profit/loss, CoinMarketCap Fear & Greed and SMA extensions.
+Both reports use their own captured dataset for downloads, excluding navigation
+and refresh controls. See [WEEKLY_REPORTS.md](WEEKLY_REPORTS.md) for the tabs,
+refresh behavior, download formats and Friday's dated balance limitations.
 
 The live [capital-report SEC monitor](https://capital-report.alatimore06370.workers.dev/api/status)
 checks both issuers every 30 seconds on Mondays, 06:45–09:30 Eastern. Its
@@ -50,10 +51,9 @@ quote timestamps. It never writes the repository on a public visit. The read-onl
 filing monitor also uses the network; its outage retains the card and last feed.
 Local scripts still support maintained quote snapshots and historical VWAP updates.
 
-The public report has one responsive view: two aligned company panels on
-computer screens, stacked panels on phones. A discreet **Download** button at
-the bottom saves a fixed 1800 × 1125 PNG for X. There are no public edition
-selectors, post/detail tabs, or price-refresh controls.
+Monday retains two aligned company panels on computer screens and stacked
+panels on phones, with a fixed 1800 × 1125 PNG for X. Friday uses the inverse
+dark palette and a 1800 × 1600 PNG. Each tab has one **Refresh data** button.
 
 **Calculation overview** explains the metrics in 279 words. Market Activity
 groups common capital, preferred capital, and effective common shares.

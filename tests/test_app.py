@@ -5,11 +5,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
+from time import monotonic
 import unittest
 from unittest.mock import patch
 
 import streamlit as st
 from streamlit.testing.v1 import AppTest
+import monday_page as page
 
 from report.current_prices import SOURCE_URLS, load_current_prices, save_current_prices
 from report.current_report import current_report
@@ -29,11 +31,11 @@ class PublicAppTests(unittest.TestCase):
         self.start_patch("report.current_prices.CACHE_PATH", self.cache_path)
         self.quote_network = self.start_patch("report.current_prices.urlopen", side_effect=AssertionError("Tests must not call a market provider"))
         self.monitor_network = self.start_patch("report.filing_monitor.urlopen", side_effect=AssertionError("Tests must not call the live SEC monitor"))
-        self.monitor_render = self.start_patch("report.filing_monitor.render_monitor")
+        self.monitor_render = self.start_patch("monday_page.render_monitor")
         self.feed = {"schemaVersion": 1, "filings": [], "version": "saved"}
         self.snapshot = MonitorSnapshot({"schemaVersion": 1, "issuers": []}, self.feed)
-        self.feed_read = self.start_patch("report.filing_monitor.load_monitor_snapshot", return_value=self.snapshot)
-        self.resolve = self.start_patch("report.live_report.resolve_live_report", side_effect=self.resolve_report)
+        self.feed_read = self.start_patch("monday_page.load_monitor_snapshot", return_value=self.snapshot)
+        self.resolve = self.start_patch("monday_page.resolve_live_report", side_effect=self.resolve_report)
         st.cache_data.clear()
         st.cache_resource.clear()
         self.addCleanup(st.cache_data.clear)
@@ -68,6 +70,18 @@ class PublicAppTests(unittest.TestCase):
     def open_app(self):
         return AppTest.from_file(str(self.app_path)).run(timeout=30)
 
+    def poll_report(self, app):
+        """Run the real due SEC fragment against the existing browser session.
+
+        The shell's normal/tab reruns deliberately reuse its completed report;
+        they no longer stand in for the independent 15-second SEC timer.
+        """
+        app.session_state[page.LAST_POLL] = monotonic() - page.POLL_SECONDS - 1
+        app.session_state[page.SKIP_POLL] = False
+        fragment = AppTest.from_string("import monday_page\nmonday_page.financial_report()\n")
+        fragment.session_state = app.session_state
+        return fragment.run(timeout=30)
+
     def resolve_report(self, prices, feed):
         """A deterministic resolver contract; live-report math has its own tests."""
         report = current_report(prices)
@@ -84,7 +98,7 @@ class PublicAppTests(unittest.TestCase):
     def assert_unavailable(self, app):
         self.assertEqual(len(app.exception), 0)
         self.assertEqual(len(app.error), 1)
-        self.assertEqual(app.error[0].value, "The report is temporarily unavailable. Please try again shortly.")
+        self.assertEqual(app.error[0].value, "The Monday report is temporarily unavailable. Try Refresh data.")
         self.assertEqual(len(app.get("download_button")), 0)
         self.assertEqual(len(app.expander), 0)
         self.assertFalse(any('class="credit-grid"' in element.proto.body for element in app.get("html")))
@@ -93,22 +107,26 @@ class PublicAppTests(unittest.TestCase):
         return next(element.proto.body for element in app.get("html")
                     if '<div class="dcr">' in element.proto.body)
 
-    def test_public_open_refreshes_without_adding_price_controls(self):
+    def test_public_open_refreshes_and_keeps_navigation_outside_report_content(self):
         app = self.open_app()
         self.assertEqual(len(app.exception), 0)
         self.assertEqual(len(app.error), 0)
         self.pull.assert_called_once_with()
-        for element_type in ("selectbox", "radio", "tabs", "button", "dataframe", "table"):
+        for element_type in ("selectbox", "radio", "dataframe", "table"):
             self.assertEqual(len(app.get(element_type)), 0, element_type)
+        self.assertEqual([tab.label for tab in app.tabs], ["Monday · Digital Credit", "Friday · Bitcoin & Digital Credit"])
+        self.assertEqual([button.label for button in app.button], ["Refresh data"])
         self.assertEqual([expander.label for expander in app.expander], ["Calculation overview", "Latest SEC filings"])
         self.monitor_render.assert_called_once()
         download = app.get("download_button")[0].proto
         self.assertEqual(len(app.get("download_button")), 1)
-        self.assertEqual(download.label, "Download")
+        self.assertEqual(download.label, "Download Monday panel")
         self.assertEqual(download.type, "tertiary")
         self.assertTrue(download.ignore_rerun)
         self.assertTrue(download.url.endswith(".png"))
         html = self.report_html(app)
+        self.assertNotIn("Refresh data", html)
+        self.assertNotIn("weekly_report_tabs", html)
         for content in ("The Digital Credit Report", 'aria-label="Strategy comparison panel"',
                         'aria-label="Strive comparison panel"', "845,050", "23,156", "VWAP", "$97.48", "BTC $83,000"):
             self.assertIn(content, html)
@@ -141,8 +159,8 @@ class PublicAppTests(unittest.TestCase):
         original = self.cache_path.read_bytes()
         newest = self.quote_snapshot("2026-09-03", 84_000.0, 32.0)
         self.pull.side_effect = [deepcopy(self.fresh), newest]
-        with patch("report.public_page.render_public_report", wraps=render_public_report) as web, \
-             patch("report.post_export.render_post_png", wraps=render_post_png) as export:
+        with patch("monday_page.render_public_report", wraps=render_public_report) as web, \
+             patch("monday_page.render_post_png", wraps=render_post_png) as export:
             first_app = self.open_app()
             self.assertEqual(len(first_app.exception), 0)
             first_view = web.call_args.args[0]
@@ -166,8 +184,8 @@ class PublicAppTests(unittest.TestCase):
 
     def test_failed_refresh_uses_saved_prices_and_original_quote_timestamp(self):
         self.pull.side_effect = ValueError("Provider unavailable")
-        with patch("report.public_page.render_public_report", wraps=render_public_report) as web, \
-             patch("report.post_export.render_post_png", wraps=render_post_png) as export:
+        with patch("monday_page.render_public_report", wraps=render_public_report) as web, \
+             patch("monday_page.render_post_png", wraps=render_post_png) as export:
             app = self.open_app()
             self.assertEqual(len(app.exception), 0)
             self.assertEqual(len(app.error), 0)
@@ -218,14 +236,14 @@ class PublicAppTests(unittest.TestCase):
         self.assertNotIn("Private", app.error[0].value)
 
     def test_new_feed_advances_cards_and_download_together_without_refetching_prices(self):
-        with patch("report.public_page.render_public_report", wraps=render_public_report) as web, \
-             patch("report.post_export.render_post_png", wraps=render_post_png) as export:
+        with patch("monday_page.render_public_report", wraps=render_public_report) as web, \
+             patch("monday_page.render_post_png", wraps=render_post_png) as export:
             app = self.open_app()
             first_view = web.call_args.args[0]
             first_download = app.get("download_button")[0].proto.url
             advanced = dict(self.feed, version="advanced", filings=[{"accession": "new-week"}])
             self.feed_read.return_value = MonitorSnapshot(self.snapshot.status, advanced)
-            app.run(timeout=30)
+            app = self.poll_report(app)
             self.assertEqual(len(app.exception), 0)
             latest_view = web.call_args.args[0]
             self.assertEqual(export.call_args.args[0], latest_view)
@@ -248,7 +266,7 @@ class PublicAppTests(unittest.TestCase):
         self.feed_read.return_value = MonitorSnapshot(self.snapshot.status, advanced, stale=True,
                                                       notice="SEC refresh unavailable.")
         self.resolve.side_effect = AssertionError("A stale feed must not replace the retained report")
-        app.run(timeout=30)
+        app = self.poll_report(app)
         self.assertEqual(len(app.exception), 0)
         self.assertEqual(self.report_html(app), previous_html)
         self.assertEqual(app.get("download_button")[0].proto.url, previous_download)
@@ -263,7 +281,7 @@ class PublicAppTests(unittest.TestCase):
         previous_html = self.report_html(app)
         previous_download = app.get("download_button")[0].proto.url
         self.resolve.side_effect = ValueError("New filing cannot establish a full denominator")
-        app.run(timeout=30)
+        app = self.poll_report(app)
         self.assertEqual(len(app.exception), 0)
         self.assertEqual(self.report_html(app), previous_html)
         self.assertEqual(app.get("download_button")[0].proto.url, previous_download)
@@ -287,8 +305,8 @@ class PublicAppTests(unittest.TestCase):
         previous_download = app.get("download_button")[0].proto.url
         advanced = dict(self.feed, version="advanced")
         self.feed_read.return_value = MonitorSnapshot(self.snapshot.status, advanced)
-        with patch("report.post_export.render_post_png", side_effect=ValueError("New disclosure does not fit")):
-            app.run(timeout=30)
+        with patch("monday_page.render_post_png", side_effect=ValueError("New disclosure does not fit")):
+            app = self.poll_report(app)
         self.assertEqual(len(app.exception), 0)
         self.assertEqual(self.report_html(app), previous_html)
         self.assertEqual(app.get("download_button")[0].proto.url, previous_download)

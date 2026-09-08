@@ -1,0 +1,60 @@
+:root { color-scheme: {{scheme}}; }
+.stApp { background: {{background}}; color: {{text}}; border-top: 4px solid #e88029; }
+.stMainBlockContainer { max-width: 1200px; padding: 24px 28px 30px; }
+[data-testid="stHeader"] { display: none; }
+[data-testid="stToolbar"] { visibility: hidden; }
+.st-key-weekly_report_tabs [role="tablist"] {
+  gap: 6px; border-bottom: 1px solid {{border}};
+  margin: 0 0 14px; padding: 0; background: {{background}};
+  position: sticky; top: 0; z-index: 100;
+}
+.st-key-weekly_report_tabs [role="tab"] {
+  height: 46px; padding: 10px 19px; border-radius: 6px 6px 0 0;
+  color: {{muted}}; background: transparent; font-size: 14px;
+  white-space: normal; font-family: Report, Arial, sans-serif;
+}
+.st-key-weekly_report_tabs [role="tab"]:hover { background: {{hover}}; color: {{text}}; }
+.st-key-weekly_report_tabs [role="tab"][aria-selected="true"] {
+  color: {{text}}; background: {{card}}; font-weight: 700;
+}
+.st-key-weekly_report_tabs [role="tab"] [data-testid="stMarkdownContainer"] { color: inherit; }
+.st-key-weekly_report_tabs [role="tab"] p { font-size: 14px; font-weight: inherit; }
+.st-key-weekly_report_tabs .react-aria-SelectionIndicator { background: #e88029; height: 3px; }
+[data-testid="stButton"] button, [data-testid="stDownloadButton"] button {
+  color: {{text}}; background: {{card}}; border-color: {{border}};
+}
+[data-testid="stButton"] button:hover, [data-testid="stDownloadButton"] button:hover {
+  color: {{text}}; border-color: #e88029; background: {{hover}};
+}
+[data-testid="stButton"] button:disabled, [data-testid="stDownloadButton"] button:disabled {
+  color: {{muted}}; opacity: .55;
+}
+[data-testid="stWidgetLabel"], [data-testid="stMarkdownContainer"],
+[data-testid="stExpander"] summary { color: {{text}}; }
+[data-testid="stCaptionContainer"] { color: {{muted}}; }
+[data-testid="stExpander"] { border-color: {{border}}; background: {{card}}; }
+[data-testid="stExpander"] summary { background: {{card}}; }
+[data-testid="stExpander"] summary:hover { background: {{hover}}; }
+.stApp a { color: #e88029; }
+[data-variant="segmented_control"] {
+  color: {{muted}}; background: {{card}}; border-color: {{border}};
+}
+[data-variant="segmented_control"][aria-checked="true"] {
+  color: {{text}}; background: {{hover}}; border-color: #e88029;
+}
+[data-variant="segmented_control"] [data-testid="stMarkdownContainer"] { color: inherit; }
+[data-testid="stMetricValue"], [data-testid="stMetricLabel"] { color: {{text}}; }
+button[aria-label^="Help for"] { color: {{muted}}; }
+@media (max-width: 640px) {
+  .stMainBlockContainer { padding: 16px 15px 24px; }
+  .st-key-weekly_report_tabs [role="tablist"] { gap: 0; }
+  .st-key-weekly_report_tabs [role="tab"] {
+    flex: 1; padding: 8px 9px; height: 57px; font-size: 12px;
+  }
+  .st-key-weekly_report_tabs [role="tab"] p { white-space: normal; text-align: center; font-size: 12px; }
+}
+@media print {
+  [role="tablist"], [data-testid="stButton"],
+  [data-testid="stDownloadButton"], [data-testid="stToggle"],
+  [data-testid="stButtonGroup"] { display: none !important; }
+}
