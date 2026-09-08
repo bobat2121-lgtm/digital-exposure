@@ -1,7 +1,7 @@
 import { load } from "cheerio/slim";
 import type { Extraction, Facts, Ticker } from "./types";
 
-export const PARSER_VERSION = "sec-weekly-v1";
+export const PARSER_VERSION = "sec-weekly-v2";
 const MONTH = "(?:January|February|March|April|May|June|July|August|September|October|November|December)";
 const DATE = `${MONTH}\\s+\\d{1,2},\\s+\\d{4}`;
 const compact = (text: string): string => text.replace(/[\u00a0\u200b]/g, " ").replace(/\s+/g, " ").trim();
@@ -22,16 +22,18 @@ function values(cells: string[]): number[] {
   return cells.map(numeric).filter((value): value is number => value !== null);
 }
 interface Table { text: string; rows: string[][] }
-function htmlTables(html: string): { text: string; tables: Table[] } {
+function htmlTables(html: string): { text: string; tables: Table[]; paragraphs: string[] } {
   const $ = load(html);
   $("script,style,ix\\:hidden,header").remove();
   const tables = $("table").toArray().map(table => {
     const rows = $(table).find("tr").toArray()
       .filter(row => $(row).closest("table")[0] === table)
       .map(row => $(row).children("td,th").toArray().map(cell => compact($(cell).text())));
-    return { text: rows.flat().join(" "), rows };
+    return { text: `${compact($(table).find("caption").text())} ${rows.flat().join(" ")}`, rows };
   });
-  return { text: compact($.root().text()), tables };
+  const paragraphs = $("p,div,li").toArray().filter(element => !$(element).closest("table").length)
+    .map(element => { const copy = $(element).clone(); copy.find("p,div,li,table").remove(); return compact(copy.text()); }).filter(Boolean);
+  return { text: compact($.root().text()), tables, paragraphs };
 }
 function put(facts: Facts, key: string, value: number, issues: string[]): void {
   if (key in facts && facts[key] !== value) issues.push(`Conflicting ${key} values`);
@@ -39,6 +41,7 @@ function put(facts: Facts, key: string, value: number, issues: string[]): void {
 }
 function validate(extraction: Extraction, required: string[]): Extraction {
   extraction.missing = required.filter(key => !(key in extraction.facts));
+  if (!("weekly_btc_purchases" in extraction.facts) && !("weekly_btc_sales" in extraction.facts)) extraction.missing.push("weekly_btc_activity");
   if (!extraction.periodStart || !extraction.periodEnd || !extraction.balanceDate) extraction.missing.push("reporting_period");
   if (extraction.periodStart && extraction.periodEnd && extraction.periodStart > extraction.periodEnd)
     extraction.issues.push("Reporting period is reversed");
@@ -49,8 +52,75 @@ function validate(extraction: Extraction, required: string[]): Extraction {
   extraction.extractionValidated = extraction.missing.length === 0 && extraction.issues.length === 0;
   return extraction;
 }
+type BitcoinKey = "weekly_btc_purchases" | "weekly_btc_sales" | "btc_holdings";
+function bitcoinQuantity(text: string): number | null {
+  const value = compact(text).replace(/\s+\(\d+\)$/, "");
+  if (/^(?:[-—–]|no)$/i.test(value)) return 0;
+  if (!/^(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/.test(value)) return null;
+  const result = Number(value.replaceAll(",", ""));
+  return Number.isFinite(result) ? result : null;
+}
+function bitcoinHeader(text: string): BitcoinKey | null {
+  const label = compact(text).replace(/\s+\(\d+\)$/, "");
+  if (/^(?:Weekly )?(?:BTC|Bitcoins?) (?:Purchased|Bought|Acquired)(?: During (?:the )?(?:Week|Period))?$/i.test(label)) return "weekly_btc_purchases";
+  if (/^(?:Weekly )?(?:BTC|Bitcoins?) (?:Sold|Sales)(?: During (?:the )?(?:Week|Period))?$/i.test(label)) return "weekly_btc_sales";
+  if (/^(?:(?:Aggregate|Total|Ending) )?(?:BTC|Bitcoin) (?:Holdings|Held)$/i.test(label)) return "btc_holdings";
+  return null;
+}
+function putBitcoin(e: Extraction, key: BitcoinKey, text: string): void {
+  const value = bitcoinQuantity(text);
+  if (value === null) e.issues.push(`Invalid ${key} quantity`);
+  else put(e.facts, key, value, e.issues);
+}
+/** Quantity columns are identified by their labels, never by nearby dollar proceeds or balance changes. */
+function bitcoinTables(e: Extraction, tables: Table[]): void {
+  if (!e.periodStart || !e.periodEnd) return;
+  for (const table of tables) {
+    if (/cumulative|year.to.date|quarter.to.date|since inception|lifetime/i.test(table.text)) continue;
+    if (!/During Period|period from|weekly|during (?:the )?(?:week|period)/i.test(table.text)) continue;
+    const rows = table.rows.map(row => row.filter(Boolean));
+    for (let index = 0; index < rows.length; index++) {
+      const headers = rows[index], keys = headers.map(bitcoinHeader);
+      if (!keys.some(key => key === "weekly_btc_purchases" || key === "weekly_btc_sales")) continue;
+      // A narrow, explicit label/value table can state each gross activity separately.
+      const numericRowBelow = rows.slice(index + 1).some(row => row.length >= 2 && row.every(cell => numeric(cell) !== null || cell === "$"));
+      if (headers.length === 2 && keys[0] && keys[1] === null && !numericRowBelow) {
+        putBitcoin(e, keys[0], headers[1]); continue;
+      }
+      const data = rows.slice(index + 1).filter(row => row.some(cell => numeric(cell) !== null));
+      if (data.length !== 1) { e.issues.push("BTC activity: table has unexpected data rows"); continue; }
+      const cells: string[] = [];
+      for (let column = 0; column < data[0].length; column++) {
+        // SEC HTML often splits a price into a dollar-symbol cell and a number cell.
+        if (data[0][column] === "$" && column + 1 < data[0].length) cells.push(`$${data[0][++column]}`);
+        else cells.push(data[0][column]);
+      }
+      if (cells.length !== headers.length) { e.issues.push("BTC activity: quantity columns changed"); continue; }
+      keys.forEach((key, column) => { if (key) putBitcoin(e, key, cells[column]); });
+    }
+    // A row table may also disclose ending holdings, without implying that its change was a trade.
+    for (const row of rows) if (row.length === 2 && bitcoinHeader(row[0]) === "btc_holdings") putBitcoin(e, "btc_holdings", row[1]);
+  }
+}
+function bitcoinProse(e: Extraction, paragraphs: string[], ticker: Ticker): void {
+  if (!e.periodStart || !e.periodEnd) return;
+  const issuer = ticker === "MSTR" ? "(?:Strategy|MicroStrategy|the Company)" : "(?:Strive|the Company)";
+  for (const paragraph of paragraphs) {
+    const holding = paragraph.match(new RegExp(`As of\\s+(${DATE}),?\\s+${issuer}\\s+(?:held|holds)\\s+([^\\s]+)\\s+(?:bitcoins?|BTC)\\b`, "i"));
+    if (holding && isoDate(holding[1]) === e.balanceDate) putBitcoin(e, "btc_holdings", holding[2]);
+    const weekly = /\bduring (?:the )?(?:reporting )?(?:period|week)\b|\bfor the week ended\b/i.test(paragraph);
+    // Historical/cumulative and prospective statements are not this week's gross trades.
+    if (!weekly || /since inception|year.to.date|quarter.to.date|cumulative|historically|intends? to|plans? to|expects? to/i.test(paragraph)) continue;
+    const statement = new RegExp(`\\b${issuer}\\s+(?:has\\s+)?(sold|purchased|bought|acquired)\\s+(?:(?:an aggregate|a total) of\\s+)?(?:approximately\\s+)?([^\\s]+)\\s+(?:bitcoins?|BTC)\\b`, "gi");
+    for (const match of paragraph.matchAll(statement)) {
+      putBitcoin(e, match[1].toLowerCase() === "sold" ? "weekly_btc_sales" : "weekly_btc_purchases", match[2]);
+      const coordinated = paragraph.slice((match.index ?? 0) + match[0].length).match(/^\s*(?:,?\s+and)(?:\s+(?:then|subsequently))?\s+(sold|purchased|bought|acquired)\s+(?:approximately\s+)?([^\s]+)\s+(?:bitcoins?|BTC)\b/i);
+      if (coordinated) putBitcoin(e, coordinated[1].toLowerCase() === "sold" ? "weekly_btc_sales" : "weekly_btc_purchases", coordinated[2]);
+    }
+  }
+}
 export function extractWeekly(html: string, ticker: Ticker): Extraction {
-  const { text, tables } = htmlTables(html);
+  const { text, tables, paragraphs } = htmlTables(html);
   const e: Extraction = { parserVersion: PARSER_VERSION, periodStart: null, periodEnd: null,
     priorBalanceDate: null, balanceDate: null, facts: {}, priorFacts: {}, securities: {},
     missing: [], issues: [], extractionValidated: false };
@@ -60,6 +130,8 @@ export function extractWeekly(html: string, ticker: Ticker): Extraction {
     if (dates.some(match => isoDate(match[1]) !== e.periodStart || isoDate(match[2]) !== e.periodEnd))
       e.issues.push("Multiple reporting periods require review");
   }
+  bitcoinTables(e, tables);
+  bitcoinProse(e, paragraphs, ticker);
   if (ticker === "ASST") {
     const mapping: [RegExp, string, number][] = [
       [/^Cash and cash equivalents \(in thousands\)$/i, "cash_and_equivalents_usd", 1000],
@@ -95,8 +167,6 @@ export function extractWeekly(html: string, ticker: Ticker): Extraction {
         if (key === "sata_shares") put(e.facts, "net_sata_shares_change", delta, e.issues);
       }
     }
-    const purchase = text.match(/\bStrive purchased\s+([\d,]+(?:\.\d+)?)\s+bitcoin\b/i);
-    if (purchase) e.facts.weekly_btc_purchases = Number(purchase[1].replaceAll(",", ""));
     for (const facts of [e.facts, e.priorFacts]) {
       if (["common_shares_class_a", "common_shares_class_b", "effective_common_shares"].every(key => key in facts)
           && facts.common_shares_class_a + facts.common_shares_class_b !== facts.effective_common_shares)
@@ -105,7 +175,7 @@ export function extractWeekly(html: string, ticker: Ticker): Extraction {
           && facts.effective_common_shares + facts.options + facts.unvested_employee_awards !== facts.assumed_diluted_shares)
         e.issues.push("Strive assumed diluted shares do not reconcile");
     }
-    return validate(e, ["btc_holdings", "weekly_btc_purchases", "cash_and_equivalents_usd", "held_strc_shares",
+    return validate(e, ["btc_holdings", "cash_and_equivalents_usd", "held_strc_shares",
       "effective_common_shares", "sata_shares", "net_common_shares_change", "net_sata_shares_change"]);
   }
   for (const table of tables) {
@@ -131,11 +201,6 @@ export function extractWeekly(html: string, ticker: Ticker): Extraction {
         e.securities[match[1]] = { ...e.securities[match[1]], repurchasedShares: parsed[0], repurchaseCashUsd: parsed[1] * 1_000_000 };
       }
     }
-    if (/BTC Purchased/i.test(table.text) && /Aggregate BTC Holdings/i.test(table.text)) {
-      const rows = table.rows.map(values).filter(row => row.length === 6);
-      if (rows.length !== 1) e.issues.push("Strategy BTC table has unexpected numeric rows");
-      else { put(e.facts, "weekly_btc_purchases", rows[0][0], e.issues); put(e.facts, "btc_holdings", rows[0][3], e.issues); }
-    }
   }
   const cash = text.match(/balances of the USD Reserve and USD Cash were \$([\d,.]+) billion and \$([\d,.]+) billion, respectively/i);
   if (cash) { e.facts.usd_reserve_usd = Number(cash[1].replaceAll(",", "")) * 1e9; e.facts.usd_cash_usd = Number(cash[2].replaceAll(",", "")) * 1e9; }
@@ -149,5 +214,5 @@ export function extractWeekly(html: string, ticker: Ticker): Extraction {
     if (activity.issuedShares === 0 && activity.netIssuanceProceedsUsd !== 0) e.issues.push(`${security} issuance cash with zero shares`);
     if (activity.repurchasedShares === 0 && activity.repurchaseCashUsd !== 0) e.issues.push(`${security} repurchase cash with zero shares`);
   }
-  return validate(e, ["btc_holdings", "weekly_btc_purchases", "common_issued_shares", "common_issuance_proceeds_usd"]);
+  return validate(e, ["btc_holdings", "common_issued_shares", "common_issuance_proceeds_usd"]);
 }

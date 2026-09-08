@@ -9,7 +9,8 @@ NAV is BTC value + cash/securities − debt principal − preferred liquidation
 claims, including accrued dividends. Strategy includes its designated
 treasury liquidity only. Price/basic NAV divides the stock price by NAV/share.
 
-**Bitcoin.** Bought means reported gross purchases; total BTC is ending holdings.
+**Bitcoin.** Bought and Sold show reported gross activity separately, never inferred
+from changes in holdings; total BTC is ending holdings.
 BTC/common share is holdings divided by shares, in sats (100 million/BTC).
 
 **Market activity.** Strategy common capital uses disclosed net proceeds less buybacks.
@@ -47,9 +48,9 @@ shares. Cash and securities are counted once. Preferred claims include applicabl
 unpaid/accrued dividends; a future declared dividend is not automatically accrued.
 **Price/basic NAV** is the common stock price divided by this NAV/share.
 
-**Bitcoin bought.** Gross purchases reported for the displayed week, not the
-change in holdings inferred from two snapshots. Unreported gross purchases are
-shown as not disclosed. **Total BTC held** is the ending holding at the displayed
+**Bitcoin bought / sold.** Gross purchases and sales reported for the displayed
+week are shown separately, never inferred from changes in holdings. Unreported
+activity stays not disclosed. **Total BTC held** is the ending holding at the displayed
 balance date, rounded to whole BTC. **BTC/common share** is BTC held divided by common
 shares, displayed in satoshis (100 million sats per BTC).
 

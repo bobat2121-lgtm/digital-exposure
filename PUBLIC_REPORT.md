@@ -7,7 +7,7 @@ See [brand asset notes](assets/BRAND-TITLE.md) for reproduction details.
 
 The responsive report has two aligned company panels on desktop and stacks them
 on phones. It shows the saved current quote snapshot, dated balance and activity
-periods, and the concise 270-word calculation overview. There are no public
+periods, and the concise 279-word calculation overview. There are no public
 edition selectors, view tabs, quote refresh controls, or VWAP pull controls.
 The former Sources & input audit section is removed. A separate read-only
 Latest SEC filings section provides the monitor's publication status.
@@ -29,3 +29,8 @@ export script, and were regenerated with the new branding.
 UI validation: 26 application, current-report, common-sale-price, post-export,
 detailed-export, legacy-demo and preferred-disclosure tests passed. The current
 download was rendered and visually inspected at 1800 × 1125.
+
+Reported Bitcoin Bought and Bitcoin Sold use separate gross quantities. A
+sales-only week changes the activity label to Bitcoin Sold; a week with both
+shows both. Confirmed zero remains zero; missing activity stays undisclosed.
+No sale is inferred from falling holdings. Fractions retain satoshi precision.

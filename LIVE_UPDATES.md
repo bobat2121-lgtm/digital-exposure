@@ -67,13 +67,19 @@ SHA-256 hashes and source URLs through the same projection as `/api/filings`.
 It persists the verified pair and publication time before sending Discord.
 
 Both filings must be primary 8-Ks accepted on the same Monday in New York,
-received within 14 days and contain recognized weekly BTC facts. Baselines,
+received within 14 days and contain nonnegative BTC holdings plus an explicit
+nonnegative weekly purchase or sale quantity. Sales-only filings and zero
+holdings after liquidation qualify. Gross `weekly_btc_purchases` and optional
+`weekly_btc_sales` remain separate; holdings declines, USD proceeds and equity
+sales are never substituted for BTC sold. Malformed supplied activity or
+BTC/reporting-period extraction errors prevent notification. Baselines,
 amendments, unrelated filings and incomplete retrievals cannot qualify.
 The fixed initial activation cutoff is **2026-09-08T00:00:00Z**; discovery and
 retrieval must be on or after it. Preserve this cutoff on future deployments
 so pending events remain eligible. Previously ingested records are not queued.
 
-The message confirms feed publication and says Streamlit is expected to load
+The message shows `Bought` and/or `Sold` quantities from the verified feed,
+confirms feed publication and says Streamlit is expected to load
 the feed when opened. It does not claim successful browser receipt or updated
 financial cards. Candidate revisions retain a new event arriving during
 verification. Existing confirmed sends and Discord retry deadlines survive

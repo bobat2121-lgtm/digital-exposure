@@ -28,6 +28,25 @@ def ratio(value: float | None, nav: float | None) -> str:
     return "N/M" if nav is not None and nav <= 0 else number(value, suffix="×")
 
 
+def btc_activity_value(value: float | None) -> str:
+    """Keep reported fractions to satoshi precision without displaying false zero."""
+    if value is None:
+        return MISSING
+    if 0 < value < 1e-8:
+        return "<0.00000001 BTC"
+    return f"{value:,.8f}".rstrip("0").rstrip(".") + " BTC"
+
+
+def _btc_activity(m: CompanyMetrics) -> tuple[MetricView, ...]:
+    supplied = tuple((value, MetricView(label, btc_activity_value(value)))
+                     for label, value in (("Bitcoin Bought", m.weekly_btc_purchases),
+                                          ("Bitcoin Sold", m.weekly_btc_sales))
+                     if value is not None)
+    positive = tuple(metric for value, metric in supplied if value > 0)
+    return positive or tuple(metric for _, metric in supplied) or (
+        MetricView("Bitcoin activity", MISSING),)
+
+
 def _common_details(c: Company, m: CompanyMetrics) -> tuple[str, ...]:
     if m.common_capital_estimated:
         if m.common_equity_vwap is None:
@@ -189,9 +208,8 @@ def company_view(c: Company, m: CompanyMetrics, *, historical: bool = False,
                           (c.share_basis_note,),
                           "Prior share count unverified" if historical and m.shares_change is None else f"{number(m.shares_change, 2, divisor=1e6, suffix='m', signed=True)} ({number(m.shares_change_pct, suffix='%', signed=True)}) WoW"),
         bitcoin=MetricView("Bitcoin per common share", number(m.sats_per_share, 0, suffix=" sats"),
-                           (f"{number(m.btc_holdings, 0)} BTC held · {number(m.weekly_btc_purchases, 0)} bought",) if historical and m.btc_change == m.weekly_btc_purchases and m.weekly_btc_purchases is not None else
                            (f"{number(m.btc_holdings, 0)} BTC held · {number(m.btc_change, 0, signed=True)} net added",
-                            f"Weekly BTC purchases: {number(m.weekly_btc_purchases, 0)}"),
+                            f"Bitcoin Bought: {btc_activity_value(m.weekly_btc_purchases)} · Bitcoin Sold: {btc_activity_value(m.weekly_btc_sales)}"),
                            "Weekly change unavailable" if historical and m.sats_change_pct is None else f"{number(m.sats_change_pct, suffix='%', signed=True)} per share WoW",
                            tone="positive" if m.sats_change_pct is not None and m.sats_change_pct > 0 else "negative" if m.sats_change_pct is not None and m.sats_change_pct < 0 else "neutral",
                            short_change=number(m.sats_change_pct, suffix='%', signed=True)),
@@ -206,7 +224,9 @@ def company_view(c: Company, m: CompanyMetrics, *, historical: bool = False,
         preferred_ratio=MetricView("Preferred / BTC", valuation(m.preferred_to_btc_pct, number(m.preferred_to_btc_pct, suffix="%"), claims_only=True),
                                    change="Claims unverified" if historical and m.preferred_to_btc_pct is None else f"{valuation(m.preferred_to_btc_change_pp, number(m.preferred_to_btc_change_pp, suffix=' pp', signed=True), claims_only=True)} {preferred_comparison}",
                                    short_change=valuation(m.preferred_to_btc_change_pp, number(m.preferred_to_btc_change_pp, suffix=' pp', signed=True), claims_only=True)),
-        bought=MetricView("Bitcoin Bought", number(m.weekly_btc_purchases, 0, suffix=" BTC")),
+        bought=MetricView("Bitcoin Bought", btc_activity_value(m.weekly_btc_purchases)),
+        sold=MetricView("Bitcoin Sold", btc_activity_value(m.weekly_btc_sales)) if m.weekly_btc_sales is not None else None,
+        btc_activity=_btc_activity(m),
         total_bitcoin=MetricView("Total BTC held", number(m.btc_holdings, 0, suffix=" BTC")),
     )
 

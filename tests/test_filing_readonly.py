@@ -9,6 +9,23 @@ from report import filing_monitor as monitor
 
 
 class PublicMonitorTests(unittest.TestCase):
+    def test_filing_rows_keep_bought_and_sold_separate_without_inventing_zeros(self):
+        base = {
+            'ticker': 'ASST', 'form': '8-K', 'baseline': False,
+            'primaryDocumentUrl': 'https://www.sec.gov/Archives/edgar/data/1920406/filing.htm',
+        }
+        for facts, expected in (
+            ({'weekly_btc_sales': 125.25}, ('Not disclosed', '125.25 BTC')),
+            ({'weekly_btc_purchases': 500, 'weekly_btc_sales': 125}, ('500 BTC', '125 BTC')),
+            ({'weekly_btc_purchases': 0, 'weekly_btc_sales': 0}, ('0 BTC', '0 BTC')),
+            ({'btc_holdings': 0}, ('Not disclosed', 'Not disclosed')),
+            ({'weekly_btc_purchases': True, 'weekly_btc_sales': -5}, ('Not disclosed', 'Not disclosed')),
+            ({'weekly_btc_sales': 1e-9}, ('Not disclosed', '<0.00000001 BTC')),
+        ):
+            with self.subTest(facts=facts):
+                row = monitor.filing_rows({'filings': [dict(base, extracted={'facts': facts})]})[0]
+                self.assertEqual((row['Bitcoin Bought'], row['Bitcoin Sold']), expected)
+
     def test_render_fetches_public_feed_without_credentials_or_acknowledgement(self):
         origin = 'https://capital-report.example.workers.dev'
         payloads = {

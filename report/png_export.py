@@ -14,7 +14,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-from .view_types import CompanyView, MetricView, ReportView
+from .view_types import CompanyView, MetricView, ReportView, btc_activity_metrics
 from .branding import draw_title
 
 
@@ -150,8 +150,14 @@ def _metric_row(metric: MetricView, kind: str, minimum: int) -> _Row:
 
 def _company_rows(company: CompanyView) -> tuple[_Row, ...]:
     rows = []
-    if company.bought:
-        rows.append(_metric_row(company.bought, "common", 85))
+    # Activity stays one logical row, so a two-sided week cannot shift or truncate
+    # the other company's later rows when the detailed export aligns both panels.
+    activity_text, activity_height = [], 0
+    for activity in btc_activity_metrics(company):
+        row = _metric_row(activity, "common", 85)
+        activity_text.extend(replace(item, y=item.y + activity_height) for item in row.text)
+        activity_height += row.height
+    rows.append(_Row(tuple(activity_text), activity_height))
     if company.total_bitcoin:
         rows.append(_metric_row(company.total_bitcoin, "common", 85))
     rows.extend((

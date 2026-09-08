@@ -403,6 +403,27 @@ class CalculationTests(unittest.TestCase):
             self.assertGreater(metrics.btc_change, 0)
             self.assertIsNone(metrics.weekly_btc_purchases)
 
+    def test_gross_bitcoin_activity_is_independent_of_holdings_and_valuation(self):
+        for company in self.report.companies:
+            reduced = replace(company, current=replace(company.current, btc_holdings=0))
+            self.assertIsNone(self.metrics(reduced).weekly_btc_sales)
+            baseline = self.metrics(company)
+            changed = self.metrics(replace(company, weekly_btc_purchases=125.5, weekly_btc_sales=75.25))
+            self.assertEqual(changed.weekly_btc_purchases, 125.5)
+            self.assertEqual(changed.weekly_btc_sales, 75.25)
+            for field in ("btc_holdings", "btc_change", "net_nav", "nav_per_share", "sats_per_share"):
+                self.assertEqual(getattr(changed, field), getattr(baseline, field))
+
+    def test_invalid_bitcoin_activity_is_unknown_and_zero_remains_explicit(self):
+        for value in (None, -1, math.nan, math.inf, -math.inf, True, "125", 10**400):
+            with self.subTest(value=value):
+                metrics = self.metrics(replace(self.strategy, weekly_btc_purchases=value, weekly_btc_sales=value))
+                self.assertIsNone(metrics.weekly_btc_purchases)
+                self.assertIsNone(metrics.weekly_btc_sales)
+        metrics = self.metrics(replace(self.strategy, weekly_btc_purchases=0, weekly_btc_sales=0))
+        self.assertEqual(metrics.weekly_btc_purchases, 0)
+        self.assertEqual(metrics.weekly_btc_sales, 0)
+
     def test_debt_and_preferred_stay_unconverted_cash_and_securities_once(self):
         snapshot = Snapshot(100.0, 10.0, 50.0, 20.0, 30.0, 40.0)
         self.assertEqual(net_treasury_nav(snapshot, 1.0), 100.0)
@@ -475,7 +496,7 @@ class CalculationTests(unittest.TestCase):
         self.assertEqual(strive.common.value, "+$99.0m")
         self.assertEqual(strive.preferred.value, "+$80.0m")
         self.assertEqual(strive.amplification.change, "0.00× vs last Monday")
-        self.assertIn("Weekly BTC purchases: Not disclosed", strive.bitcoin.details)
+        self.assertIn("Bitcoin Bought: Not disclosed · Bitcoin Sold: Not disclosed", strive.bitcoin.details)
 
 
 if __name__ == "__main__":

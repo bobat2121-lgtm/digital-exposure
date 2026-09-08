@@ -5,7 +5,7 @@ from io import BytesIO
 from .png_export import INK, LINE, MUTED, ORANGE, _Canvas, _metadata
 from .branding import draw_title
 from .post_export import WIDTH, HEIGHT, MARGIN, GAP, PANEL_WIDTH, INSET, _text, _pair, _disclosure, _post_details
-from .view_types import CompanyView, MetricView, ReportView
+from .view_types import CompanyView, MetricView, ReportView, btc_activity_metrics
 
 GREEN, RED = "#15745E", "#AE4355"
 
@@ -43,12 +43,16 @@ def _company(canvas: _Canvas, c: CompanyView, index: int, capital_period: str) -
     canvas.right(c.price_to_nav, right, 316, 34, True, width=width * .32)
     draw.line((left, 366, right, 366), fill=LINE)
 
-    bought = c.bought or MetricView("Bitcoin Bought", "Not disclosed")
+    activities = btc_activity_metrics(c)
     total_bitcoin = c.total_bitcoin or MetricView("Total BTC held", "Not disclosed")
-    _text(canvas, bought.label, left, 378, width * .49, size=21, bold=True, color=MUTED)
-    _text(canvas, bought.value, left, 407, width * .49, size=28, bold=True)
-    canvas.right(total_bitcoin.label, right, 378, 21, True, MUTED, width=width * .49)
-    canvas.right(total_bitcoin.value, right, 407, 28, True, width=width * .49)
+    activity_width = (width - 28) / 3 if len(activities) > 1 else width * .49
+    for index, activity in enumerate(activities):
+        activity_left = left + index * (activity_width + 14)
+        _text(canvas, activity.label, activity_left, 378, activity_width, size=21, bold=True, color=MUTED)
+        _text(canvas, activity.value, activity_left, 407, activity_width, size=28, bold=True)
+    total_width = activity_width if len(activities) > 1 else width * .49
+    canvas.right(total_bitcoin.label, right, 378, 21, True, MUTED, width=total_width)
+    canvas.right(total_bitcoin.value, right, 407, 28, True, width=total_width)
     _text(canvas, capital_period.upper(), left, 456, width * .59, size=17, bold=True, color=ORANGE)
     canvas.right("+ RAISED / − REPURCHASED", right, 457, 17, color=MUTED)
     _pair(canvas, c.common, left, 483, width, value_size=29, label_size=23)

@@ -2,7 +2,7 @@
 from html import escape
 
 from .page import ASSETS, asset_uri
-from .view_types import CompanyView, MetricView, ReportView
+from .view_types import CompanyView, MetricView, ReportView, btc_activity_metrics
 
 
 def _tone(value: str) -> str:
@@ -25,7 +25,12 @@ def _metric(label: str, value: str, delta: str, tone: str = "neutral", *, featur
 
 
 def _company(c: CompanyView, period: str) -> str:
-    btc = c.bought.value if c.bought else "Not disclosed"
+    activities = btc_activity_metrics(c)
+    btc_rows = "".join(f'<div><h3>{escape(metric.label)}</h3><strong>{escape(metric.value)}</strong></div>'
+                       for metric in activities)
+    activity_css = " multi-activity" if len(activities) > 1 else ""
+    if any(len(metric.value) > 12 for metric in activities):
+        activity_css += " long-activity"
     total = c.total_bitcoin.value if c.total_bitcoin else "Not disclosed"
     metric_rows = (
         _metric("Bitcoin per common share", c.bitcoin.value,
@@ -54,8 +59,8 @@ def _company(c: CompanyView, period: str) -> str:
         <div><h3>Net treasury NAV / share</h3><strong>{escape(c.nav_per_share)}</strong></div>
         <div><h3>Price / basic NAV</h3><strong>{escape(c.price_to_nav)}</strong></div>
       </section>
-      <section class="bitcoin-pair">
-        <div><h3>Bitcoin Bought</h3><strong>{escape(btc)}</strong></div>
+      <section class="bitcoin-pair{activity_css}">
+        {btc_rows}
         <div><h3>Total BTC held</h3><strong>{escape(total)}</strong></div>
       </section>
       <section class="market-activity" aria-label="{escape(c.name)} market activity">

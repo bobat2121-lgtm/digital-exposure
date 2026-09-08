@@ -44,6 +44,15 @@ class CompanyView:
     bought: MetricView | None = None
     periods: tuple[PeriodGrowthView, ...] = ()
     total_bitcoin: MetricView | None = None
+    sold: MetricView | None = None
+    btc_activity: tuple[MetricView, ...] = ()
+
+
+def btc_activity_metrics(company: CompanyView) -> tuple[MetricView, ...]:
+    """Shared gross-activity rows, including legacy manually constructed views."""
+    return company.btc_activity or tuple(
+        metric for metric in (company.bought, company.sold) if metric is not None
+    ) or (MetricView("Bitcoin activity", "Not disclosed"),)
 
 
 @dataclass(frozen=True)

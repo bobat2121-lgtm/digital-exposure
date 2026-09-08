@@ -88,6 +88,8 @@ class Company:
     valuation_estimated: bool = False
     preferred_claims_estimated: bool = False
     valuation_note: str | None = None
+    # Explicit gross BTC sold during the reporting period, never a holdings delta.
+    weekly_btc_sales: float | None = None
 
 
 @dataclass(frozen=True)
@@ -141,3 +143,4 @@ class CompanyMetrics:
     prior_net_btc_amplification: float | None
     prior_preferred_to_btc_pct: float | None
     preferred_capital_reported: bool = False
+    weekly_btc_sales: float | None = None

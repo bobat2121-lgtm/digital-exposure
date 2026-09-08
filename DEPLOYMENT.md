@@ -89,3 +89,24 @@ See [SECURITY.md](SECURITY.md) for scope, residual risks and maintenance guidanc
 After each release, verify the hosted title, both panels, calculation overview,
 Latest SEC filings and PNG download. Keep Worker health checks separate from
 page checks: a successful page load alone does not prove a new filing was ingested.
+
+## Bitcoin activity update — September 7, 2026
+
+The web report and generated PNG now label explicit gross activity as Bitcoin
+Bought or Bitcoin Sold, showing both when both are reported. Missing activity
+stays unknown; a change in holdings never establishes a purchase or sale.
+The public filing table also exposes the separate reported quantities.
+
+Worker version `21cb4dc4-6f33-4ca8-88fc-918a8ac38798` uses parser
+`sec-weekly-v2`. Sales-only filings, including zero ending BTC holdings, can
+qualify for the existing paired Monday notification. Conflicting or malformed
+BTC activity is held for review. The alert includes gross Bought/Sold amounts
+from the verified public feed; publication checks, retries and deduplication
+are unchanged. No market-price feed or widget was added.
+
+Validation: 144 Python tests passed, followed by nine focused activity/monitor
+tests after the final formatting guard; 107 Worker tests, TypeScript and dry-run
+passed. Sale-only, mixed activity and long fractional quantities fit the
+1800 × 1125 PNG and a 375px phone layout. Production report balances still
+advance after reconciliation. Synthetic sale scenarios were tested locally,
+never published as real filings or sent to the live Discord channel.

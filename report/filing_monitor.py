@@ -6,6 +6,9 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
+from .calculations import bitcoin_activity_amount
+from .presentation import btc_activity_value
+
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "data" / "sec-monitor.json"
 MAX_BYTES = 2_000_000
 
@@ -74,6 +77,13 @@ def filing_rows(feed: dict) -> list[dict]:
         extracted = filing.get("extracted") or {}
         if not isinstance(extracted, dict):
             extracted = {}
+        facts = extracted.get("facts")
+        if not isinstance(facts, dict):
+            facts = {}
+        activity = {}
+        for label, field in (("Bitcoin Bought", "weekly_btc_purchases"), ("Bitcoin Sold", "weekly_btc_sales")):
+            amount = bitcoin_activity_amount(facts.get(field))
+            activity[label] = btc_activity_value(amount)
         rows.append({
             "Company": filing.get("ticker", ""), "Form": filing.get("form", ""),
             "Accession": filing.get("accession", ""),
@@ -82,6 +92,7 @@ def filing_rows(feed: dict) -> list[dict]:
             "Document received": filing.get("documentFetchedAt") or "Pending",
             "State": "Initial baseline" if filing.get("baseline") else filing.get("status", ""),
             "Filing": url, "Balance date": extracted.get("balanceDate") or "Not extracted",
+            **activity,
         })
     return rows
 

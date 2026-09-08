@@ -1,8 +1,8 @@
 import { documentUrl } from "./sec";
-import { ISSUERS, type Filing, type Ticker } from "./types";
+import { ISSUERS, type BitcoinActivity, type Filing, type Ticker } from "./types";
 const DAY = 86_400_000;
 export interface ReceiptKey { ticker: Ticker; accession: string; sha256: string }
-export interface NotificationFiling extends ReceiptKey { url: string }
+export interface NotificationFiling extends ReceiptKey, BitcoinActivity { url: string }
 export interface PublicationEvent { week: string; filing: NotificationFiling }
 export function awareTime(value: string | null | undefined): number {
   return typeof value === "string" && /(Z|[+-]\d{2}:\d{2})$/.test(value) ? Date.parse(value) : NaN;
@@ -24,8 +24,11 @@ export function validateReceipt(filing: Filing | null, ack: ReceiptKey, now: num
   const day = easternDay(accepted);
   if (day.weekday !== "Mon") return null;
   const facts = filing.extracted?.facts;
-  if (!facts || !Number.isFinite(facts.btc_holdings) || facts.btc_holdings <= 0
-    || !Number.isFinite(facts.weekly_btc_purchases) || facts.weekly_btc_purchases < 0) return null;
+  const activityKeys = ["weekly_btc_purchases", "weekly_btc_sales"] as const;
+  if (!facts || !Number.isFinite(facts.btc_holdings) || facts.btc_holdings < 0
+    || !activityKeys.some(key => Object.hasOwn(facts, key))
+    || activityKeys.some(key => Object.hasOwn(facts, key) && (typeof facts[key] !== "number" || !Number.isFinite(facts[key]) || facts[key]! < 0))
+    || filing.extracted?.issues.some(issue => /weekly_btc_(?:purchases|sales)|btc_holdings|BTC activity:|reporting period|period dates disagree/i.test(issue))) return null;
   const receipt = filing.documents[0];
   if (!receipt || receipt.sha256 !== ack.sha256 || receipt.url !== filing.primaryDocumentUrl || awareTime(receipt.fetchedAt) !== fetched) return null;
   try {
@@ -56,7 +59,12 @@ export function verifyPublishedPair(records: Filing[], candidates: NotificationF
     for (const filing of matches) {
       const event = eligiblePublication(filing, now, activation);
       if (event?.week === week && candidates.some(c => c.ticker === ticker && c.accession === event.filing.accession && c.sha256 === event.filing.sha256 && c.url === event.filing.url)) {
-        chosen = event.filing; break;
+        // Only the verified projection supplies notification quantities. Keep issuer outbox keys unchanged.
+        chosen = { ...event.filing };
+        for (const key of ["weekly_btc_purchases", "weekly_btc_sales"] as const) {
+          if (Object.hasOwn(filing.extracted!.facts, key)) chosen[key] = filing.extracted!.facts[key];
+        }
+        break;
       }
     }
     if (!chosen) return null;

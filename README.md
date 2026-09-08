@@ -52,7 +52,7 @@ computer screens, stacked panels on phones. A discreet **Download** button at
 the bottom saves a fixed 1800 × 1125 PNG for X. There are no public edition
 selectors, post/detail tabs, or price-refresh controls.
 
-**Calculation overview** explains the metrics in 270 words. Market Activity
+**Calculation overview** explains the metrics in 279 words. Market Activity
 groups common capital, preferred capital, and effective common shares.
 Strategy's proceeds-based average sale price, Strive's VWAP proxy, and
 preferred repurchase prices remain visible. Total BTC, weekly changes,

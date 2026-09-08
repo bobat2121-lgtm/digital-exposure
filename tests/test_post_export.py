@@ -56,7 +56,7 @@ class PostExportTests(unittest.TestCase):
                         "Cash + liquid assets + BTC", "await verified baselines"):
             self.assertNotIn(formula, text)
         first = view.companies[0]
-        labels = (first.bought.label, first.common.label, first.preferred.label,
+        labels = (first.btc_activity[0].label, first.common.label, first.preferred.label,
                   first.shares.label, first.bitcoin.label)
         self.assertEqual([text_items.index(label) for label in labels],
                          sorted(text_items.index(label) for label in labels))

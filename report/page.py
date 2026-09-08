@@ -4,7 +4,7 @@ from dataclasses import replace
 from html import escape
 from pathlib import Path
 
-from .view_types import CompanyView, MetricView, ReportView
+from .view_types import CompanyView, MetricView, ReportView, btc_activity_metrics
 
 ASSETS = Path(__file__).resolve().parents[1] / "assets"
 
@@ -44,7 +44,7 @@ def _panel(c: CompanyView, capital_period_label: str) -> str:
         <div class="nav-ratio"><h3>Price / basic NAV</h3><div>{escape(c.price_to_nav)}</div></div>
         <p class="nav-note">{escape(c.nav_note)}</p>
       </section>
-      {_row(c.bought, 'bitcoin-bought') if c.bought else ''}
+      {''.join(_row(activity, 'bitcoin-activity') for activity in btc_activity_metrics(c))}
       {_row(c.total_bitcoin, 'bitcoin-held') if c.total_bitcoin else ''}
       <div class="capital-heading"><span>{escape(capital_period_label)}</span><span>+ raised / − repurchased</span></div>
       {_row(common, 'common-capital')}
@@ -82,8 +82,8 @@ def render_post_preview(v: ReportView, png: bytes) -> str:
     for c in v.companies:
         summary.extend((c.name, c.ticker, c.stock_price, f"NAV/share {c.nav_per_share}", f"Price/basic NAV {c.price_to_nav}"))
         summary.append(c.nav_note)
-        if c.bought:
-            summary.append(f"{c.bought.label}: {c.bought.value}")
+        for activity in btc_activity_metrics(c):
+            summary.append(f"{activity.label}: {activity.value}")
         if c.total_bitcoin:
             summary.append(f"{c.total_bitcoin.label}: {c.total_bitcoin.value}")
         for metric in (c.common, c.preferred, c.shares, c.bitcoin, c.nav_change, c.amplification, c.preferred_ratio):

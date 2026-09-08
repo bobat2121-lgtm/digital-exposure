@@ -17,6 +17,16 @@ def _nonnegative(value: float | None) -> bool:
     return _known(value) and value >= 0
 
 
+def bitcoin_activity_amount(value: object) -> float | None:
+    """An explicit gross BTC quantity; unknown or invalid inputs stay unknown."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    try:
+        return value if isfinite(value) and value >= 0 else None
+    except OverflowError:
+        return None
+
+
 def _difference(current: float | None, prior: float | None) -> float | None:
     return current - prior if _known(current) and _known(prior) else None
 
@@ -260,7 +270,8 @@ def calculate_company(company: Company, current_btc_price: float | None,
         sats_change_pct=_percentage_change(sats, previous_sats),
         btc_holdings=current.btc_holdings,
         btc_change=_difference(current.btc_holdings, prior.btc_holdings),
-        weekly_btc_purchases=company.weekly_btc_purchases,
+        weekly_btc_purchases=bitcoin_activity_amount(company.weekly_btc_purchases),
+        weekly_btc_sales=bitcoin_activity_amount(company.weekly_btc_sales),
         constant_price_nav_change_pct=_percentage_change(nav_per_share, previous_constant_per_share),
         net_btc_amplification=amplification,
         amplification_change=_difference(amplification, previous_amplification),

@@ -4,7 +4,12 @@ export const ISSUERS = {
 } as const;
 export type Ticker = keyof typeof ISSUERS;
 export type Issuer = typeof ISSUERS[Ticker];
-export type Facts = Record<string, number>;
+/** Explicit gross BTC quantities. Missing is unknown; sales are never inferred from a holdings decline. */
+export interface BitcoinActivity {
+  weekly_btc_purchases?: number;
+  weekly_btc_sales?: number;
+}
+export type Facts = Record<string, number> & BitcoinActivity;
 export interface SecurityActivity {
   issuedShares?: number;
   netIssuanceProceedsUsd?: number;
