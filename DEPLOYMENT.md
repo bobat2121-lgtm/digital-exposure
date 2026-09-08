@@ -3,6 +3,18 @@
 Public report: [digital-credit-report.streamlit.app](https://digital-credit-report.streamlit.app/).
 Worker: [capital-report.alatimore06370.workers.dev](https://capital-report.alatimore06370.workers.dev/).
 
+## Combined weekly reports — September 8, 2026
+
+The existing root entrypoint now hosts Monday and Friday as lazy, switchable
+tabs. Friday includes the approved dark palette, compact spacing and title
+size, one refresh button, fixed chart windows and its panel-only download.
+Monday retains the deployed filing resolver and report data. Runtime history
+caching uses writable temporary storage, and no Worker deployment is involved.
+
+Friday's issuer balance inputs remain the reviewed August disclosures;
+future filing integration is not part of this release. See
+[WEEKLY_REPORTS.md](WEEKLY_REPORTS.md) for refresh and snapshot behavior.
+
 ## Streamlit configuration
 
 | Field | Value |

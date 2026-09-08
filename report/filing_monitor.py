@@ -107,7 +107,7 @@ class MonitorSnapshot:
     notice: str | None = None
 
 
-def load_monitor_snapshot() -> MonitorSnapshot:
+def load_monitor_snapshot(*, force: bool = False) -> MonitorSnapshot:
     """One cached public feed for the financial cards and their filing details."""
     import streamlit as st
 
@@ -119,11 +119,13 @@ def load_monitor_snapshot() -> MonitorSnapshot:
         origin = monitor_url()
         if not origin:
             return MonitorSnapshot(None, None, stale=True, notice="SEC monitor is not connected.")
+        if force:
+            cached_feed.clear()
         status, feed = cached_feed(origin)
-        st.session_state["last_sec_monitor"] = (status, feed)
+        st.session_state["monday_last_sec_monitor"] = (status, feed)
         return MonitorSnapshot(status, feed)
     except (OSError, ValueError, TypeError, KeyError, HTTPException):
-        previous = st.session_state.get("last_sec_monitor")
+        previous = st.session_state.get("monday_last_sec_monitor")
         status, feed = previous if previous else (None, None)
         return MonitorSnapshot(status, feed, stale=True, notice="SEC refresh unavailable.")
 
