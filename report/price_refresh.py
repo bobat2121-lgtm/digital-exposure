@@ -3,9 +3,12 @@ from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
 from http.client import HTTPException
+import logging
 from threading import Lock
 
 from .current_prices import load_current_prices, pull_current_prices
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -49,7 +52,9 @@ class PriceStore:
             generation = self._generation
         try:
             fresh = pull_current_prices()
-        except (OSError, ValueError, HTTPException):
+        except (OSError, ValueError, HTTPException) as error:
+            # Provider class/status only; no response bodies or private paths.
+            LOGGER.warning("Price refresh failed: %s (HTTP %s)", type(error).__name__, getattr(error, "code", "n/a"))
             with self._lock:
                 return PriceRefreshResult(deepcopy(self._latest), using_saved_prices=True)
         return self._remember(fresh, generation)
