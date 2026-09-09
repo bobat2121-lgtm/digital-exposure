@@ -9,8 +9,9 @@ Only the selected tab renders charts or polls. Returning to a tab restores its
 completed snapshot, timeframe and expander preferences. Opening a tab for the
 first time in a browser session, reloading the browser, or pressing **Refresh
 data** requests fresh readings. Friday has no source selector, synthetic preview
-option or periodic auto-refresh. Chart windows are fixed; zooming is disabled.
-Monday retains its read-only 15-second SEC checks while selected.
+option or periodic market-data auto-refresh. Chart windows are fixed; zooming is
+disabled. Both reports check the shared read-only SEC feed every 15 seconds
+while selected. Unchanged filings never reload Friday's charts or market feeds.
 
 Friday refreshes run in the background. Current readings remain placeholders
 until that request finishes; validated cached histories can appear immediately.
@@ -21,17 +22,24 @@ that every source published a new observation.
 
 ## Balance-sheet scope
 
-Friday currently uses reviewed August 24/31 SEC disclosures, selected by the
-completed Friday cutoff. Holdings, cash, debt, common shares and preferred
-claims are held fixed for the weekly price comparison. These are dated real
-inputs, including documented estimates, and do **not** automatically advance
-from the Monday Worker. Future balance changes require reviewed records or a
-cutoff-aware feed integration. Directly using Monday's newest filing pair could
-introduce disclosures made after the Friday being measured.
+Friday now resolves the same latest validated filing pair and date-specific NAV
+supplements as Monday. BTC holdings, Strategy USD Reserve plus USD Cash,
+Strive cash/securities, debt, basic shares and preferred claims all come from
+that shared financial model. Disclosures may update the Friday panel even when
+published after the displayed price week, as explicitly requested. The web page
+and PNG show the balance dates alongside the separate Friday price week.
 
-Monday continues to consume the deployed Worker and date-specific supplements.
-This release does not change Worker code, schedules or notifications. No new
-repository, Worker or required API secret is needed for these report tabs.
+Both weekly BTC marks use those same latest inputs. NAV/share WoW remains a
+price-only comparison. A new filing pair with missing shares, debt or preferred
+claims shows unavailable NAV rather than carrying old values into a new edition.
+An incomplete pair remains pending under Monday's existing validation rules.
+NAV marks (STRC and FX) refresh with the full market request; balance-only checks
+retain them. Feed failures retain a whole dated edition with a visible notice.
+
+The deployed Worker and date-specific supplements remain authoritative. This
+connection updates everything Monday can validate; it does not invent facts
+that an 8-K omits or add an independent debt parser. Worker code, schedules and
+notifications are unchanged. No new repository, Worker or API secret is needed.
 
 ## Downloads
 

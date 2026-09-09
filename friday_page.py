@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 import streamlit as st
 
 from friday.presentation import chart_spec, deferred_png
-from friday.runtime import session_snapshot, SESSION_KEY
+from friday.runtime import session_snapshot, poll_company_inputs, SESSION_KEY
 from friday.freshness import display_panel
 
 ROOT = Path(__file__).resolve().parent / "sources" / "friday"
@@ -91,7 +91,7 @@ def title(panel, source_mode):
     st.html(f'''<header class="friday friday-head">
       <div><p class="eyebrow">FRIDAY CLOSE · {tag}</p>
       <h1>The <strong>Bitcoin &amp; Digital Credit</strong> Report<span class="orange-dot">.</span></h1></div>
-      <div class="edition"><strong>{'Week ending ' + escape(pretty_date(period.get('week_ending', period['end']))) if period.get('end') else 'Loading Friday snapshot…'}</strong><br>Weekly market snapshot</div>
+      <div class="edition"><strong>{'Week ending ' + escape(pretty_date(period.get('week_ending', period['end']))) if period.get('end') else 'Loading Friday snapshot…'}</strong><br>Weekly prices · latest Monday balances</div>
     </header>''')
 
 
@@ -259,6 +259,12 @@ def report(snapshot, source_mode):
         st.warning(snapshot['error'])
     elif source_mode == 'latest':
         st.caption(f"Readings refreshed: {pretty_time(data.get('fetched_at'))}")
+        financial = data.get('financial_inputs') or {}
+        dates = ' · '.join(f"{item['ticker']} {pretty_date(item.get('baseline_at'))}" for item in panel.get('treasury', []) if item.get('baseline_at'))
+        if dates:
+            st.caption("Monday balance inputs · " + dates)
+        if financial.get('notice'):
+            st.caption(financial['notice'])
     header(panel, pending=pending)
     section("Trading liquidity", "12 completed weeks · dollar volume")
     volume = {item["ticker"]: item for item in panel["liquidity"]}
@@ -300,7 +306,8 @@ def report(snapshot, source_mode):
         st.markdown("**Price / NAV** = common share price ÷ estimated net treasury NAV per basic share. For example, 1.25x represents a 25% premium; 0.90x represents a 10% discount.")
         st.markdown("**Price / NAV WoW** is the change in the multiple, in x, using each Friday's stock price and BTC mark against the same frozen disclosed quantities. It is a price-only comparison, not a reconstruction of two independently reported balance sheets.")
         st.markdown("**Estimated net treasury NAV** = BTC value + cash and other included liquid assets − debt principal − preferred claims. The denominator matches the Monday report: actual Class A + Class B shares.")
-        st.markdown("**Friday assumption:** no additional assets bought or financing changes assumed before disclosure. The same disclosed balance sheet is valued at both BTC price marks; Monday's Digital Credit Report handles new disclosures.")
+        st.markdown("**Monday balance updates:** both reports use the same validated filing pair and dated NAV supplements. BTC held, cash, debt, basic shares, securities and preferred claims advance together when that Monday edition becomes available, including on a holiday Tuesday. Friday may therefore show newer Monday balances alongside the last completed Friday's prices. The displayed balance dates identify those inputs; no undisclosed purchases or issuance are assumed.")
+        st.markdown("**Weekly comparison:** the latest Monday inputs are held fixed at both BTC price marks. Price/NAV and NAV/share WoW describe that price-only comparison, not two historical balance sheets. Missing inputs in a new edition remain unavailable. Strategy cash includes USD Reserve plus USD Cash; Strive securities and foreign-currency preferred claims use the same valuation method as Monday, with marks captured on the last full refresh.")
         st.markdown("**NAV/share WoW** shows the dollar and percentage change from repricing BTC against that same balance sheet. Other assets, claims and the share count stay fixed.")
         st.markdown("**Weekly liquidity:** 12 completed exchange weeks. WoW compares adjacent weeks; the four-week comparison uses the four completed weeks before the latest week. Short holiday weeks contain fewer sessions. Missing or incomplete weeks are unavailable, not zero. Public-feed dollar volume is estimated as daily close × shares traded when VWAP is unavailable.")
         st.markdown("**Charts and downloads:** financial headers and weekly liquidity use Friday close. Indicator charts and the downloaded panel use the displayed latest validated readings, which may be delayed. The download captures this dataset without requesting new feeds. Price and supply lines connect observations directly. Fear & Greed uses CoinMarketCap throughout. Its line uses a trailing three-calendar-day average of published daily observations; its live headline and dot use the latest reported raw index. The download preserves the same raw headline and current marker; its collection time and each observation date are retained. Supply in profit/loss uses coins' last-moved price as a cost-basis proxy, not investors' actual profit or loss.")
@@ -321,7 +328,9 @@ def report(snapshot, source_mode):
         st.caption(f"Market data fetched: {data.get('fetched_at', 'Unavailable')}")
         if data.get("refresh_meta", {}).get("last_full_load_at"):
             st.caption(f"Full price history requested: {pretty_time(data['refresh_meta']['last_full_load_at'])}")
-        st.caption("First opening Friday in a browser session, reloading the browser, and using Refresh data request fresh feeds in the background. Switching away and back reuses the session snapshot. Historical charts can appear from a dated, validated cache; summary readings remain placeholders until the request finishes. Timeframe controls use the same complete calculation history.")
+        st.caption("First opening Friday in a browser session, reloading the browser, and using Refresh data request fresh feeds in the background. A read-only filing check every 15 seconds while Friday is open updates changed Monday balance inputs without fetching market histories or rebuilding charts. Switching away and back reuses market data and checks for a changed financial edition. Historical charts can appear from a dated, validated cache; summary readings remain placeholders until the request finishes.")
+        if data.get('financial_inputs'):
+            st.caption(f"Monday filing edition: {data['financial_inputs'].get('version', 'Unavailable')} · checked {pretty_time(data['financial_inputs'].get('checked_at'))}")
         if snapshot.get('timings'):
             st.caption(f"Latest refresh timing: {snapshot['timings']}")
         st.caption(str(panel["period"].get("price_alignment", "")))
@@ -340,6 +349,12 @@ def finish_refresh():
         return
     current = session_snapshot(st.session_state, 'latest')
     if not current.get('pending'):
+        st.rerun()
+
+
+@st.fragment(run_every="15s", key="friday_monday_inputs")
+def follow_monday_inputs():
+    if poll_company_inputs(st.session_state):
         st.rerun()
 
 
@@ -364,8 +379,15 @@ def render():
     with st.container(key="friday_report"):
         st.html(css())
         snapshot = session_snapshot(st.session_state, "latest", st.session_state.pop("friday_refresh_request", None))
+        monday_version = getattr(st.session_state.get('monday_prepared_report'), 'version', None)
+        monday_changed = monday_version is not None and monday_version != st.session_state.get('friday_seen_monday_version')
+        poll_company_inputs(st.session_state, force=monday_changed)
+        st.session_state['friday_seen_monday_version'] = monday_version
+        snapshot = st.session_state[SESSION_KEY]
         st.button("Refresh data", on_click=queue_refresh, key="friday_refresh_button",
             disabled=bool(snapshot.get("pending")))
         report(snapshot, "latest")
         if st.session_state.get(SESSION_KEY, {}).get("pending"):
             finish_refresh()
+        else:
+            follow_monday_inputs()

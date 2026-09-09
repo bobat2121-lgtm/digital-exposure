@@ -81,7 +81,7 @@ def displayed_export_panel(panel, *, snapshot_as_of=None):
     """
     fields = ("mode", "period", "header", "liquidity", "treasury", "trends",
               "sentiment", "supply_loss", "supply_source", "supply_source_url",
-              "supply_method", "sentiment_source", "sentiment_source_url")
+              "supply_method", "sentiment_source", "sentiment_source_url", "financial_inputs")
     projected = {field: panel.get(field) for field in fields}
     if panel.get("mode") == "latest":
         for target, live in (("trends", "live_trends"), ("supply_loss", "live_supply_loss"),

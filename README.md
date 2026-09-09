@@ -7,7 +7,7 @@ pairs. Friday adds weekly dollar liquidity, BTC performance, Price/NAV,
 supply in profit/loss, CoinMarketCap Fear & Greed and SMA extensions.
 Both reports use their own captured dataset for downloads, excluding navigation
 and refresh controls. See [WEEKLY_REPORTS.md](WEEKLY_REPORTS.md) for the tabs,
-refresh behavior, download formats and Friday's dated balance limitations.
+refresh behavior, download formats and the shared Monday balance updates.
 
 The live [capital-report SEC monitor](https://capital-report.alatimore06370.workers.dev/api/status)
 checks both issuers every 30 seconds on Mondays, 06:45–09:30 Eastern. Its

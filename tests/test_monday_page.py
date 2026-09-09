@@ -140,22 +140,16 @@ class MondayAdapterTests(unittest.TestCase):
 
 
 class MondayMonitorNamespaceTests(unittest.TestCase):
-    def test_force_refresh_clears_only_its_cache_and_uses_namespaced_fallback(self):
-        cleared = []
-        def cache_data(**kwargs):
-            def decorate(function):
-                function.clear = lambda: cleared.append(function.__name__)
-                return function
-            return decorate
+    def test_force_refresh_uses_shared_reader_and_namespaced_fallback(self):
         state = {"last_sec_monitor": ({"wrong": "page"}, {"wrong": "page"})}
-        fake = SimpleNamespace(cache_data=cache_data, session_state=state)
+        fake = SimpleNamespace(session_state=state)
         status, feed = {"schemaVersion": 1, "issuers": []}, {"schemaVersion": 1, "filings": []}
         with patch.dict("sys.modules", {"streamlit": fake}), \
              patch.object(filing_monitor, "monitor_url", return_value="https://example.workers.dev"), \
-             patch.object(filing_monitor, "read_monitor", side_effect=[(status, feed), OSError("Synthetic timeout")]):
+             patch.object(filing_monitor, "read_shared_monitor", side_effect=[(status, feed), OSError("Synthetic timeout")]) as read:
             first = filing_monitor.load_monitor_snapshot(force=True)
             later = filing_monitor.load_monitor_snapshot()
-        self.assertEqual(cleared, ["cached_feed"])
+        self.assertEqual([call.kwargs for call in read.call_args_list], [{"force": True}, {"force": False}])
         self.assertEqual(state["monday_last_sec_monitor"], (status, feed))
         self.assertTrue(later.stale)
         self.assertEqual(later.feed, first.feed)

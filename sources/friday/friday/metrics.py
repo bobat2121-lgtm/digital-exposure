@@ -196,11 +196,22 @@ def _liquidity(ticker: str, prices: dict[str, dict], period: dict, calendar: Any
     }
 
 
+def _latest_monday_inputs(company: dict) -> bool:
+    """An explicit bridge marker admits later, genuinely dated disclosures."""
+    return (company.get("allow_post_friday_disclosure") is True
+            and company.get("publication_basis") == "latest_monday_disclosures")
+
+
+def _publication_eligible(company: dict, close_at: datetime) -> bool:
+    disclosed = _datetime(company.get("disclosed_at"))
+    return disclosed is not None and (disclosed <= close_at or _latest_monday_inputs(company))
+
+
 def _baseline(company: dict, close_at: datetime) -> tuple[bool, str | None]:
     disclosed = _datetime(company.get("disclosed_at"))
     if disclosed is None:
         return False, "Dated company disclosure unavailable"
-    if disclosed > close_at:
+    if disclosed > close_at and not _latest_monday_inputs(company):
         return False, "Available company snapshot was disclosed after this Friday; historical NAV withheld"
     for key in ("btc_held", "cash_usd", "debt_usd", "preferred_usd", "shares"):
         value = _number(company.get(key))
@@ -220,10 +231,9 @@ def _nav(company: dict, btc: float | None) -> float | None:
 
 def _treasury(ticker: str, company: dict, btc_prices: dict, equity_prices: dict, period: dict, use_equity: bool) -> dict:
     valid, reason = _baseline(company, _datetime(period["as_of"]))
-    disclosed = _datetime(company.get("disclosed_at"))
-    eligible = disclosed is not None and disclosed <= _datetime(period["as_of"])
+    eligible = _publication_eligible(company, _datetime(period["as_of"]))
     frozen_balances = {}
-    for field in ("btc_held", "cash_usd", "debt_usd"):
+    for field in ("btc_held", "cash_usd", "debt_usd", "securities_usd", "preferred_usd"):
         value = _number(company.get(field))
         frozen_balances[field] = value if eligible and value is not None and value >= 0 else None
     start_btc = _mark(btc_prices.get(period["previous_end"]), use_equity)
@@ -258,16 +268,55 @@ def _treasury(ticker: str, company: dict, btc_prices: dict, equity_prices: dict,
         "nav_multiple_change": end_multiple - start_multiple if end_multiple is not None and start_multiple is not None else None,
         "baseline_disclosed_at": company.get("disclosed_at"),
         "baseline_at": company.get("baseline_at"),
+        "publication_basis": "latest_monday_disclosures" if _latest_monday_inputs(company) else "available_by_friday_close",
         "shares": _number(company.get("shares")),
         "share_basis": "basic",
         "estimated_fields": list(company.get("estimated_fields", [])),
         "baseline_notes": list(company.get("notes", [])),
         "baseline_sources": list(company.get("sources", [])),
         "nav_series": nav_series,
-        "series_basis": "Price-only reconstruction using one frozen disclosed baseline",
+        "series_basis": ("Price-only reconstruction using one latest Monday disclosure baseline, including post-Friday disclosures"
+                         if _latest_monday_inputs(company) else "Price-only reconstruction using one frozen disclosed baseline"),
         "valid": valid,
         "reason": reason if reason else ("Premium unavailable because estimated common NAV is nonpositive" if end_nav is not None and end_nav <= 0 else None),
     }
+
+
+def reprice_company_inputs(panel: dict, data: dict, companies: dict) -> dict:
+    """Replace company valuations while retaining the exact market snapshot.
+
+    Both weekly endpoints use the same new disclosed quantities. No provider,
+    SMA, indicator, liquidity, chart builder or current clock is consulted.
+    Unchanged chart/history containers are shared read-only; changed containers
+    are new, so neither the authoritative snapshot nor ``companies`` is mutated.
+    """
+    period = panel["period"]
+    end = _date(period["end"])
+    wanted = {period["previous_end"], *period["sessions"]}
+    prices = {}
+    for ticker in ("BTC", "MSTR", "ASST"):
+        relevant = [row for row in data.get("prices", {}).get(ticker, [])
+                    if (day := _date(row.get("date"))) is not None and day.isoformat() in wanted]
+        prices[ticker] = _clean_prices(relevant, end)
+    btc = _equity_marks(prices["BTC"], data.get("btc_equity_marks", {}), period, _calendar())
+    use_equity = all((_mark(btc.get(day), True) or 0) > 0 for day in (period["previous_end"], period["end"]))
+    treasury = [_treasury(ticker, companies.get(ticker, {}), btc, prices[ticker], period, use_equity)
+                for ticker in ("MSTR", "ASST")]
+    original_header = panel.get("header", {})
+    header_companies = dict(original_header.get("companies", {}))
+    for row in treasury:
+        ticker = row["ticker"]
+        header_companies[ticker] = {
+            **header_companies.get(ticker, {}),
+            **{field: row[field] for field in (
+                "nav_per_share", "nav_change_pct", "premium_pct", "nav_multiple",
+                "start_nav_multiple", "nav_multiple_change")},
+        }
+    prior_reasons = {f"{row['ticker']}: {row['reason']}." for row in panel.get("treasury", []) if row.get("reason")}
+    notices = [notice for notice in panel.get("notices", []) if notice not in prior_reasons]
+    notices.extend(f"{row['ticker']}: {row['reason']}." for row in treasury if row.get("reason"))
+    return {**panel, "header": {**original_header, "companies": header_companies},
+            "treasury": treasury, "notices": list(dict.fromkeys(notices))}
 
 
 @lru_cache(maxsize=12)

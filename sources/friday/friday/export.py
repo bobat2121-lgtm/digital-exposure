@@ -336,6 +336,9 @@ def render_png(panel: dict) -> bytes:
     text(1746, 39, "DEMO · SYNTHETIC SAMPLE DATA" if demo else "LATEST AVAILABLE · ESTIMATED", 19, ORANGE, True, align="right")
     text(1746, 75, f"Week ended {_date(period.get('week_ending', period.get('end')))}", 25, align="right")
     text(1746, 111, "Charts refreshed " + _snapshot_label(panel["snapshot_as_of"]) if panel.get("export_basis") == "displayed_latest" and panel.get("snapshot_as_of") else "U.S. market close · Eastern time", 18, MUTED, align="right")
+    if panel.get("financial_inputs"):
+        dates = " · ".join(f"{item['ticker']} {_date(item.get('baseline_at'))}" for item in panel.get("treasury", []) if item.get('baseline_at'))
+        text(54, 131, "Monday balance inputs · " + dates, 16, MUTED, max_width=1692)
 
     columns = [(54,160,606,363), (624,160,1176,363), (1194,160,1746,363)]
     btc = header.get("btc") or {}
@@ -551,6 +554,9 @@ def render_png(panel: dict) -> bytes:
         if panel.get(field):
             metadata.add_text(field,str(panel[field]))
     metadata.add_text("financial_week_end",str(period.get("end") or "unavailable"))
+    if panel.get("financial_inputs"):
+        metadata.add_text("financial_edition", str(panel['financial_inputs'].get('version', 'unavailable')))
+        metadata.add_text("balance_dates", "; ".join(f"{item['ticker']}:{item.get('baseline_at')}" for item in panel.get('treasury', [])))
     if not demo:
         for field in ("sentiment_source","sentiment_source_url"):
             if panel.get(field):

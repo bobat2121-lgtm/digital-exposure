@@ -182,6 +182,7 @@ class SnapshotService:
             if not isinstance(panel, dict) or panel.get("mode") != "latest":
                 raise ValueError("Only a Latest panel may be cached")
             panel = deepcopy(panel)
+            panel["financial_inputs"] = deepcopy(data.get("financial_inputs", {}))
             for field, value in data.items():
                 if field == "sources" or field.endswith("_source") or field.endswith("_source_url") or field == "supply_method":
                     panel[field] = deepcopy(value)

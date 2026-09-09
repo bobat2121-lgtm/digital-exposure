@@ -1,8 +1,8 @@
 """Portable data providers for the Friday panel.
 
 The demo is entirely synthetic. Latest mode never falls back to demo observations.
-Company balances use vetted SEC disclosures published before the Friday cutoff,
-with explicitly estimated basic shares and senior claims where required.
+The runtime adds the current validated Monday financial edition, with dated
+basic-share and senior-claim supplements where required.
 Public feeds may be delayed, incomplete or rate limited.
 """
 from __future__ import annotations
@@ -21,7 +21,6 @@ from zoneinfo import ZoneInfo
 
 from friday.supply import fetch_public_supply
 from friday.sentiment import fetch_cmc_sentiment, SOURCE_URL as CMC_SOURCE_URL
-from friday.balances import company_balances
 from friday.metrics import completed_week
 
 UTC = timezone.utc
@@ -318,25 +317,24 @@ def _supply_feed(key=""):
 def load_latest() -> dict:
     """Fetch independent public series; keep unavailable data visibly missing."""
     fetched_at = _now()
-    cutoff = datetime.fromisoformat(completed_week(fetched_at)["as_of"])
     data = {
         "mode": "latest", "fetched_at": fetched_at.isoformat(),
         "prices": {symbol: [] for symbol in SYMBOLS}, "latest_quotes": {}, "sentiment": [],
         "sentiment_latest": {}, "sentiment_source": "CoinMarketCap", "sentiment_source_url": CMC_SOURCE_URL,
-        "supply_loss": [], "btc_equity_marks": {}, "companies": company_balances(cutoff),
+        "supply_loss": [], "btc_equity_marks": {}, "companies": {},
         "sources": {
             "prices": "Yahoo Finance chart API; provider close and volume, daily VWAP unavailable",
             "sentiment": "CoinMarketCap · " + CMC_SOURCE_URL,
             "supply_loss": "Checkonchain public daily supply balances",
-            "companies": "SEC filings published August 24 and 31, 2026; latest eligible disclosure held fixed through Friday; basic shares and senior claims include labeled estimates",
+            "companies": "Latest validated Monday filing edition and dated NAV supplements",
         },
         "price_basis": "Provider close (split-adjusted where supplied by Yahoo); not dividend-adjusted total return",
         "btc_close_alignment": "Daily BTC bars use UTC. Recent equity-close BTC marks are separate 1-hour candle closes at 16:00/13:00 ET.",
         "notices": [
             "Latest charts show provider quotes separately from completed daily bars. Quote timestamps are provider observations and may be delayed; this is not a real-time consolidated feed.",
             "Dollar volume uses daily close × shares traded as an estimate; Yahoo daily data does not provide exact traded notional or VWAP.",
-            "NAV uses BASIC Class A+B shares and the latest vetted disclosure published by the Friday cutoff. Disclosed quantities, cash and estimated senior claims are held fixed for both weekly price marks.",
-            "Strategy liquid assets include $6.71B combined designated reserve/cash once; debt is carried from June 30. Strive STRC securities retain their August 28 mark.",
+            "NAV uses the same latest validated Monday balance inputs and BASIC Class A+B shares. Those inputs are held fixed across both weekly BTC price marks, even if disclosed after the displayed price week.",
+            "Strategy cash includes USD Reserve plus USD Cash once. Strive cash, STRC securities, debt and preferred claims follow the same dated inputs and valuation method as Monday.",
             "Long-history BTC SMA uses daily UTC closes; the weekly return and BTC-only NAV impact require matching ET equity-close BTC marks.",
             "Opening or refreshing a tab requests fresh quotes and indicators in the background. Validated history can be preloaded; full histories revalidate at UTC rollover, equity-session close, new stock splits, and at least every six hours.",
             "Fear & Greed uses CoinMarketCap throughout, starting July 2023. The live headline and dot use its latest reported index; the line uses a trailing three-day average of published daily observations. Friday values stop at the equity-close cutoff. Other sentiment providers are not mixed into the series.",

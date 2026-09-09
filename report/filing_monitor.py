@@ -1,10 +1,13 @@
 """Read public SEC filing observations without credentials or write requests."""
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
+from copy import deepcopy
 from dataclasses import dataclass
 from http.client import HTTPException
 import json
 import os
 from pathlib import Path
+from threading import Lock
+from time import monotonic
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
@@ -13,6 +16,11 @@ from .presentation import btc_activity_value
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "data" / "sec-monitor.json"
 MAX_BYTES = 2_000_000
+SHARED_MONITOR_TTL = 15
+_SHARED_MONITOR_LIMIT = 4
+_shared_monitor_lock = Lock()
+_shared_monitor_cache: dict[str, tuple[float, tuple[dict, dict]]] = {}
+_shared_monitor_inflight: dict[str, Future] = {}
 
 
 def monitor_url() -> str | None:
@@ -64,6 +72,55 @@ def read_monitor(origin: str) -> tuple[dict, dict]:
     return status, feed
 
 
+def clear_shared_monitor_cache() -> None:
+    """Clear completed cached reads; in-flight reads finish normally."""
+    with _shared_monitor_lock:
+        _shared_monitor_cache.clear()
+
+
+def read_shared_monitor(origin: str, *, force: bool = False) -> tuple[dict, dict]:
+    """Share one public SEC read across UI and background callers for 15 seconds.
+
+    An in-flight refresh is joined even when the prior cache is still fresh.
+    Each caller receives a deep copy. Failed refreshes propagate to all callers;
+    only the report's session layer may choose to retain a dated old snapshot.
+    This function has no Streamlit dependency or session-state access.
+    """
+    origin = _validated_origin(origin)
+    started = monotonic()
+    with _shared_monitor_lock:
+        pending = _shared_monitor_inflight.get(origin)
+        cached = _shared_monitor_cache.get(origin)
+        if pending is not None:
+            owner = False
+        elif (cached is not None and monotonic() - cached[0] < SHARED_MONITOR_TTL
+              and (not force or cached[0] > started)):
+            return deepcopy(cached[1])
+        else:
+            pending = Future()
+            _shared_monitor_inflight[origin] = pending
+            owner = True
+    if not owner:
+        return deepcopy(pending.result())
+    try:
+        result = deepcopy(read_monitor(origin))
+    except BaseException as error:
+        # Wake every waiter on failure too; do not create a cached error or
+        # silently substitute an expired successful feed.
+        with _shared_monitor_lock:
+            pending.set_exception(error)
+            _shared_monitor_inflight.pop(origin, None)
+        raise
+    with _shared_monitor_lock:
+        _shared_monitor_cache[origin] = (monotonic(), result)
+        while len(_shared_monitor_cache) > _SHARED_MONITOR_LIMIT:
+            oldest = min(_shared_monitor_cache, key=lambda key: _shared_monitor_cache[key][0])
+            del _shared_monitor_cache[oldest]
+        pending.set_result(result)
+        _shared_monitor_inflight.pop(origin, None)
+    return deepcopy(result)
+
+
 def filing_rows(feed: dict) -> list[dict]:
     """Keep baseline observations distinct from newly detected filings."""
     rows = []
@@ -111,17 +168,11 @@ def load_monitor_snapshot(*, force: bool = False) -> MonitorSnapshot:
     """One cached public feed for the financial cards and their filing details."""
     import streamlit as st
 
-    @st.cache_data(ttl=15, max_entries=4, show_spinner=False)
-    def cached_feed(origin):
-        return read_monitor(origin)
-
     try:
         origin = monitor_url()
         if not origin:
             return MonitorSnapshot(None, None, stale=True, notice="SEC monitor is not connected.")
-        if force:
-            cached_feed.clear()
-        status, feed = cached_feed(origin)
+        status, feed = read_shared_monitor(origin, force=force)
         st.session_state["monday_last_sec_monitor"] = (status, feed)
         return MonitorSnapshot(status, feed)
     except (OSError, ValueError, TypeError, KeyError, HTTPException):

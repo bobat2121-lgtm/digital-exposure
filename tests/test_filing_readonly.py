@@ -32,7 +32,7 @@ class PublicMonitorTests(unittest.TestCase):
         feed = {'schemaVersion': 1, 'filings': [{'accession': 'latest-complete'}]}
         with patch.dict('sys.modules', {'streamlit': st}), \
              patch.object(monitor, 'monitor_url', return_value='https://report.example.workers.dev'), \
-             patch.object(monitor, 'read_monitor', side_effect=[(status, feed), OSError('Timed out')]):
+             patch.object(monitor, 'read_shared_monitor', side_effect=[(status, feed), OSError('Timed out')]):
             first = monitor.load_monitor_snapshot()
             second = monitor.load_monitor_snapshot()
         self.assertFalse(first.stale)
