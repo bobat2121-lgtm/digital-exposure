@@ -11,9 +11,11 @@ size, one refresh button, fixed chart windows and its panel-only download.
 Monday retains the deployed filing resolver and report data. Runtime history
 caching uses writable temporary storage, and no Worker deployment is involved.
 
-Friday's issuer balance inputs remain the reviewed August disclosures;
-future filing integration is not part of this release. See
-[WEEKLY_REPORTS.md](WEEKLY_REPORTS.md) for refresh and snapshot behavior.
+Friday now shares Monday's validated filing-pair resolver and dated NAV inputs.
+A 15-second read-only filing check advances financial cards when that edition
+changes while retaining market histories and their original timestamps. Later
+Monday disclosures may rebase the displayed completed Friday comparison.
+See [WEEKLY_REPORTS.md](WEEKLY_REPORTS.md) for refresh and snapshot behavior.
 
 ## Streamlit configuration
 
