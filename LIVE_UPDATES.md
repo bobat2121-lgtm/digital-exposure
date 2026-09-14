@@ -59,7 +59,13 @@ with its original balance dates and a reconciliation notice. Its newer filing
 records remain visible in Latest SEC filings. Claims and denominators are never
 copied into a different date. Friday's input adapter still projects the newest
 validated filing quantities, including unknown fields until reconciliation.
-**Dated supplement reconciliation is still required for future NAV editions.**
+**Dated supplement reconciliation is required for each NAV edition.** A recurring
+Codex task now performs that work and publishes validated updates to `main`.
+See [AUTOMATIC_MONDAY_REPORT.md](AUTOMATIC_MONDAY_REPORT.md) for the source
+reconciliation, publication checks, and quarter/year rollover procedure. The
+task runs on its local host with Codex open; only the filing collector runs
+independently in Cloudflare. Missing source inputs retain the last complete
+edition while the task retries.
 
 Strive common capital uses the exact dated saved VWAP; SATA uses net new
 shares × $100. September 8 uses complete five-minute bars because two

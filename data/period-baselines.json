@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "basis": "Exact source-dated quarter/year-end balances. Reviewed June 2026 and December 2025 baselines remain in the historical providers. New dated records are populated by the scheduled reconciliation task after source verification.",
+  "balances": {"MSTR": {}, "ASST": {}}
+}

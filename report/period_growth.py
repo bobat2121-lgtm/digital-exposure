@@ -13,6 +13,7 @@ from .calculations import net_treasury_nav
 from .current_prices import load_current_prices
 from .historical_claims import ECB_USD_PER_EUR, strategy_claim_components
 from .models import Report, Snapshot
+from .dated_baselines import baseline_dates, dated_baseline
 
 
 PERIODS = ("QTD", "YTD")
@@ -162,5 +163,11 @@ def get_period_growth(report: Report, prices: dict | None = None) -> dict[str, d
                 applicable["YTD"] = None
             if not date(2026, 7, 1) <= measurement <= date(2026, 9, 30):
                 applicable["QTD"] = None
+            # Exact dated records extend the reviewed historical providers.
+            # An absent quarter end is never replaced by the nearest weekly date.
+            for period, balance_date in baseline_dates(measurement).items():
+                saved = dated_baseline(company.ticker, balance_date, fx, strc)
+                if saved is not None:
+                    applicable[period] = saved
         result[company.ticker] = calculate_period_growth(company.current, applicable, report.current_btc_price)
     return result

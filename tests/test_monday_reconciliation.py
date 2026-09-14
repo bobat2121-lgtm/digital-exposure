@@ -18,6 +18,12 @@ from report.post_export import render_post_png
 
 class MondayReconciliationTests(unittest.TestCase):
     def setUp(self):
+        fixtures = Path(__file__).parent / "fixtures"
+        for name, filename in (("CHECKPOINT", "filings-2026-09-14.json"),
+                               ("SUPPLEMENTS", "supplements-2026-09-14.json")):
+            patcher = patch.object(live_report, name, fixtures / filename)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.prices = load_current_prices()
         self.feed = json.loads(live_report.CHECKPOINT.read_text())
 
