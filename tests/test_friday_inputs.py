@@ -38,6 +38,10 @@ def future_rows(feed):
 
 class FridayInputsTests(unittest.TestCase):
     def setUp(self):
+        for name, filename in (("CHECKPOINT", "filings-2026-09-08.json"), ("SUPPLEMENTS", "supplements-2026-09-08.json")):
+            patcher = patch.object(live_report, name, Path(__file__).parent / "fixtures" / filename)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.prices = load_current_prices()
         self.feed = json.loads(live_report.CHECKPOINT.read_text(encoding="utf-8"))
 

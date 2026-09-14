@@ -54,6 +54,10 @@ def next_pair(feed):
 class FridayLiveInputsTests(TestCase):
     @classmethod
     def setUpClass(cls):
+        for name, filename in (("CHECKPOINT", "filings-2026-09-08.json"), ("SUPPLEMENTS", "supplements-2026-09-08.json")):
+            patcher = patch.object(live_report, name, Path(__file__).parent / "fixtures" / filename)
+            patcher.start()
+            cls.addClassCleanup(patcher.stop)
         cls.market = load_demo()
         cls.market.update(mode="latest", fetched_at=STAMP)
         cls.nav_prices = load_current_prices()

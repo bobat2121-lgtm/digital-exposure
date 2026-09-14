@@ -10,7 +10,7 @@ import streamlit as st
 
 from report.current_report import current_report
 from report.filing_monitor import MonitorSnapshot, load_monitor_snapshot, render_monitor
-from report.live_report import resolve_live_report
+from report.live_report import resolve_complete_report as resolve_live_report
 from report.methodology import PUBLIC_METHODOLOGY
 from report.models import Report
 from report.post_export import render_post_png

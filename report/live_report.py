@@ -257,12 +257,15 @@ def _company(ticker, filing, all_filings, supplements, prices):
         balance_date=balance, prior_balance_date=prior_date), prior_date
 
 
-def resolve_live_report(prices: dict, feed: dict) -> LiveReportResult:
+def resolve_live_report(prices: dict, feed: dict, *, through_date: str | None = None) -> LiveReportResult:
     """Read-only projection: new reported inputs advance; missing NAV inputs stay missing."""
     if not isinstance(feed, dict) or feed.get("schemaVersion") != 1 or not isinstance(feed.get("filings"), list):
         raise ValueError("Unsupported filing feed")
     checkpoint, supplements = _load(CHECKPOINT), _load(SUPPLEMENTS)
     rows = _merged_filings(feed, checkpoint)
+    if through_date is not None:
+        cutoff = date.fromisoformat(through_date)
+        rows = [row for row in rows if date.fromisoformat(row["extracted"]["balanceDate"]) <= cutoff]
     groups = {}
     for row in sorted(rows, key=lambda item: item.get("acceptedAt", "")):
         period_start = date.fromisoformat(row["extracted"]["periodStart"])
@@ -306,3 +309,57 @@ def resolve_live_report(prices: dict, feed: dict) -> LiveReportResult:
     version_data = [(row["accession"], row.get("documents"), row["extracted"]) for row in chosen.values()]
     version = hashlib.sha256(json.dumps([version_data, supplements.get("revision")], sort_keys=True).encode()).hexdigest()[:16]
     return LiveReportResult(report, notice, version)
+
+
+def _complete_panel_inputs(report, prices):
+    """Require actual inputs, including comparisons; zero and negative NAV are valid.
+
+    Do not require a BTC sale when only purchases were disclosed, or a positive
+    NAV ratio when the denominator is nonpositive (the view correctly uses N/M).
+    """
+    from .calculations import calculate_company, liquid_assets
+    from .period_growth import get_period_growth
+
+    if _number(report.prior_btc_price) is None:
+        return False
+    for company in report.companies:
+        for snapshot in (company.current, company.prior):
+            if any(_number(value) is None for value in (
+                    snapshot.btc_holdings, snapshot.effective_common_shares,
+                    snapshot.debt_principal, snapshot.preferred_claims, liquid_assets(snapshot))):
+                return False
+            if snapshot.effective_common_shares <= 0:
+                return False
+        metric = calculate_company(company, report.current_btc_price, report.prior_btc_price)
+        if metric.net_common_capital is None or metric.net_preferred_capital is None:
+            return False
+        if metric.common_capital_estimated and metric.common_equity_vwap is None:
+            return False
+        if company.weekly_btc_purchases is None and company.weekly_btc_sales is None:
+            return False
+    growth = get_period_growth(report, prices)
+    return all(period.btc_per_share_growth_pct is not None
+               and (period.nav_per_share_growth_pct is not None or period.nav_not_meaningful)
+               for periods in growth.values() for period in periods.values())
+
+
+def resolve_complete_report(prices: dict, feed: dict) -> LiveReportResult:
+    """Publish a complete Monday edition; keep later incomplete filings in the feed.
+
+    Resolve older pairs from their own dated inputs, including on a fresh
+    session. Never fill the new edition with old claims, shares, or prices.
+    """
+    newest = resolve_live_report(prices, feed)
+    if _complete_panel_inputs(newest.report, prices):
+        return newest
+    latest_date = max(c.balance_date or "" for c in newest.report.companies)
+    rows = _merged_filings(feed, _load(CHECKPOINT))
+    cutoffs = sorted({row["extracted"]["balanceDate"] for row in rows
+                      if row["extracted"]["balanceDate"] < latest_date}, reverse=True)
+    for cutoff in cutoffs:
+        candidate = resolve_live_report(prices, feed, through_date=cutoff)
+        if _complete_panel_inputs(candidate.report, prices):
+            return replace(candidate, notice=(
+                "New filing inputs are being reconciled · showing the last complete report. "
+                + candidate.report.subtitle))
+    raise ValueError("No complete dated Monday report is available")

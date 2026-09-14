@@ -52,11 +52,14 @@ The SEC filing supplies BTC activity, balances and financing disclosures.
 `data/report-supplements.json` supplies separately reconciled, date-specific
 Strategy basic shares and debt, native-currency preferred claims, and Strive
 debt. `data/latest-report-filings.json` is the last verified checkpoint for
-new sessions during a feed outage. A complete new pair can advance reported
-figures without supplemental NAV inputs: affected NAV figures then become
-unavailable with an explicit notice; old claims or denominators are never
-carried forward silently. **Supplement reconciliation is still required for
-fully automatic future NAV editions.**
+new sessions during a feed outage. Monday now publishes a pair only when its
+NAV, capital estimate, prior-week marks and period-growth inputs are complete.
+If a later pair is missing inputs, Monday retains the last complete edition
+with its original balance dates and a reconciliation notice. Its newer filing
+records remain visible in Latest SEC filings. Claims and denominators are never
+copied into a different date. Friday's input adapter still projects the newest
+validated filing quantities, including unknown fields until reconciliation.
+**Dated supplement reconciliation is still required for future NAV editions.**
 
 Strive common capital uses the exact dated saved VWAP; SATA uses net new
 shares × $100. September 8 uses complete five-minute bars because two

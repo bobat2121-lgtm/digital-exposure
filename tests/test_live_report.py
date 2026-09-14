@@ -9,10 +9,14 @@ from unittest.mock import patch
 
 from report.calculations import calculate_company
 from report.current_prices import load_current_prices
-from report.live_report import CHECKPOINT, SUPPLEMENTS, resolve_live_report
+from report.live_report import resolve_live_report
 from report.period_growth import get_period_growth
 from report.presentation import build_report_view
 from report.post_export import render_post_png
+
+
+CHECKPOINT = Path(__file__).parent / "fixtures/filings-2026-09-08.json"
+SUPPLEMENTS = Path(__file__).parent / "fixtures/supplements-2026-09-08.json"
 
 
 def saved_feed():
@@ -25,6 +29,10 @@ def current_rows(feed):
 
 class LiveReportTests(unittest.TestCase):
     def setUp(self):
+        for name, value in (("CHECKPOINT", CHECKPOINT), ("SUPPLEMENTS", SUPPLEMENTS)):
+            patcher = patch("report.live_report." + name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
         self.prices = load_current_prices()
         self.feed = saved_feed()
 
@@ -118,7 +126,9 @@ class LiveReportTests(unittest.TestCase):
                 e["priorFacts"] = deepcopy(e["facts"])
                 e["facts"]["net_sata_shares_change"] = 0
             future["filings"].append(row)
-        result = self.resolve(future)
+        # This scenario represents a future edition before a VWAP was saved.
+        with patch("report.live_report.load_estimate", return_value=None):
+            result = self.resolve(future)
         self.assertIn("NAV inputs pending", result.notice)
         self.assertIn("Strategy Sep 13", result.report.subtitle)
         self.assertIsNone(result.report.companies[0].current.effective_common_shares)
