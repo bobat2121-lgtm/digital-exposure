@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "2026-09-14.1",
+  "revision": "2026-09-21.1",
   "basis": "Dated supplemental inputs; NAV estimates use ending preferred shares and ordinary accrued dividends. No supplement automatically rolls into a newer balance date.",
   "balances": {
     "MSTR": {
@@ -38,6 +38,20 @@
           "https://www.sec.gov/Archives/edgar/data/1050446/000119312526384402/mstr-20260831.htm"
         ],
         "limitations": "Debt principal carries June 30; preferred estimates roll verified shares through disclosed repurchases and ordinary accrued dividends. Assumes scheduled payments and no unreported issuance. See reconciliation-2026-09-14.json."
+      },
+      "2026-09-20": {
+        "btc_holdings": 846000,
+        "effective_common_shares": 420507000,
+        "debt_principal": 6753703000,
+        "preferred_claims_usd": 13554239833.038889,
+        "preferred_claims_eur": 792222222.2222222,
+        "share_basis": "Dated issuer Class A 400867000 + Class B 19640000; rounded to thousands",
+        "sources": [
+          "https://www.strategy.com/shares",
+          "https://www.sec.gov/Archives/edgar/data/1050446/000119312526396093/mstr-20260914.htm",
+          "https://www.sec.gov/Archives/edgar/data/1050446/000105044626000044/mstr-20260630.htm"
+        ],
+        "limitations": "Debt principal carries June 30. Preferred estimates roll shares through disclosed repurchases and ordinary accrued dividends, assuming scheduled payments and no unreported issuance. See reconciliation-2026-09-21.json."
       }
     },
     "ASST": {
@@ -66,16 +80,29 @@
           "https://www.sec.gov/Archives/edgar/data/1920406/000162828026034802/certi1.htm"
         ],
         "limitations": "Friday after-payment convention; conservative certificate-derived $100.01 preference. Common capital is a net-share VWAP estimate, before fees. See reconciliation-2026-09-14.json."
+      },
+      "2026-09-18": {
+        "debt_principal": 0,
+        "preferred_claims_usd": 1118416000.0,
+        "preferred_claims_eur": 0,
+        "sources": [
+          "https://www.strive.com/treasury/api/dashboard/base-data",
+          "https://www.sec.gov/Archives/edgar/data/1920406/000162828026062806/asst-20260921.htm",
+          "https://www.sec.gov/Archives/edgar/data/1920406/000162828026034802/certi1.htm"
+        ],
+        "limitations": "Friday after-payment convention; both certificate branches give $100 preference. Common capital uses a complete same-week five-minute VWAP estimate before fees. See reconciliation-2026-09-21.json."
       }
     }
   },
   "comparison_btc_prices": {
     "2026-08-30": 78414.14,
-    "2026-09-07": 79207.14
+    "2026-09-07": 79207.14,
+    "2026-09-13": 77471.9
   },
   "comparison_release_dates": {
     "2026-08-30": "2026-08-31",
-    "2026-09-07": "2026-09-08"
+    "2026-09-07": "2026-09-08",
+    "2026-09-13": "2026-09-14"
   },
   "balance_marks": {
     "2026-08-30": {
@@ -89,11 +116,18 @@
     },
     "2026-09-04": {
       "STRC": 97.75049504950495
+    },
+    "2026-09-13": {
+      "EURUSD=X": 1.1534
+    },
+    "2026-09-11": {
+      "STRC": 98.63960396039604
     }
   },
   "preferred_audit_files": [
     "preferred-claims-2026-09-08.json",
     "strive-supplements-2026-09-08.json",
-    "reconciliation-2026-09-14.json"
+    "reconciliation-2026-09-14.json",
+    "reconciliation-2026-09-21.json"
   ]
 }
