@@ -36,16 +36,23 @@ existing GitHub/network access available. No new API subscription is required.
    prior edition's archived quote snapshot or a clearly documented dated source.
    Keep current price marks together and save the successful release snapshot
    under `data/release-prices/YYYY-MM-DD.json` for the next week's comparison.
-5. At quarter/year rollover, compute the required exact baseline dates with
-   `report.dated_baselines.baseline_dates`. Research the corresponding issuer
-   balances and populate `data/period-baselines.json`. Its entries contain
-   `balance_date`, `sources`, `basis`, `btc_holdings`, `effective_common_shares`,
+5. Quarter/year rollover is automatic. A new quarter (or year) starts from the
+   last complete reconciled weekly balance dated on or before the prior quarter
+   (or year) end, at most ten days earlier, repriced at the current marks. Week 1
+   of a quarter therefore shows only that week's change, and the panel labels the
+   start ("QTD from Sep 27 balance"). Keep the quarter-end week's filings in
+   `data/latest-report-filings.json` and its dated supplements in
+   `data/report-supplements.json` for the whole quarter (and the December weeks for
+   the whole year). When an issuer later publishes exact quarter-end balances
+   (10-Q/10-K), an exact record in `data/period-baselines.json` supersedes the
+   weekly start automatically. Compute its date with
+   `report.dated_baselines.baseline_dates`; entries contain `balance_date`,
+   `sources`, `basis`, `btc_holdings`, `effective_common_shares`,
    `debt_principal`, `preferred_claims_usd`, `preferred_claims_eur`; Strategy also
    needs `combined_liquid_assets`, and Strive needs `cash` and `held_strc_shares`.
    The original June 2026 and December 2025 reviewed providers remain in use.
-   New records are repriced at the current report's FX and security marks.
-   A nearby weekly date is not an exact quarter end. If the source has not yet
-   published the necessary figures, retain the last complete report and retry.
+   If neither a weekly start nor an exact record exists, retain the last
+   complete report and retry.
 6. Run `python scripts/check_monday_publication.py --live --output-dir <scratch>`.
    This checks the newest pair directly, disallows missing fields and pending
    notices, and renders both HTML and a PNG. An older fallback cannot pass this

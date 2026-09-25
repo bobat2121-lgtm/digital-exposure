@@ -92,6 +92,10 @@ class Company:
     weekly_btc_sales: float | None = None
     balance_date: str | None = None
     prior_balance_date: str | None = None
+    # Automatic quarter/year-start baselines: (period, period_start_end_date,
+    # source balance date, Snapshot). Used only when no reviewed or exact
+    # quarter-end record exists; see report.period_growth.
+    period_baselines: tuple = ()
 
 
 @dataclass(frozen=True)

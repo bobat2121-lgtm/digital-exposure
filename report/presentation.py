@@ -1,4 +1,5 @@
 """Build one formatted report consumed unchanged by HTML and PNG renderers."""
+from datetime import date
 from math import isfinite
 from dataclasses import replace
 
@@ -259,7 +260,12 @@ def build_report_view(report: Report, *, prices: dict | None = None) -> ReportVi
                 btc = "≈" + btc
             if growth.nav_per_share_growth_pct is not None:
                 nav = "≈" + nav
-            periods.append(PeriodGrowthView(label, btc, nav, tone(growth.btc_per_share_growth_pct), tone(growth.nav_per_share_growth_pct)))
+            note = ""
+            if growth.baseline_date:
+                start = date.fromisoformat(growth.baseline_date)
+                note = f"from {start:%b} {start.day} balance"
+            periods.append(PeriodGrowthView(label, btc, nav, tone(growth.btc_per_share_growth_pct),
+                                            tone(growth.nav_per_share_growth_pct), baseline_note=note))
         companies.append(replace(company, periods=tuple(periods)))
     return ReportView(
         title=report.title.replace("The Monday Capital Report", "The Digital Credit Report"),

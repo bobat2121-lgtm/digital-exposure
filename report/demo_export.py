@@ -80,6 +80,9 @@ def _company(canvas: _Canvas, c: CompanyView, index: int, capital_period: str) -
     _text(canvas, "NAV / share", left + 16, 1042, width * .44, size=20, bold=True)
     if not c.periods:
         canvas.right("QTD / YTD not provided", right - 12, 1032, 19, color=MUTED, width=width * .52)
+    notes = [f"{p.period} {p.baseline_note}" for p in c.periods if p.baseline_note]
+    if notes:
+        _text(canvas, " · ".join(notes), left + width * .27, 981, width * .30, size=14, color=MUTED, minimum=11)
 
 
 def render_redesign_png(view: ReportView) -> bytes:

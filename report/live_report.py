@@ -21,6 +21,28 @@ DATA = Path(__file__).resolve().parents[1] / "data"
 CHECKPOINT = DATA / "latest-report-filings.json"
 SUPPLEMENTS = DATA / "report-supplements.json"
 CIKS = {"MSTR": "1050446", "ASST": "1920406"}
+# Series in Strategy's repurchase table. STRE (euro) trades under the ATM only.
+REPURCHASE_SERIES = ("STRC", "STRF", "STRK", "STRD")
+PREFERRED_SERIES = REPURCHASE_SERIES + ("STRE",)
+ACTIVITY_FIELDS = ("issuedShares", "netIssuanceProceedsUsd", "repurchasedShares", "repurchaseCashUsd")
+
+
+def _preferred_rows(securities):
+    """Per-series activity; STRE appears only when the filing lists it.
+
+    STRE is absent from Strategy's repurchase program table, so once that table
+    was parsed for every covered series, STRE's repurchases are zero by scope,
+    not by omission. Missing STRE issuance fields still leave the row invalid.
+    """
+    rows = {series: dict(securities.get(series, {})) for series in REPURCHASE_SERIES}
+    if "STRE" in securities:
+        stre = dict(securities["STRE"])
+        covered = all(_number(rows[series].get(key)) is not None
+                      for series in REPURCHASE_SERIES for key in ("repurchasedShares", "repurchaseCashUsd"))
+        if covered and "repurchasedShares" not in stre and "repurchaseCashUsd" not in stre:
+            stre.update(repurchasedShares=0, repurchaseCashUsd=0)
+        rows["STRE"] = stre
+    return rows
 
 
 @dataclass(frozen=True)
@@ -106,11 +128,10 @@ def _eligible(filing):
         if any(_number(facts.get(key)) is None for key in required):
             return False
         securities = extraction.get("securities", {})
-        if set(securities) - {"MSTR", "STRC", "STRF", "STRK", "STRD"}:
+        if set(securities) - {"MSTR", *PREFERRED_SERIES}:
             return False
-        for series in ("STRC", "STRF", "STRK", "STRD"):
-            if any(_number(securities.get(series, {}).get(key)) is None for key in
-                   ("issuedShares", "netIssuanceProceedsUsd", "repurchasedShares", "repurchaseCashUsd")):
+        for row in _preferred_rows(securities).values():
+            if any(_number(row.get(key)) is None for key in ACTIVITY_FIELDS):
                 return False
     else:
         if any(_number(facts.get(key)) is None for key in
@@ -160,6 +181,47 @@ def _snapshot(ticker, balance_date, facts, supplements, prices):
     return Snapshot(holdings, shares, fact("cash_and_equivalents_usd"), securities, debt, claims)
 
 
+def _complete(snapshot):
+    from .calculations import liquid_assets
+    return (all(_number(value) is not None for value in (
+                snapshot.btc_holdings, snapshot.effective_common_shares,
+                snapshot.debt_principal, snapshot.preferred_claims, liquid_assets(snapshot)))
+            and snapshot.effective_common_shares > 0)
+
+
+def _rolling_baselines(ticker, balance, all_filings, supplements, prices):
+    """Quarter/year-start baselines from the last reconciled weekly balance.
+
+    Each period starts from the latest complete balance dated on or before the
+    prior quarter (or year) end, at most ten days earlier, so the first week of
+    a new quarter shows only that week's change. Balances are repriced at the
+    current marks exactly like the prior-week comparison. Exact dated records
+    in data/period-baselines.json and the reviewed providers take precedence.
+    """
+    from .dated_baselines import baseline_dates
+    result = []
+    for period, end in baseline_dates(date.fromisoformat(balance)).items():
+        end_day = date.fromisoformat(end)
+        candidates = {}
+        for row in sorted(all_filings, key=lambda item: item.get("acceptedAt", "")):
+            if row["ticker"] != ticker:
+                continue
+            extraction = row["extracted"]
+            for day, facts, own in ((extraction.get("priorBalanceDate"), extraction.get("priorFacts") or {}, False),
+                                    (extraction["balanceDate"], extraction["facts"], True)):
+                parsed = _day(day)
+                if parsed and end_day - timedelta(days=10) <= parsed <= end_day and facts:
+                    # A filing's own balance supersedes another filing's comparative.
+                    if own or day not in candidates or not candidates[day][1]:
+                        candidates[day] = (facts, own)
+        for day in sorted(candidates, reverse=True):
+            snapshot = _snapshot(ticker, day, candidates[day][0], supplements, prices)
+            if _complete(snapshot):
+                result.append((period, end, day, snapshot))
+                break
+    return tuple(result)
+
+
 def _company(ticker, filing, all_filings, supplements, prices):
     extraction = filing["extracted"]
     facts = extraction["facts"]
@@ -207,8 +269,7 @@ def _company(ticker, filing, all_filings, supplements, prices):
             repurchased_shares=_number(facts.get("common_repurchased_shares")),
             proceeds_basis="Reported ATM proceeds · net of commissions")
         activity = []
-        for series in ("STRC", "STRF", "STRK", "STRD"):
-            row = extraction.get("securities", {}).get(series, {})
+        for series, row in _preferred_rows(extraction.get("securities", {})).items():
             activity.append(PreferredActivity(series, _number(row.get("issuedShares")),
                 _number(row.get("repurchasedShares")), issuance_price_assumption=None,
                 capital_method="reported", reported_issuance_proceeds=_number(row.get("netIssuanceProceedsUsd")),
@@ -218,7 +279,7 @@ def _company(ticker, filing, all_filings, supplements, prices):
         def total(field):
             values = [getattr(row, field) for row in other]
             return sum(values) if all(value is not None for value in values) else None
-        activity = (activity[0], PreferredActivity("STRF / STRK / STRD", total("issued_shares"),
+        activity = (activity[0], PreferredActivity(" / ".join(row.series for row in other), total("issued_shares"),
             total("repurchased_shares"), issuance_price_assumption=None, capital_method="reported",
             reported_issuance_proceeds=total("reported_issuance_proceeds"),
             reported_repurchases_cash=total("reported_repurchases_cash")))
@@ -254,7 +315,8 @@ def _company(ticker, filing, all_filings, supplements, prices):
         preferred_activity_notes=("Net share change × $100 · before fees",) if ticker == "ASST" else (),
         valuation_estimated=True, preferred_claims_estimated=True,
         valuation_note="≈ Basic common shares · after debt & preferred claims",
-        balance_date=balance, prior_balance_date=prior_date), prior_date
+        balance_date=balance, prior_balance_date=prior_date,
+        period_baselines=_rolling_baselines(ticker, balance, all_filings, supplements, prices)), prior_date
 
 
 def resolve_live_report(prices: dict, feed: dict, *, through_date: str | None = None) -> LiveReportResult:

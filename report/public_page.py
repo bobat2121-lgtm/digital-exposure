@@ -44,10 +44,12 @@ def _company(c: CompanyView, period: str) -> str:
     period_headers = "".join(f'<th scope="col">{escape(p.period)}</th>' for p in c.periods)
     btc_periods = "".join(f'<td class="{_tone(p.btc_tone)}">{escape(p.btc_growth)}</td>' for p in c.periods)
     nav_periods = "".join(f'<td class="{_tone(p.nav_tone)}">{escape(p.nav_growth)}</td>' for p in c.periods)
+    notes = "".join(f'<p class="transaction-note">{escape(p.period)} {escape(p.baseline_note)}</p>'
+                    for p in c.periods if p.baseline_note)
     growth = f'''<section class="growth-panel"><table aria-label="{escape(c.name)} quarter and year growth">
       <thead><tr><th scope="col">Basic-share growth</th>{period_headers}</tr></thead>
       <tbody><tr><th scope="row">BTC / share</th>{btc_periods}</tr>
-      <tr><th scope="row">NAV / share</th>{nav_periods}</tr></tbody></table></section>''' if c.periods else ''
+      <tr><th scope="row">NAV / share</th>{nav_periods}</tr></tbody></table>{notes}</section>''' if c.periods else ''
     return f'''<article class="credit-card {escape(c.logo)}" aria-label="{escape(c.name)} comparison panel">
       <header class="issuer-head">
         <img src="{asset_uri(c.logo + '.svg', 'image/svg+xml')}" alt="{escape(c.name)}" class="issuer-logo">

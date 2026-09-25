@@ -4,7 +4,7 @@ Baseline providers reprice their securities and foreign-currency claims before
 these calculations. Financing flows are never added to a balance snapshot.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from decimal import Decimal
 from math import isclose, isfinite
@@ -24,6 +24,9 @@ class PeriodGrowth:
     btc_per_share_growth_pct: float | None
     nav_per_share_growth_pct: float | None
     nav_not_meaningful: bool = False
+    # Set when the period starts from the last weekly balance before the
+    # quarter/year end instead of an exact quarter-end record.
+    baseline_date: str | None = None
 
 
 def _finite(value) -> bool:
@@ -157,6 +160,7 @@ def get_period_growth(report: Report, prices: dict | None = None) -> dict[str, d
     result = {}
     for company in report.companies:
         applicable = dict(baselines[company.ticker])
+        rolled = {}
         if company.balance_date:
             measurement = date.fromisoformat(company.balance_date)
             if measurement.year != 2026:
@@ -164,10 +168,17 @@ def get_period_growth(report: Report, prices: dict | None = None) -> dict[str, d
             if not date(2026, 7, 1) <= measurement <= date(2026, 9, 30):
                 applicable["QTD"] = None
             # Exact dated records extend the reviewed historical providers.
-            # An absent quarter end is never replaced by the nearest weekly date.
+            # Otherwise each new quarter/year starts from the last reconciled
+            # weekly balance on or before its prior period end (live editions).
+            automatic = {period: (end, day, snapshot) for period, end, day, snapshot in company.period_baselines}
             for period, balance_date in baseline_dates(measurement).items():
                 saved = dated_baseline(company.ticker, balance_date, fx, strc)
                 if saved is not None:
                     applicable[period] = saved
-        result[company.ticker] = calculate_period_growth(company.current, applicable, report.current_btc_price)
+                elif applicable.get(period) is None and automatic.get(period, (None,))[0] == balance_date:
+                    applicable[period] = automatic[period][2]
+                    rolled[period] = automatic[period][1]
+        growth = calculate_period_growth(company.current, applicable, report.current_btc_price)
+        result[company.ticker] = {period: replace(value, baseline_date=rolled.get(period))
+                                  for period, value in growth.items()}
     return result

@@ -166,9 +166,11 @@ class LiveReportTests(unittest.TestCase):
         self.assertIsNotNone(a.prior_securities_at_current_prices)
 
     def test_period_baselines_expire_at_quarter_and_year_boundaries(self):
+        """Reviewed providers expire; without weekly quarter-end balances nothing rolls."""
         result = self.resolve()
         for day, qtd_missing, ytd_missing in (("2026-09-30", False, False), ("2026-10-01", True, False), ("2027-01-04", True, True)):
-            report = replace(result.report, companies=tuple(replace(c, balance_date=day) for c in result.report.companies))
+            report = replace(result.report, companies=tuple(replace(c, balance_date=day, period_baselines=())
+                                                            for c in result.report.companies))
             growth = get_period_growth(report, self.prices)
             for values in growth.values():
                 self.assertEqual(values["QTD"].btc_per_share_growth_pct is None, qtd_missing)

@@ -21,6 +21,8 @@ class PeriodGrowthView:
     nav_growth: str
     btc_tone: str = "neutral"
     nav_tone: str = "neutral"
+    # e.g. "from Sep 27 balance" when a period starts from a weekly balance.
+    baseline_note: str = ""
 
 
 @dataclass(frozen=True)
