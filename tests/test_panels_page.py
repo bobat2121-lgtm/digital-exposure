@@ -21,6 +21,14 @@ import panels_page  # noqa: E402
 APP = ROOT / "app.py"
 
 
+def in_order(node):
+    """Every element under ``node`` as (type, label), in page order."""
+    rows = [(getattr(node, "type", None), getattr(node, "label", None))]
+    for key in sorted(getattr(node, "children", None) or {}):
+        rows += in_order(node.children[key])
+    return rows
+
+
 def tiny_png():
     buffer = BytesIO()
     Image.new("RGB", (2, 2), "#000").save(buffer, format="PNG")
@@ -70,6 +78,10 @@ class PanelsPageTests(TestCase):
         # Expanders with an icon come back from AppTest as status blocks.
         self.assertEqual([block.label for block in app.status], ["Formulas", "Sources, notes and audit values"])
         self.assertEqual(len(app.get("download_button")), 1)
+        # The X image download closes the tab, after the formulas and sources.
+        order = in_order(app.main)
+        self.assertLess(order.index(("status", "Sources, notes and audit values")),
+                        order.index(("download_button", "Download X image")))
         # One style, one funding layout: no selectors or test toggles on the shared page.
         self.assertEqual(len(app.segmented_control), 0)
         self.assertEqual(len(app.toggle), 0)

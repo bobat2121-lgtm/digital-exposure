@@ -224,14 +224,14 @@ def _m(value, digits=1, signed=False):
 
 
 # ── Monday ──────────────────────────────────────────────────────────────────
-def monday(preview, *, download=None) -> None:
+def monday(preview, *, notices=()) -> None:
     view = preview.view
     stamp = view.report_time.replace("Updated ", "", 1)
     header("monday", "Digital Credit Report · Monday", ("The ", "Accretion", " Ledger"),
            f"<b>{escape(preview.period)}</b> · BTC <b>{escape(view.btc_price)}</b> · {escape(stamp)} · "
            "what last week's filings did to each common share")
-    if download:
-        download()
+    for notice in notices:
+        st.caption(notice)
     companies = list(view.companies)
     columns = st.columns(len(companies), gap="medium")
     for column, company in zip(columns, companies):
@@ -384,13 +384,13 @@ MONDAY_FORMULAS = (
 
 
 # ── Wednesday ───────────────────────────────────────────────────────────────
-def wednesday(data, *, download=None) -> None:
+def wednesday(data, *, notices=()) -> None:
     stamp = data.get("stamp")
     refs = " · ".join(f"{label} <b>{wed._pct(value)}</b>" for label, (_, value) in data["references"])
     header("wednesday", "Digital Credit Report · Wednesday", ("The ", "Coupon", " Sheet"),
            f"{refs}{' · closes through ' + escape(wed._short(stamp)) if stamp else ''}")
-    if download:
-        download()
+    for notice in notices:
+        st.caption(notice)
     columns = st.columns(2, gap="medium")
     for column, ticker in zip(columns, wed.HEROES):
         with column, st.container(border=True, key=f"wed_{ticker}"):
@@ -541,14 +541,14 @@ WEDNESDAY_FORMULAS = (
 
 
 # ── Friday ──────────────────────────────────────────────────────────────────
-def friday(panel, derived, *, download=None) -> None:
+def friday(panel, derived, *, notices=()) -> None:
     period = panel.get("period") or {}
     week_end = period.get("week_ending", period.get("end"))
     sub = (f"Week of <b>{escape(fri._short(period.get('start')))}–{escape(fri._short(week_end))}</b> · marked at the Friday "
            "4:00 pm ET close" if week_end else "")
     header("friday", "Digital Credit Report · Friday", ("The ", "Closing", " Mark"), sub)
-    if download:
-        download()
+    for notice in notices:
+        st.caption(notice)
     btc = (panel.get("header") or {}).get("btc") or {}
     companies = (panel.get("header") or {}).get("companies") or {}
     tile_rows = [("Bitcoin", fri._money(btc.get("price")), f'<span class="{_tone(fri._pct(btc.get("weekly_return_pct"), 2, True))}">'

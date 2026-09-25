@@ -2,8 +2,9 @@
 
 Each tab shows a web layout built for reading on a computer or a phone
 (``panels.web``), from the same data as the X image. The X image, the phone-first
-PNG, is the tab's download. Each tab fetches fresh data when a browser session
-opens it (cached briefly across sessions), and only the open tab builds.
+PNG, is the download at the bottom of each tab, after the formulas and sources.
+Each tab fetches fresh data when a browser session opens it (cached briefly
+across sessions), and only the open tab builds.
 ``?report=monday|wednesday|friday`` deep-links a tab; the detailed Monday and
 Friday reports remain at ``?classic=1``. The page has one style (Neon Ledger) and
 one Monday funding layout (the waterfall), so every shared link looks the same.
@@ -103,23 +104,21 @@ def _refresh():
 
 def _download(name: str, report: dict):
     """The X image: the phone-first PNG, offered as a download with a preview."""
-    def draw():
-        with st.container(horizontal=True, gap="small", vertical_alignment="center"):
-            st.download_button("Download X image", data=report["png"], file_name=f"{name.lower()}.png", mime="image/png",
-                               icon=":material/download:", on_click="ignore", key=f"download_{name}")
-            with st.popover("Preview X image", icon=":material/image:"):
-                st.image(report["png"], width="stretch")
-        for notice in report["notices"]:
-            st.caption(notice)
-        if report["overflows"]:
-            st.warning("Some text in the X image was shortened to fit: " + "; ".join(report["overflows"][:5]))
-    return draw
+    with st.container(horizontal=True, gap="small", vertical_alignment="center"):
+        st.download_button("Download X image", data=report["png"], file_name=f"{name.lower()}.png", mime="image/png",
+                           icon=":material/download:", on_click="ignore", key=f"download_{name}")
+        with st.popover("Preview X image", icon=":material/image:"):
+            st.image(report["png"], width="stretch")
+    if report["overflows"]:
+        st.warning("Some text in the X image was shortened to fit: " + "; ".join(report["overflows"][:5]))
 
 
-def _footer(formulas, report: dict):
+def _footer(name: str, formulas, report: dict):
+    """The end of every tab: formulas, sources, then the X image download."""
     from panels import web
     web.formulas(formulas)
     web.sources(report["notes"], report["audit"])
+    _download(name, report)
 
 
 def render():
@@ -146,19 +145,19 @@ def render():
         with monday:
             with st.spinner("Building Monday…"):
                 report = monday_report()
-            web.monday(report["preview"], download=_download("Monday", report))
-            _footer(web.MONDAY_FORMULAS, report)
+            web.monday(report["preview"], notices=report["notices"])
+            _footer("Monday", web.MONDAY_FORMULAS, report)
     elif active == "wednesday":
         with wednesday:
             with st.spinner("Building Wednesday…"):
                 report = wednesday_report()
-            web.wednesday(report["data"], download=_download("Wednesday", report))
-            _footer(web.WEDNESDAY_FORMULAS, report)
+            web.wednesday(report["data"], notices=report["notices"])
+            _footer("Wednesday", web.WEDNESDAY_FORMULAS, report)
     else:
         with friday:
             with st.spinner("Building Friday… (full price history, about 10 seconds)"):
                 report = friday_report()
-            web.friday(report["panel"], report["derived"], download=_download("Friday", report))
-            _footer(web.FRIDAY_FORMULAS, report)
+            web.friday(report["panel"], report["derived"], notices=report["notices"])
+            _footer("Friday", web.FRIDAY_FORMULAS, report)
     st.caption(f"Rendered {datetime.now(ET):%b %d, %Y · %I:%M %p ET} · "
                "[Detailed Monday and Friday reports](?classic=1)")

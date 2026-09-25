@@ -10,7 +10,8 @@ forms built from the same data:
   saves it; **Preview X image** shows it first.
 
 At the bottom of every tab, two collapsed sections list **Formulas** (every figure's
-definition) and **Sources, notes and audit values**. Each tab fetches fresh data
+definition) and **Sources, notes and audit values**; the X image download and preview
+come last. Each tab fetches fresh data
 when a browser session opens it and offers **Refresh data**. Only the open tab
 builds.
 
