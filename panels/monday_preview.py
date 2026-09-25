@@ -293,10 +293,11 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
             amp_x, amp_source = (kpi, "strategy.com KPI") if kpi else (metrics.net_btc_amplification, "derived")
             amp_change_x = metrics.amplification_change
         else:
-            # Strive's own "Amplification Ratio" (its dashboard): (debt + SATA notional) ÷ BTC value, shown in ×.
-            amp_x = amp / 100 if amp is not None else None
+            # Strive's own "Amplification Ratio" (its dashboard): (debt + SATA notional) ÷ BTC value.
+            # Shown as exposure in ×: 1 + the ratio (a 50.5% ratio reads 1.51×).
+            amp_x = 1 + amp / 100 if amp is not None else None
             amp_change_x = (amp - prior_amp) / 100 if amp is not None and prior_amp is not None else None
-            amp_source = "Strive's formula: (debt + SATA notional) ÷ BTC value"
+            amp_source = "Strive's formula: 1 + (debt + SATA notional) ÷ BTC value"
         months, years, breakeven, source = _coverage(ticker, company, report.current_btc_price, extras, facts)
         key = "strategy_reserve_floor_months" if ticker == "MSTR" else "strive_reserve_goal_months"
         target = _n((config.get(key) or {}).get("value"))
@@ -650,7 +651,7 @@ def notes(preview: MondayPreview) -> list[str]:
                       "difference is rounding in its $0.01B balances." for e in preview.extras.values()
                       if e.ticker == "MSTR" and e.stated_dividends is not None)
     strive = preview.extras.get("ASST")
-    strive_amp = (f", where {strive.amplification_x:.2f}× reads {strive.amplification_pct:.1f}%"
+    strive_amp = (f" ({strive.amplification_pct:.1f}% there, so {strive.amplification_x:.2f}× here)"
                   if strive and strive.amplification_x is not None and strive.amplification_pct is not None else "")
     return [line for line in (
         "Capital raised = ATM issuance − repurchases, common and preferred. Cash is an existing balance, never counted as a raise. "
@@ -659,9 +660,9 @@ def notes(preview: MondayPreview) -> list[str]:
         f"BTC = the week's bitcoin purchase cost, fees included ({costs}). DIVs = the rest of the week's funding: preferred "
         f"dividends and interest, plus fees and other uses. {stated}".strip(),
         "Amplification uses each issuer's own formula, shown in ×. Strategy: BTC reserve ÷ net BTC reserve (BTC + USD − "
-        "debt − preferred), its strategy.com KPI since July 23, 2026. Strive: (debt + SATA notional) ÷ BTC value, the "
-        f"\"Amplification Ratio\" on its treasury dashboard{strive_amp} (Strive has no debt). The two measure different "
-        "things and are not comparable. Weekly changes come from the filed balances.",
+        "debt − preferred), its strategy.com KPI since July 23, 2026. Strive: 1 + (debt + SATA notional) ÷ BTC value, "
+        f"where the ratio is the \"Amplification Ratio\" on its treasury dashboard{strive_amp}; Strive has no debt. "
+        "The two measure different things and are not comparable. Weekly changes come from the filed balances.",
         "NAV, price/NAV, coverage and growth are estimates from dated balances and reconstructed preferred "
         "claims at the displayed prices; growth holds prices constant.",
         "USD cover = months of dividend (and, for Strategy, interest) obligations held in USD, read against Strategy's 12-month "

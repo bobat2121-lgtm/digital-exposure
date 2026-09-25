@@ -61,13 +61,13 @@ class MondayPreviewTests(unittest.TestCase):
         strive = next(c for c in self.report.companies if c.ticker == "ASST")
         current = strive.current
         bitcoin = current.btc_holdings * self.report.current_btc_price
-        # Strive: (debt + SATA notional) ÷ BTC value, its dashboard's Amplification Ratio (about 50%, i.e. 0.5×).
+        # Strive: its dashboard's Amplification Ratio, (debt + SATA notional) ÷ BTC value (about 50%),
+        # shown as exposure: 1 + the ratio (about 1.5×).
         asst = self.preview.extras["ASST"]
         ratio = (current.debt_principal + current.preferred_claims) / bitcoin
-        self.assertAlmostEqual(asst.amplification_x, ratio)
         self.assertAlmostEqual(asst.amplification_pct, ratio * 100)
-        self.assertLess(asst.amplification_x, 1)
-        self.assertEqual(monday_preview._amplification(asst)[0], f"{ratio:.2f}×")
+        self.assertAlmostEqual(asst.amplification_x, 1 + ratio)
+        self.assertEqual(monday_preview._amplification(asst)[0], f"{1 + ratio:.2f}×")
         # Same SATA notional as Strive's dashboard, so at its BTC value the ratio is Strive's own figure.
         dashboard = offline_extras()["strive"]["dashboard_amplification"]
         self.assertEqual(current.preferred_claims, dashboard["sata_notional"])

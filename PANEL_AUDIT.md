@@ -27,7 +27,7 @@ Nasdaq estimates; the weekly task replaces them with confirmed dates.
   `btc_cost`, `btc_divs` and `MSTR.divs_8k`.
 - **Each issuer's own amplification.** MSTR shows strategy.com's `amplification`
   (BTC reserve ÷ net BTC reserve, 1.25×); ASST shows Strive's (notional preferred +
-  debt) ÷ BTC value, in × (0.51×, which Strive's dashboard shows as 50.5%).
+  debt) ÷ BTC value, written as 1 + the ratio (Strive's dashboard 50.5% → 1.51×).
   `MSTR.amp_model` checks that the 8-K model used for the weekly change stays within
   0.05× of strategy.com (1.27× vs 1.25×); `ASST.amp_dashboard` checks Strive's figure
   against its dashboard. (A brief interim version applied Strategy's formula to
@@ -198,7 +198,7 @@ Each figure below was recomputed independently from raw inputs. All passed.
     Reserve ÷ Net Reserve, about 1.25×
     ([Strategy FWP, Aug 24, 2026](https://www.sec.gov/Archives/edgar/data/1050446/000119312526363557/d431748dfwp.htm)).
   - Since the second round, each card shows its issuer's own definition, both
-    written in × (ASST 0.51× = Strive's 50.5%).
+    written in × (ASST 1 + Strive's 50.5% = 1.51×).
 - **Strategy's USD cover and coverage include interest.** Its "dividends" in
   `usdMonthsOfDividends`, `totalYearsOfCoverage` and `btcBreakevenArr` are all
   annual interest + dividends ($1.62B). The footnotes now say so.

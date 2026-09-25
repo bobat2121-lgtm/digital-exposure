@@ -95,9 +95,9 @@ then what it did per share.
   weekly change. Amplification uses each issuer's own formula, shown in ×:
   - Strategy: BTC reserve ÷ net BTC reserve (BTC + USD − debt − preferred),
     strategy.com's `amplification` KPI since Jul 23, 2026 (about 1.25×).
-  - Strive: (debt + SATA notional) ÷ BTC value, the "Amplification Ratio" on its
-    treasury dashboard (about 0.51×, which Strive shows as 50.5%). The audit checks
-    it against Strive's dashboard figure.
+  - Strive: 1 + (debt + SATA notional) ÷ BTC value. The ratio is the "Amplification
+    Ratio" on Strive's treasury dashboard (50.5%), so the panel shows 1.51×. The
+    audit checks the ratio against Strive's dashboard figure.
 
   The two measure different things and are not comparable.
 

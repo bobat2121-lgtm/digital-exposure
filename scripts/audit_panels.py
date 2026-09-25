@@ -106,7 +106,8 @@ def audit_monday(report, monday, extras, rows, now):
                     detail="the weekly change uses this model; claims include accrued dividends, strategy.com uses notional")
         else:
             compare("monday", f"{t}.amplification", f"{t} amplification (×), Strive's formula", e.amplification_x,
-                    (cur.debt_principal + cur.preferred_claims) / bitcoin, .0005, source="(debt + SATA notional) ÷ BTC value")
+                    1 + (cur.debt_principal + cur.preferred_claims) / bitcoin, .0005,
+                    source="1 + (debt + SATA notional) ÷ BTC value")
             dashboard = (strive.get("dashboard_amplification") or {})
             compare("monday", "ASST.amp_dashboard", "ASST amplification vs Strive's dashboard ratio", e.amplification_pct,
                     number(dashboard.get("amplification_pct")), 1.0, warn_only=True,
