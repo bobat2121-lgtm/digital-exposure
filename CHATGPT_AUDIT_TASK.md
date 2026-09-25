@@ -5,9 +5,9 @@ hour, and report back. They mostly notify rather than act. This audit therefore
 checks the published numbers against primary sources and tells you what to fix.
 The panels already refresh themselves whenever the page opens.
 
-Requirement: the page must be reachable on the internet. Either merge the preview,
-or add a second Streamlit Community Cloud app from the preview branch and use its URL.
-Replace `PAGE_URL` below with that URL, ending in `?preview=1`.
+The panels are the public app's default page:
+https://digital-credit-report.streamlit.app/ (`?report=monday|wednesday|friday`
+opens a tab). Use that as `PAGE_URL` below.
 
 Paste the block below into ChatGPT. If the Tasks screen needs one schedule per
 task, create three tasks: paste the shared rules plus one day's section each time.
@@ -45,8 +45,11 @@ Monday checks (Strategy CIK 1050446, Strive CIK 1920406):
   balance date. Strategy: MSTR ATM net proceeds, STRC shares repurchased and cost,
   USD Reserve and USD Cash balances. Strive: SATA net share change, cash.
 - Strategy "USD cover" months: https://api.strategy.com/btc/bitcoinKpis field
-  usdMonthsOfDividends. Strive dividend reserve months:
-  https://strive.com/treasury/api/dashboard/base-data (cashDebt[0].dividend_reserve_months).
+  usdMonthsOfDividends (panel reads it as a multiple of the 12-month floor). Strive
+  dividend reserve months: https://strive.com/treasury/api/dashboard/base-data
+  (cashDebt[0].dividend_reserve_months; panel reads it against the 18-month goal).
+- Capital raised must equal ATM common + preferred only; cash is a balance, and
+  deployed = raised + cash drawn (or − cash added).
 - Recompute sats per share = BTC held ÷ common shares × 100,000,000 using the
   page's share count, and cash/reserve change = this week's minus last week's balance.
 - Before Tuesday 9:30 am a missing new edition is expected; after that, report
@@ -61,7 +64,8 @@ Wednesday checks:
   effective yield = rate × 100 ÷ price.
 - Benchmarks from FRED (latest observation): SOFR, DGS3MO, DGS10,
   BAMLC0A0CMEY, BAMLH0A0HYM2EY (https://fred.stlouisfed.org/series/<ID>).
-- The ladder must be sorted from highest to lowest effective yield.
+- Spreads (the panel's headline for STRC and SATA) = (effective yield − benchmark)
+  × 100 bp; recompute each and allow ±5 bp.
 
 Friday checks:
 - BTC 4:00 pm ET mark vs a reputable BTC price at 4:00 pm ET (within 0.5%);

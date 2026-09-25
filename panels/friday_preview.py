@@ -10,12 +10,14 @@ Sunday close: every weekly reading is taken at the Friday mark.
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+import threading
 from zoneinfo import ZoneInfo
 
 from friday.export import display_rows, sma_segments
 from friday.series import SENTIMENT_BANDS, smooth_sentiment, year_start
 
-from .draw import Canvas, imprint, mix, sparkline, width
+from . import themes
+from .draw import Canvas, fontset, imprint, mix, sparkline, width
 from .extras import fred_latest, number
 
 ET = ZoneInfo("America/New_York")
@@ -24,10 +26,34 @@ BG, CARD, TEXT, MUTED, SOFT = "#0b0d0f", "#15191d", "#f5f3ed", "#9aa4ad", "#6f7a
 LINE, ORANGE, POSITIVE, NEGATIVE, NEUTRAL = "#30363c", "#e88029", "#8cdbb5", "#f5a09b", "#d9c86a"
 BLUE, VIOLET, BAND = "#7fb2ff", "#c39bff", "#56c4a0"
 TITLE = ("The ", "Closing", " Mark")
+THEME = themes.CLASSIC
+# Rendering swaps the module palette for the requested theme; the lock keeps
+# concurrent Streamlit sessions from drawing with each other's colors.
+_LOCK = threading.RLock()
+# How each checklist reading maps to a state (anything else is NEUTRAL).
+RULES = {"50W SMA": "bull above · bear at/below", "20W / 21W BAND": "bull above · bear below",
+         "50D / 200D": "bull golden · bear death", "WEEKLY RSI": "bull ≥ 50 · bear < 50",
+         "MVRV": "bull < 1 · bear > avg + 1 sd", "PUELL MULTIPLE": "bull < low · bear > high band",
+         "SUPPLY IN PROFIT": "bull < 50% · bear > 95%"}
 # Crypto Currently's names for distance above the 200-week SMA. Its thresholds
 # are not published; these follow the levels quoted in its weekly reports.
 ZONES = ((0, "VERY CHEAP", "#304cba"), (50, "CHEAP", "#198653"), (100, "FAIR VALUE", "#b8a528"),
          (150, "EXPENSIVE", "#c67b1b"), (None, "VERY EXPENSIVE", "#ba3b48"))
+
+
+def _use(theme):
+    global BG, CARD, TEXT, MUTED, SOFT, LINE, ORANGE, POSITIVE, NEGATIVE, NEUTRAL, BLUE, VIOLET, BAND, THEME
+    p = theme.friday
+    BG, CARD, TEXT, MUTED, SOFT = p.bg, p.card, p.ink, p.muted, p.soft
+    LINE, ORANGE, POSITIVE, NEGATIVE, NEUTRAL = p.line, p.accent, p.positive, p.negative, p.neutral
+    BLUE, VIOLET, BAND, THEME = p.accent2, p.accent3, p.band, theme
+
+
+def _card(canvas, box, accent=None, accent_height=3):
+    if THEME.key == "classic":
+        canvas.card(box, CARD, 10, accent, accent_height)
+    else:
+        themes.card(canvas, box, THEME.friday, accent, THEME, accent_height)
 
 
 def zone(extension):
@@ -400,14 +426,29 @@ def _equity_chart(canvas, box, panel, ticker, derived):
 
 
 # ── render ──────────────────────────────────────────────────────────────────
-def render_png(panel: dict, derived: dict, *, stale: tuple = ()) -> tuple[bytes, list[str]]:
+def render_png(panel: dict, derived: dict, *, stale: tuple = (), theme: themes.Theme = themes.CLASSIC) -> tuple[bytes, list[str]]:
+    with _LOCK, fontset(theme.fontset):
+        _use(theme)
+        try:
+            return _render(panel, derived, stale)
+        finally:
+            _use(themes.CLASSIC)
+
+
+def _render(panel: dict, derived: dict, stale: tuple) -> tuple[bytes, list[str]]:
     canvas = Canvas((WIDTH, HEIGHT), BG)
     draw = canvas.draw
     period, header = panel.get("period") or {}, panel.get("header") or {}
     week_end = period.get("week_ending", period.get("end"))
-    draw.rectangle((0, 0, WIDTH, 5), fill=ORANGE)
+    if THEME.key == "classic":
+        draw.rectangle((0, 0, WIDTH, 5), fill=ORANGE)
+    else:
+        themes.background(canvas, THEME.friday, THEME, header_height=142, orbit_at=(1040, 62, .62))
     canvas.text(54, 26, f"THE DIGITAL CREDIT REPORT  ·  FRIDAY  ·  WEEK ENDED {_short(week_end).upper()}", 18, ORANGE, True)
-    imprint(canvas, 54, 104, TITLE, 54, ink=TEXT, muted="#aab3ba", dot=ORANGE)
+    if THEME.key == "classic":
+        imprint(canvas, 54, 104, TITLE, 54, ink=TEXT, muted="#aab3ba", dot=ORANGE)
+    else:
+        themes.title(canvas, 54, 104, TITLE, 54, THEME.friday, THEME, on_space=THEME.decor == "orbit")
     canvas.text(54, 120, "Bitcoin, treasury premiums, liquidity & cycle — every reading marked at the Friday 4:00 pm ET close",
                 19, MUTED, max_width=1180)
     canvas.text(1746, 30, "MARKED FRI 4:00 PM ET", 19, ORANGE, True, align="right")
@@ -420,7 +461,7 @@ def render_png(panel: dict, derived: dict, *, stale: tuple = ()) -> tuple[bytes,
     # Row A: BTC + treasury tiles.
     btc = header.get("btc") or {}
     tiles = [(54, 150, 606, 340), (624, 150, 1176, 340), (1194, 150, 1746, 340)]
-    canvas.card(tiles[0], CARD, 10, ORANGE, 3)
+    _card(canvas, tiles[0], ORANGE)
     canvas.text(78, 166, "BITCOIN", 20, TEXT, True)
     canvas.text(582, 168, "FRI 4 PM MARK", 16, MUTED, True, align="right")
     canvas.text(78, 196, _money(btc.get("price")), 50, TEXT, True)
@@ -440,7 +481,7 @@ def render_png(panel: dict, derived: dict, *, stale: tuple = ()) -> tuple[bytes,
     for ticker, box in zip(("MSTR", "ASST"), tiles[1:]):
         x0, _, x1, _ = box
         company, base = companies.get(ticker) or {}, treasury.get(ticker) or {}
-        canvas.card(box, CARD, 10, TEXT, 3)
+        _card(canvas, box, TEXT)
         canvas.text(x0 + 24, 166, ticker, 20, TEXT, True)
         canvas.text(x1 - 24, 168, "PRICE / NAV", 16, MUTED, True, align="right")
         multiple = company.get("nav_multiple")
@@ -468,7 +509,7 @@ def render_png(panel: dict, derived: dict, *, stale: tuple = ()) -> tuple[bytes,
     for index, (label, rows, value, note, reference) in enumerate(strip):
         x0 = 54 + index * 570
         box = (x0, 352, x0 + 552, 440)
-        canvas.card(box, CARD, 10)
+        _card(canvas, box)
         canvas.text(x0 + 20, 364, label, 15, MUTED, True)
         canvas.text(x0 + 20, 386, value, 30, TEXT, True)
         canvas.text(x0 + 20, 420, note, 14, MUTED, max_width=300)
@@ -483,7 +524,7 @@ def render_png(panel: dict, derived: dict, *, stale: tuple = ()) -> tuple[bytes,
     for box, title, tickers in (((54, 490, 891, 760), "Common stock", ("MSTR", "ASST")),
                                 ((909, 490, 1746, 760), "Preferred stock", ("STRC", "SATA"))):
         x0, y0, x1, y1 = box
-        canvas.card(box, CARD, 10)
+        _card(canvas, box)
         canvas.text(x0 + 22, y0 + 14, title, 19, MUTED)
         for i, ticker in enumerate(tickers):
             weeks = derived["turnover"][ticker]
@@ -532,12 +573,13 @@ def render_png(panel: dict, derived: dict, *, stale: tuple = ()) -> tuple[bytes,
     colors = {"BULL": POSITIVE, "BEAR": NEGATIVE, "NEUTRAL": NEUTRAL}
     for index, (label, value, note, state) in enumerate(derived["checklist"]):
         x0 = 54 + index * (cell + 12)
-        canvas.card((x0, 812, x0 + cell, 932), CARD, 10)
+        _card(canvas, (x0, 812, x0 + cell, 932))
         canvas.draw.rectangle((x0 + 6, 812, x0 + cell - 6, 815), fill=colors[state])
         canvas.text(x0 + 14, 826, label, 14, MUTED, True, max_width=cell - 28)
-        canvas.text(x0 + 14, 848, value, 26, TEXT, True, max_width=cell - 28)
-        canvas.text(x0 + 14, 884, note, 13, MUTED, max_width=cell - 28, minimum=11)
-        canvas.text(x0 + 14, 905, state, 14, colors[state], True)
+        canvas.text(x0 + 14, 846, value, 26, TEXT, True, max_width=cell - 28)
+        canvas.text(x0 + 14, 880, note, 13, MUTED, max_width=cell - 28, minimum=11)
+        canvas.text(x0 + 14, 899, state, 14, colors[state], True)
+        canvas.text(x0 + 14, 917, RULES.get(label, ""), 11, SOFT, max_width=cell - 28, minimum=10)
 
     # Supply & sentiment.
     canvas.text(54, 952, "BITCOIN SUPPLY & SENTIMENT", 21, TEXT, True)
@@ -545,7 +587,7 @@ def render_png(panel: dict, derived: dict, *, stale: tuple = ()) -> tuple[bytes,
     supply = panel.get("supply_loss") or {}
     sentiment = panel.get("sentiment") or {}
     box = (54, 984, 891, 1240)
-    canvas.card(box, CARD, 10)
+    _card(canvas, box)
     canvas.text(76, 998, "SUPPLY IN PROFIT / LOSS", 18, MUTED, True)
     canvas.text(871, 1000, "4 YEARS", 15, MUTED, True, align="right")
     canvas.text(76, 1024, _pct(supply.get("profit_pct"), 1) + " in profit", 30, ORANGE, True)
@@ -574,7 +616,7 @@ def render_png(panel: dict, derived: dict, *, stale: tuple = ()) -> tuple[bytes,
     canvas.text(76, 1216, "% of circulating BTC · shaded 40–50% = past bottom zone · Checkonchain · last-moved price as cost basis", 14, MUTED, max_width=790)
 
     box = (909, 984, 1746, 1240)
-    canvas.card(box, CARD, 10)
+    _card(canvas, box)
     canvas.text(931, 998, "FEAR & GREED", 18, MUTED, True)
     canvas.text(1726, 1000, "FROM JUL 2023", 15, MUTED, True, align="right")
     value = number(sentiment.get("value"))
@@ -607,7 +649,7 @@ def render_png(panel: dict, derived: dict, *, stale: tuple = ()) -> tuple[bytes,
     canvas.text(54, 1260, "PRICE VS MOVING AVERAGES", 21, TEXT, True)
     canvas.text(1746, 1263, "BTC zones = distance above the 200W SMA · equities 200D with +50% / +100% guides", 17, MUTED, align="right")
     box = (54, 1292, 1150, 1730)
-    canvas.card(box, CARD, 10)
+    _card(canvas, box)
     canvas.text(76, 1306, "BTC · 200W SMA ZONES", 20, TEXT, True)
     canvas.text(1128, 1306, f"{_pct(derived['extension'], 1, True)} vs 200W", 22, TEXT, True, align="right")
     legend = [("BTC Fri close", TEXT, False), ("200W SMA", ORANGE, True), ("50W SMA", BLUE, False),
@@ -621,7 +663,7 @@ def render_png(panel: dict, derived: dict, *, stale: tuple = ()) -> tuple[bytes,
     for index, ticker in enumerate(("MSTR", "ASST")):
         y0 = 1292 + index * 225
         box = (1168, y0, 1746, y0 + 213)
-        canvas.card(box, CARD, 10)
+        _card(canvas, box)
         trend = (panel.get("trends") or {}).get(ticker) or {}
         metric = ((trend.get("averages") or {}).get("200D") or {})
         canvas.text(1188, y0 + 12, f"{ticker} · 200D SMA", 19, TEXT, True)
@@ -656,7 +698,7 @@ def audit_rows(panel: dict, derived: dict) -> list[dict]:
         {"metric": "Fear & Greed", "value": str((panel.get("sentiment") or {}).get("value")), "source": "CoinMarketCap"},
     ]
     for label, value, note, state in derived["checklist"]:
-        rows.append({"metric": f"Checklist · {label}", "value": f"{value} ({state})", "source": note})
+        rows.append({"metric": f"Checklist · {label}", "value": f"{value} ({state})", "source": f"{note} · rule: {RULES.get(label, '')}"})
     for company in ("MSTR", "ASST"):
         item = ((panel.get("header") or {}).get("companies") or {}).get(company) or {}
         rows.append({"metric": f"{company} price / NAV", "value": f"{item.get('nav_multiple'):.2f}x" if item.get("nav_multiple") else "—", "source": "derived"})

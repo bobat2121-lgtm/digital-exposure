@@ -1,11 +1,38 @@
 # Automatic Monday report publication
 
-The SEC collector runs in Cloudflare. A recurring Codex task performs the
-financial reconciliation and publishes tested updates to this repository's
-`main` branch, which deploys the existing Streamlit application. This is an
-agent-assisted scheduled process, not a GitHub Actions reconciliation service.
-The scheduled task needs its host computer awake with Codex running and its
-existing GitHub/network access available. No new API subscription is required.
+## Fully automatic mode (default)
+
+The SEC collector runs in Cloudflare and parses each weekly 8-K. The report now
+reconciles a new week by itself (`report/auto_reconcile.py`) whenever
+`data/report-supplements.json` has no reviewed entry for that balance date:
+
+| Input | Automatic source |
+| --- | --- |
+| Strategy basic shares | latest reviewed count + 8-K ATM shares sold − repurchased |
+| Strategy preferred shares | latest reviewed count per series + 8-K issued − repurchased |
+| Strategy preferred claims | max($100, ten-close mean before the balance business day) per USD series, €100 STRE, plus 30/360 accrual since the last scheduled payment (STRC dates and rate from strategy.com) |
+| Strategy debt | latest reviewed principal carried forward |
+| Strive SATA claims | filing share count × max($100, ten-close mean, prior close) |
+| Comparison marks | BTC and EUR/USD at the prior filing's SEC acceptance hour; STRC from the prior Strive filing |
+| Strive common-capital VWAP | `report.equity_vwap` for the filing week (1-minute, else 5-minute) |
+
+Checked against the reviewed September 20 edition, the roll-forward reproduced the
+preferred claims to the cent, debt and SATA claims exactly, and basic shares within
+10,000 (employee issuance the 8-K does not show). The page labels such weeks:
+"Automatically reconciled … review pending". Reviewed entries always take
+precedence, and any source failure leaves the week missing, so the last complete
+edition stays up. `DCR_AUTO_RECONCILE=0` turns this off. `scripts/auto_reconcile.py`
+prints the derived entries; add `--write` to freeze them for review.
+
+The procedure below is now optional review. Running it replaces the automatic
+estimates with checked figures and resets the roll-forward.
+
+## Optional review procedure
+
+A recurring Codex task can still perform the financial reconciliation and publish
+tested updates to this repository's `main` branch, which deploys the Streamlit
+application. The scheduled task needs its host computer awake with Codex running
+and its existing GitHub/network access available. No new API subscription is required.
 
 ## Run procedure
 
@@ -64,7 +91,8 @@ existing GitHub/network access available. No new API subscription is required.
    Push the tested commit to `bobat2121-lgtm/digital-exposure` `main` using the
    user's existing authorization for automatic publication. Wait for Streamlit
    to update and verify both balance dates and populated numbers at
-   `https://digital-credit-report.streamlit.app/?report=monday`. Record the
+   `https://digital-credit-report.streamlit.app/?classic=1&report=monday` (the
+   default page shows the same edition as the Accretion Ledger panel). Record the
    actual deployment outcome; a successful push alone is not live verification.
 8. If anything fails, retain the complete published edition. Retry transient
    errors on a later scheduled run and report a meaningful unresolved failure.

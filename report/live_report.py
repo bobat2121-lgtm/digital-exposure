@@ -143,6 +143,39 @@ def _eligible(filing):
                ("weekly_btc_purchases", "weekly_btc_sales", "btc_holdings"))
 
 
+def load_supplements(rows=None):
+    """Reviewed supplements, plus auto-reconciled entries for newer filings.
+
+    Auto entries exist only where no reviewed entry does (see
+    report.auto_reconcile). ``rows`` are the eligible merged filings.
+    """
+    supplements = _load(SUPPLEMENTS)
+    if rows is None:
+        return supplements
+    from . import auto_reconcile
+    if not auto_reconcile.enabled(SUPPLEMENTS):
+        return supplements
+    try:
+        merged, _ = auto_reconcile.augment(rows, supplements)
+        return merged
+    except Exception:  # never let automation block the reviewed report
+        return supplements
+
+
+def _vwap(filing):
+    """Archived Strive VWAP estimate, else an automatic one for that week."""
+    filed = date.fromisoformat(filing["filedDate"])
+    estimate = load_estimate("ASST", filed)
+    from . import auto_reconcile
+    if estimate is None and auto_reconcile.enabled(SUPPLEMENTS):
+        try:
+            estimate = dict(auto_reconcile.vwap_estimate(filed))
+            estimate["display_note"] = ("5-minute" if estimate.get("method") == "hlc3_5m" else "1-minute") + " VWAP estimate · automatic"
+        except Exception:
+            estimate = None
+    return estimate
+
+
 def _merged_filings(feed, checkpoint):
     rows = {row["accession"]: row for row in checkpoint.get("filings", []) if _eligible(row)}
     for row in feed.get("filings", []):
@@ -294,7 +327,7 @@ def _company(ticker, filing, all_filings, supplements, prices):
                 raise ValueError("SATA net shares do not reconcile")
         activity = (PreferredActivity("SATA", None, None, issuance_price_assumption=100,
                                      capital_method="share_change_par", net_share_change=change),)
-        estimate = load_estimate("ASST", date.fromisoformat(filing["filedDate"]))
+        estimate = _vwap(filing)
         if estimate and (estimate["session_start"] < extraction["periodStart"]
                          or estimate["session_end"] > extraction["periodEnd"]):
             raise ValueError("ASST VWAP does not match the filing's activity period")
@@ -323,8 +356,9 @@ def resolve_live_report(prices: dict, feed: dict, *, through_date: str | None = 
     """Read-only projection: new reported inputs advance; missing NAV inputs stay missing."""
     if not isinstance(feed, dict) or feed.get("schemaVersion") != 1 or not isinstance(feed.get("filings"), list):
         raise ValueError("Unsupported filing feed")
-    checkpoint, supplements = _load(CHECKPOINT), _load(SUPPLEMENTS)
+    checkpoint = _load(CHECKPOINT)
     rows = _merged_filings(feed, checkpoint)
+    supplements = load_supplements(rows)
     if through_date is not None:
         cutoff = date.fromisoformat(through_date)
         rows = [row for row in rows if date.fromisoformat(row["extracted"]["balanceDate"]) <= cutoff]
@@ -359,6 +393,10 @@ def resolve_live_report(prices: dict, feed: dict, *, through_date: str | None = 
         (c.current.btc_holdings, c.current.effective_common_shares, c.current.debt_principal, c.current.preferred_claims))
         or (c.current.combined_liquid_assets is None and (c.current.cash is None or c.current.marketable_securities is None))]
     notice = ("New filings loaded · " + ", ".join(missing) + " NAV inputs pending; unavailable figures are not carried forward.") if missing else None
+    automatic = [f"{c.name} {_short(c.balance_date)}" for c in companies
+                 if supplements.get("balances", {}).get(c.ticker, {}).get(c.balance_date, {}).get("auto_reconciled")]
+    if automatic and not missing:
+        notice = "Automatically reconciled from the filings and public data · " + " · ".join(automatic) + " · review pending."
     if max(groups, default=start) > start:
         notice = "One newer filing received · awaiting its matching weekly report. " + report.subtitle
     newest_release = max(row["filedDate"] for row in chosen.values())
@@ -369,7 +407,10 @@ def resolve_live_report(prices: dict, feed: dict, *, through_date: str | None = 
     if pending:
         notice = "New filing data awaits validation · showing the last verified filing pair. " + report.subtitle
     version_data = [(row["accession"], row.get("documents"), row["extracted"]) for row in chosen.values()]
-    version = hashlib.sha256(json.dumps([version_data, supplements.get("revision")], sort_keys=True).encode()).hexdigest()[:16]
+    automatic_inputs = {ticker: supplements.get("balances", {}).get(ticker, {}).get(chosen[ticker]["extracted"]["balanceDate"])
+                        for ticker in chosen}
+    version = hashlib.sha256(json.dumps([version_data, supplements.get("revision"), automatic_inputs],
+                                        sort_keys=True, default=str).encode()).hexdigest()[:16]
     return LiveReportResult(report, notice, version)
 
 

@@ -1,4 +1,5 @@
-"""Public Monday and Friday reports sharing one Streamlit entrypoint."""
+"""Public Monday, Wednesday and Friday panels, plus the detailed Monday and
+Friday reports at ``?classic=1``, sharing one Streamlit entrypoint."""
 from pathlib import Path
 import sys
 
@@ -11,10 +12,10 @@ if str(friday_source) not in sys.path:
 
 st.set_page_config(page_title="Weekly Reports | Digital Credit", page_icon="₿", layout="wide")
 
-# Redesign previews (Monday, Wednesday, Friday) never replace the live tabs.
-if st.query_params.get("preview") == "1":
-    from preview_page import render as render_preview
-    render_preview()
+# The three panels are the default page; ?classic=1 opens the detailed reports.
+if st.query_params.get("classic") != "1":
+    from panels_page import render as render_panels
+    render_panels()
     st.stop()
 
 MONDAY = "Monday · Digital Credit"

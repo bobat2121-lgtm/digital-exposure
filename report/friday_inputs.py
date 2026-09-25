@@ -75,7 +75,7 @@ def resolve_friday_inputs(prices: dict, feed: dict, *, now=None) -> dict:
     now = now.astimezone(timezone.utc)
     resolved = live_report.resolve_live_report(prices, feed)
     publications = _selected_publications(feed, resolved.report)
-    supplements = live_report._load(live_report.SUPPLEMENTS)
+    supplements = live_report.load_supplements(live_report._merged_filings(feed, live_report._load(live_report.CHECKPOINT)))
     companies = {}
     notices = [resolved.notice] if resolved.notice else []
     for company in resolved.report.companies:

@@ -6,6 +6,8 @@ a clean layout. Fonts are the bundled Lato (report-*.ttf) and Gelasio (OFL).
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
+from contextvars import ContextVar
 from functools import lru_cache
 import math
 from pathlib import Path
@@ -15,13 +17,41 @@ from PIL import Image, ImageColor, ImageDraw, ImageFont
 ASSETS = Path(__file__).resolve().parents[1] / "assets"
 
 
-@lru_cache(maxsize=96)
+# Font sets per theme: (file, variable-font style or None). "key" is the
+# display face for a title's key word (serif in the classic Imprint style).
+FONT_SETS = {
+    "classic": {"regular": ("report-regular.ttf", None), "bold": ("report-bold.ttf", None),
+                "key": ("gelasio-variable.ttf", "Bold"), "key_regular": ("gelasio-variable.ttf", "Regular")},
+    "cyber": {"regular": ("chakrapetch-regular.ttf", None), "bold": ("chakrapetch-bold.ttf", None),
+              "key": ("orbitron-variable.ttf", "Black"), "key_regular": ("orbitron-variable.ttf", "Medium")},
+    "brutal": {"regular": ("spacegrotesk-variable.ttf", "Regular"), "bold": ("spacegrotesk-variable.ttf", "Bold"),
+               "key": ("spacegrotesk-variable.ttf", "Bold"), "key_regular": ("spacemono-regular.ttf", None),
+               "mono": ("spacemono-bold.ttf", None)},
+}
+FONTSET: ContextVar[str] = ContextVar("panel_fontset", default="classic")
+
+
+@contextmanager
+def fontset(name: str):
+    token = FONTSET.set(name if name in FONT_SETS else "classic")
+    try:
+        yield
+    finally:
+        FONTSET.reset(token)
+
+
+@lru_cache(maxsize=256)
+def _face(name: str, style: str | None, size: int) -> ImageFont.FreeTypeFont:
+    face = ImageFont.truetype(str(ASSETS / name), size)
+    if style:
+        face.set_variation_by_name(style)
+    return face
+
+
 def font(size: int, bold: bool = False, serif: bool = False) -> ImageFont.FreeTypeFont:
-    if serif:
-        face = ImageFont.truetype(str(ASSETS / "gelasio-variable.ttf"), size)
-        face.set_variation_by_name("Bold" if bold else "Regular")
-        return face
-    return ImageFont.truetype(str(ASSETS / ("report-bold.ttf" if bold else "report-regular.ttf")), size)
+    fonts = FONT_SETS[FONTSET.get()]
+    role = ("key" if bold else "key_regular") if serif else ("bold" if bold else "regular")
+    return _face(*fonts[role], size)
 
 
 def width(text: str, size: int, bold: bool = False, serif: bool = False) -> float:

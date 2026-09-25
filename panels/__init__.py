@@ -1,7 +1,6 @@
-"""Preview editions of the Monday, Wednesday and Friday panels.
+"""The Monday, Wednesday and Friday panels shown by ``panels_page``.
 
-Nothing here is imported by the live Monday/Friday tabs. The preview tabs
-render only when the app is opened with ``?preview=1``.
+The detailed Monday and Friday reports (``?classic=1``) import nothing here.
 """
 from pathlib import Path
 import sys

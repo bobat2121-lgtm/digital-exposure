@@ -68,7 +68,9 @@ class PublicAppTests(unittest.TestCase):
         return result
 
     def open_app(self):
-        return AppTest.from_file(str(self.app_path)).run(timeout=30)
+        app = AppTest.from_file(str(self.app_path))
+        app.query_params["classic"] = "1"
+        return app.run(timeout=30)
 
     def poll_report(self, app):
         """Run the real due SEC fragment against the existing browser session.

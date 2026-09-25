@@ -1,29 +1,39 @@
-"""Wednesday: "The Coupon Sheet." — the midweek digital credit monitor.
+"""Wednesday: "The Coupon Sheet." — spreads on the digital credit that funds
+Strategy and Strive.
 
-Covers Strategy's STRC, STRF, STRK, STRD, STRE and Strive's SATA: effective
-yield against cash and credit benchmarks, price against $100 par, liquidity,
-the issuance/buyback ledger from the Monday filings, coverage and the dated
-calendar. A certificate-paper palette sets it apart from Monday's cream and
-Friday's black while keeping the family type, cards and orange dot.
+STRC (Strategy) and SATA (Strive) carry the treasuries, so each gets a hero
+card: the spread over the 3-month bill, the spread stack over cash, Treasuries
+and corporate credit, twelve weeks of spread history, par and liquidity.
+STRF, STRK, STRD and STRE follow in a compact ladder. USD cover is read
+against each issuer's own target on a weekly timeline, then the flow ledger
+and the dated calendar.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+import json
 import math
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from .draw import Canvas, imprint, mix, width
+from . import themes
+from .draw import Canvas, fontset, mix, width
 from .extras import fred_latest, number
 
 ET = ZoneInfo("America/New_York")
 WIDTH, HEIGHT = 1800, 1400
-PAPER, CARD, INK, MUTED, SOFT = "#E6ECE7", "#F9FBF7", "#10302A", "#4E6A63", "#7D938D"
-GREEN, DEEP, ORANGE, GOLD, RED, LINE = "#1F6F5C", "#15463B", "#E07A1F", "#B08A2E", "#A8433F", "#CBD8D1"
 TITLE = ("The ", "Coupon", " Sheet")
+CONFIG = Path(__file__).resolve().parents[1] / "data" / "preview-config.json"
+HEROES = ("STRC", "SATA")
+REST = ("STRF", "STRK", "STRD", "STRE")
 ISSUER = {"STRC": "Strategy", "STRF": "Strategy", "STRK": "Strategy", "STRD": "Strategy", "STRE": "Strategy", "SATA": "Strive"}
-KIND = {"STRC": "variable · monthly", "SATA": "variable · daily", "STRF": "10% fixed · senior",
+HERO_NOTE = {"STRC": "variable rate · paid semi-monthly", "SATA": "variable rate · paid every business day"}
+KIND = {"STRC": "variable · semi-monthly", "SATA": "variable · daily", "STRF": "10% fixed · senior",
         "STRK": "8% · convertible", "STRD": "10% · non-cumulative", "STRE": "10% · euro"}
+BENCHMARKS = (("SOFR", "SOFR"), ("3M bill", "DGS3MO"), ("10Y", "DGS10"), ("IG corp", "BAMLC0A0CMEY"),
+              ("HY corp", "BAMLH0A0HYM2EY"))
+HISTORY_DAYS = 84
 
 
 @dataclass(frozen=True)
@@ -59,6 +69,13 @@ def _pct(value, digits=2, signed=False, suffix="%"):
     return f"{sign}{abs(value):,.{digits}f}{suffix}"
 
 
+def _bp(value, signed=True):
+    if value is None:
+        return "—"
+    sign = "−" if round(value) < 0 else "+" if signed and round(value) > 0 else ""
+    return f"{sign}{abs(value):,.0f} bp"
+
+
 def _money(value, digits=1, signed=False):
     if value is None:
         return "—"
@@ -80,17 +97,65 @@ def _short(day):
     return f"{parsed:%b} {parsed.day}"
 
 
+def _asof(series, day):
+    """Last FRED observation on or before ``day``."""
+    value = None
+    for stamp, level in series or []:
+        if stamp > day:
+            break
+        if level is not None:
+            value = level
+    return value
+
+
+def _strc_rate_at(item):
+    """STRC's stated rate for the payment period covering a date (strategy.com history)."""
+    schedule = sorted((entry["payDate"], number(entry.get("rate"))) for entry in item.get("dividendHistory") or []
+                      if entry.get("payDate") and number(entry.get("rate")) is not None)
+    current = number(item.get("currentDividend"))
+
+    def rate(day):
+        return next((value for pay, value in schedule if pay >= day), current)
+    return rate
+
+
+def _sata_rate_at(strive):
+    """SATA's stated rate on a date from Strive's dividend history.
+
+    Daily payments (June 2026 onward) annualize over 252 business days; the
+    earlier monthly payments over 12.
+    """
+    changes, last = [], None
+    for row in sorted(strive.get("sata_dividends") or [], key=lambda row: row.get("payDate") or ""):
+        amount = number(row.get("cashAmount"))
+        if amount is None or not row.get("payDate"):
+            continue
+        rate = round(amount * (252 if amount < .5 else 12), 4)
+        if rate != last:
+            changes.append((row["payDate"], rate))
+            last = rate
+    current = number(strive.get("sata_rate_pct"))
+
+    def rate(day):
+        value = None
+        for pay, level in changes:
+            if pay > day:
+                break
+            value = level
+        return value if value is not None else (changes[0][1] if changes else current)
+    return rate
+
+
 def _par_stats(rows, today):
-    closes = [(row["date"], row["close"]) for row in rows if row["date"] < today.isoformat() or True]
+    closes = [(row["date"], row["close"]) for row in rows if row.get("close") is not None]
     if not closes:
         return {}
     last20 = closes[-20:]
-    at_par = sum(1 for _, close in last20 if close >= 99.995)
-    last_par = next((day for day, close in reversed(closes) if close >= 99.995), None)
     first_of_month = today.replace(day=1)
     prior_start = (first_of_month - timedelta(days=1)).replace(day=1)
     prior = [close for day, close in closes if prior_start.isoformat() <= day < first_of_month.isoformat()]
-    return {"series": closes[-60:], "at_par_20": at_par, "sessions": len(last20), "last_par": last_par,
+    return {"at_par_20": sum(1 for _, close in last20 if close >= 99.995), "sessions": len(last20),
+            "last_par": next((day for day, close in reversed(closes) if close >= 99.995), None),
             "prior_month": prior_start, "prior_avg": sum(prior) / len(prior) if prior else None}
 
 
@@ -115,22 +180,53 @@ def _ledger(feed_rows):
         facts = extraction["facts"]
         if row["ticker"] == "MSTR":
             securities = extraction.get("securities", {})
+
             def net(series):
                 item = securities.get(series) or {}
                 issued, bought = number(item.get("netIssuanceProceedsUsd")), number(item.get("repurchaseCashUsd"))
                 return (issued or 0) - (bought or 0) if issued is not None or bought is not None else None
-            entry.update(strc=net("STRC"), other=sum(v for v in (net(s) for s in ("STRF", "STRK", "STRD", "STRE")) if v is not None),
+            entry.update(strc=net("STRC"), other=sum(v for v in (net(s) for s in REST) if v is not None),
                          mstr=net("MSTR"), mstr_btc=number(facts.get("weekly_btc_purchases")),
                          strc_bought=number((securities.get("STRC") or {}).get("repurchasedShares")),
                          mstr_end=extraction["periodEnd"], mstr_start=extraction["periodStart"])
         else:
-            change = number(facts.get("net_sata_shares_change")) if "net_sata_shares_change" in facts else None
-            if change is None and isinstance(facts.get("net_sata_shares_change"), (int, float)):
-                change = facts["net_sata_shares_change"]
+            change = facts.get("net_sata_shares_change")
+            change = number(change) if not isinstance(change, (int, float)) else change
             entry.update(sata=change * 100 if isinstance(change, (int, float)) else None,
                          asst_btc=number(facts.get("weekly_btc_purchases")))
     complete = [entry for entry in weeks.values() if "strc" in entry and "sata" in entry]
     return sorted(complete, key=lambda entry: entry["week"])[-4:]
+
+
+def _cover_history(rows, extras, config, monday):
+    """Weekly USD cover in months, newest last, with each issuer's own target."""
+    strategy_kpis = (extras.get("strategy") or {}).get("btc") or {}
+    annual = number(strategy_kpis.get("totalAnnualDividends"))
+    weekly = {}
+    for row in rows:
+        facts = row["extracted"]["facts"]
+        reserve, cash = number(facts.get("usd_reserve_usd")), number(facts.get("usd_cash_usd"))
+        if row["ticker"] == "MSTR" and annual and reserve is not None and cash is not None:
+            weekly[row["extracted"]["balanceDate"]] = (reserve + cash) / (annual / 12)
+    strategy = sorted(weekly.items())[-12:]
+    strive = sorted((row["date"], number(row.get("dividend_reserve_months")))
+                    for row in (extras.get("strive") or {}).get("cash") or []
+                    if row.get("date") and number(row.get("dividend_reserve_months")) is not None)
+    # Weeks before SATA existed report zero; start at the first funded week.
+    first = next((index for index, (_, months) in enumerate(strive) if months > 0), len(strive))
+    strive = strive[first:][-12:]
+
+    def target(ticker, key):
+        item = monday.extras.get(ticker) if monday is not None else None
+        return (item.target_months if item and item.target_months else None) or number((config.get(key) or {}).get("value"))
+    return {
+        "MSTR": {"name": "Strategy", "weeks": strategy, "current": number(strategy_kpis.get("usdMonthsOfDividends")),
+                 "target": target("MSTR", "strategy_reserve_floor_months"), "kind": "floor",
+                 "basis": "(USD Reserve + USD Cash) ÷ current monthly dividends"},
+        "ASST": {"name": "Strive", "weeks": strive, "current": strive[-1][1] if strive else None,
+                 "target": target("ASST", "strive_reserve_goal_months"), "kind": "goal",
+                 "basis": "Strive dashboard dividend reserve"},
+    }
 
 
 def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None) -> dict:
@@ -138,10 +234,12 @@ def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None)
     now = now or datetime.now(ET)
     today = now.date()
     rows = live_report._merged_filings(feed or {"filings": []}, live_report._load(live_report.CHECKPOINT))
+    config = json.loads(CONFIG.read_text(encoding="utf-8")) if CONFIG.exists() else {}
     strategy = (extras.get("strategy") or {}).get("preferreds") or {}
     strive = extras.get("strive") or {}
+    fred = extras.get("fred") or {}
     ladder = []
-    for series in ("STRC", "STRF", "STRK", "STRD", "STRE"):
+    for series in ("STRC",) + REST:
         item = strategy.get(series) or {}
         price = number(item.get("ufPrice"))
         rate = number(item.get("currentDividend"))
@@ -151,30 +249,55 @@ def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None)
     sata_rate = number(strive.get("sata_rate_pct"))
     ladder.append(Ladder("SATA", sata_price, sata_rate, sata_rate * 100 / sata_price if sata_rate and sata_price else None))
     ladder.sort(key=lambda item: -(item.effective or 0))
-    references = [(label, fred_latest(extras, series)) for label, series in
-                  (("SOFR", "SOFR"), ("3M bill", "DGS3MO"), ("10Y", "DGS10"), ("IG corp", "BAMLC0A0CMEY"), ("HY corp", "BAMLH0A0HYM2EY"))]
-    bill = fred_latest(extras, "DGS3MO")[1]
-    par = {ticker: _par_stats(_rows(extras, ticker), today) for ticker in ("STRC", "SATA")}
+    by_ticker = {item.ticker: item for item in ladder}
+    references = [(label, fred_latest(extras, code)) for label, code in BENCHMARKS]
+    levels = {label: value for label, (_, value) in references}
+    bill = levels.get("3M bill")
+
+    def spreads(effective):
+        return {label: (effective - value) * 100 if effective is not None and value is not None else None
+                for label, value in levels.items()}
+
     notionals = {series: number((strategy.get(series) or {}).get("notional")) for series in strategy}
     sata_rows = sorted((row for row in rows if row["ticker"] == "ASST" and number(row["extracted"]["facts"].get("sata_shares"))),
                        key=lambda row: row["extracted"]["balanceDate"])
     sata_shares = number(sata_rows[-1]["extracted"]["facts"]["sata_shares"]) if sata_rows else None
-    shares_out = {series: (notionals.get(series) or 0) / 100 or None for series in ("STRC", "STRF", "STRK", "STRD")}
+    shares_out = {series: (notionals.get(series) or 0) / 100 or None for series in ("STRC",) + REST}
     shares_out["SATA"] = sata_shares
     liquidity = {}
-    for ticker in ("STRC", "SATA", "STRF", "STRK", "STRD"):
-        dollars, shares = _adv(_rows(extras, ticker), 30, today.isoformat())
+    for ticker in HEROES + REST:
+        dollars, shares = _adv(_rows(extras, ticker), 30, today.isoformat()) if ticker != "STRE" else (None, None)
         liquidity[ticker] = {"adv": dollars, "turnover": shares / shares_out[ticker] * 100 if shares and shares_out.get(ticker) else None,
                              "notional": notionals.get(ticker) if ticker != "SATA" else (sata_shares * 100 if sata_shares else None)}
     btc_adv, _ = _adv(_rows(extras, "BTC-USD"), 30, datetime.now(UTC).date().isoformat(), usd_volume=True)
-    credit_adv = sum(liquidity[t]["adv"] or 0 for t in ("STRC", "SATA"))
+    credit_adv = sum(liquidity[t]["adv"] or 0 for t in HEROES)
+
+    rate_at = {"STRC": _strc_rate_at(strategy.get("STRC") or {}), "SATA": _sata_rate_at(strive)}
+    heroes = {}
+    for ticker in HEROES:
+        item = by_ticker[ticker]
+        price_rows = _rows(extras, ticker)
+        history = []
+        if price_rows:
+            start = (date.fromisoformat(price_rows[-1]["date"]) - timedelta(days=HISTORY_DAYS)).isoformat()
+            for row in price_rows:
+                bill_then = _asof(fred.get("DGS3MO"), row["date"])
+                rate = rate_at[ticker](row["date"])
+                if row["date"] >= start and row.get("close") and rate and bill_then is not None:
+                    history.append((row["date"], (rate * 100 / row["close"] - bill_then) * 100))
+        par = _par_stats(price_rows, today)
+        heroes[ticker] = {"item": item, "spreads": spreads(item.effective), "history": history, "par": par,
+                          "liquidity": liquidity[ticker]}
+    rest = [{"item": by_ticker[ticker], "spreads": spreads(by_ticker[ticker].effective), "liquidity": liquidity[ticker]}
+            for ticker in REST if ticker in by_ticker]
+
     ledger = _ledger(rows)
     for entry in ledger:
         volume = [row for row in _rows(extras, "STRC") if entry.get("mstr_start", "9") <= row["date"] <= entry.get("mstr_end", "0")]
         traded = sum(row["volume"] or 0 for row in volume)
         entry["buyback_share"] = entry["strc_bought"] / traded * 100 if entry.get("strc_bought") and traded else None
     events = {}
-    for series in ("STRC", "STRF", "STRK", "STRD", "STRE"):
+    for series in ("STRC",) + REST:
         item = strategy.get(series) or {}
         for label, key in (("record", "nextRecordDate"), ("pay", "nextPayoutDate")):
             day = item.get(key)
@@ -182,25 +305,20 @@ def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None)
                 events.setdefault((day, label), []).append(series)
     calendar = [(day, f"{' · '.join(series)} dividend {label}", "record date" if label == "record" else "payment")
                 for (day, label), series in events.items()]
-    warrants = None
-    if monday is not None:
-        warrants = (monday.extras.get("ASST") and monday.extras["ASST"].warrants) or None
+    warrants = (monday.extras.get("ASST") and monday.extras["ASST"].warrants) or None if monday is not None else None
     if warrants:
         calendar.append((warrants["expires"].date().isoformat(), "ASST warrant exercise deadline",
-                         f"{warrants['count'] / 1e6:.1f}m @ ${warrants['strike']:.0f} · 5:00 pm ET"))
+                         f"{warrants['count'] / 1e6:.1f}m @ ${warrants['strike']:.0f} · 5 pm ET"))
     quarter_end = date(today.year, 3 * ((today.month - 1) // 3) + 3, 1)
     quarter_end = (quarter_end.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
     calendar.append((quarter_end.isoformat(), "Quarter end · QTD restarts", "next Monday ledger"))
     calendar.sort()
-    coverage = {}
-    if monday is not None:
-        for ticker, item in monday.extras.items():
-            coverage[ticker] = item
+    coverage = dict(monday.extras) if monday is not None else {}
     stamp = max((row["date"] for row in _rows(extras, "STRC")), default=None)
-    return {"ladder": ladder, "references": references, "bill": bill, "par": par, "liquidity": liquidity,
-            "btc_adv": btc_adv, "credit_adv": credit_adv, "ledger": ledger, "calendar": calendar[:6],
-            "coverage": coverage, "sata_rate": sata_rate, "stamp": stamp, "now": now,
-            "floor": 12, "stale": tuple(extras.get("stale") or ())}
+    return {"ladder": ladder, "references": references, "bill": bill, "heroes": heroes, "rest": rest,
+            "liquidity": liquidity, "btc_adv": btc_adv, "credit_adv": credit_adv, "ledger": ledger,
+            "calendar": calendar[:5], "coverage": coverage, "cover": _cover_history(rows, extras, config, monday),
+            "sata_rate": sata_rate, "stamp": stamp, "now": now, "stale": tuple(extras.get("stale") or ())}
 
 
 # ── rendering ───────────────────────────────────────────────────────────────
@@ -216,241 +334,288 @@ def _guilloche(canvas: Canvas, box, color):
         canvas.line(points, color, 1)
 
 
-def _perforation(canvas: Canvas, x, y0, y1):
-    canvas.line([(x, y0 + 14), (x, y1 - 14)], LINE, 2, dashed=True, dash=(5, 6))
-    for y in (y0, y1):
-        canvas.dot(x, y, 11, PAPER)
-
-
-def _frame(canvas: Canvas):
+def _frame(canvas: Canvas, p):
     draw = canvas.draw
-    draw.rectangle((16, 16, WIDTH - 17, HEIGHT - 17), outline=DEEP, width=3)
-    draw.rectangle((24, 24, WIDTH - 25, HEIGHT - 25), outline=mix(DEEP, PAPER, .45), width=1)
+    draw.rectangle((16, 16, WIDTH - 17, HEIGHT - 17), outline=p.deep, width=3)
+    draw.rectangle((24, 24, WIDTH - 25, HEIGHT - 25), outline=mix(p.deep, p.bg, .45), width=1)
     for x, y in ((16, 16), (WIDTH - 17, 16), (16, HEIGHT - 17), (WIDTH - 17, HEIGHT - 17)):
-        draw.rectangle((x - 5, y - 5, x + 5, y + 5), fill=ORANGE)
+        draw.rectangle((x - 5, y - 5, x + 5, y + 5), fill=p.accent)
 
 
-def render_png(data: dict) -> tuple[bytes, list[str]]:
-    canvas = Canvas((WIDTH, HEIGHT), PAPER)
-    draw = canvas.draw
-    _frame(canvas)
-    _guilloche(canvas, (800, 60, 1130, 150), mix(GREEN, PAPER, .16))
-    now = data["now"]
-    stamp = data["stamp"]
-    canvas.text(56, 44, "THE DIGITAL CREDIT REPORT  ·  WEDNESDAY  ·  DIGITAL CREDIT MONITOR", 18, ORANGE, True)
-    imprint(canvas, 56, 122, TITLE, 56, ink=INK, muted="#4c6660", dot=ORANGE)
-    canvas.text(56, 138, "Yield, par, liquidity and coverage for the preferreds that fund Strategy and Strive", 20, MUTED, max_width=1100)
-    canvas.text(WIDTH - 56, 46, f"CLOSE · {date.fromisoformat(stamp):%a %b} {date.fromisoformat(stamp).day}, {date.fromisoformat(stamp).year}".upper()
-                if stamp else "CLOSE", 19, DEEP, True, align="right")
-    refs = {label: value for label, (_, value) in data["references"]}
-    canvas.text(WIDTH - 56, 76, "  ·  ".join(f"{label} {value:.2f}%" for label, value in refs.items() if value is not None), 18, MUTED,
-                align="right", max_width=600)
-    canvas.text(WIDTH - 56, 104, f"FRED as of {_short(data['references'][0][1][0])} · prices at the close · STRE in EUR", 16, SOFT, align="right")
+def _card(canvas, box, p, theme, accent=None):
+    if theme.key == "classic":
+        canvas.card(box, p.card, p.radius, accent=accent, accent_height=5, outline=p.line)
+    else:
+        themes.card(canvas, box, p, accent, theme, 5)
 
-    # Hero: the yield ladder.
-    box = (56, 176, 1130, 640)
-    canvas.card(box, CARD, 14, outline=LINE)
-    _perforation(canvas, 1130, 176, 640)
-    canvas.text(80, 194, "THE LADDER · EFFECTIVE YIELD", 19, DEEP, True)
-    strc = next((item for item in data["ladder"] if item.ticker == "STRC"), None)
-    sata = next((item for item in data["ladder"] if item.ticker == "SATA"), None)
-    if strc and sata and strc.effective and sata.effective:
-        canvas.text(1106, 194, f"SATA − STRC {_pct(sata.effective - strc.effective, 2, True, ' pp')}", 18, MUTED, True, align="right")
-    plot_left, plot_right, top = 330, 980, 286
-    scale = max(16.0, max((item.effective or 0) for item in data["ladder"]) * 1.12)
-    x_of = lambda value: plot_left + value / scale * (plot_right - plot_left)
-    row_h = 54
-    bottom = top + row_h * len(data["ladder"]) - 14
-    for label, (_, value) in data["references"]:
-        if value is None:
-            continue
-        x = x_of(value)
-        canvas.line([(x, top - 16), (x, bottom)], mix(DEEP, CARD, .35), 1, dashed=True, dash=(3, 4))
-    levels = []  # greedy rows so benchmark labels never overlap
-    for label, (_, value) in sorted(data["references"], key=lambda item: item[1][1] or 0):
-        if value is None:
-            continue
-        x, text = x_of(value), f"{label} {value:.2f}%"
-        half = width(text, 13) / 2 + 6
-        level = next((n for n, right in enumerate(levels) if x - half > right), len(levels))
-        if level == len(levels):
-            levels.append(0)
-        levels[level] = x + half
-        canvas.text(x, 222 + level * 17, text, 13, MUTED, align="center")
-        canvas.line([(x, 222 + level * 17 + 16), (x, top - 16)], mix(DEEP, CARD, .35), 1, dashed=True, dash=(3, 4))
-    for index, item in enumerate(data["ladder"]):
-        y = top + index * row_h
-        variable = item.ticker in ("STRC", "SATA")
-        color = GREEN if variable else mix(GREEN, CARD, .45)
-        canvas.text(80, y, item.ticker, 26, INK, True)
-        canvas.text(170, y + 4, ISSUER[item.ticker], 16, MUTED)
-        canvas.text(80, y + 30, KIND[item.ticker], 14, SOFT)
-        currency = "€" if item.currency == "EUR" else "$"
-        canvas.text(plot_left - 16, y + 2, f"{currency}{item.price:,.2f}" if item.price else "—", 20, INK, True, align="right")
-        canvas.text(plot_left - 16, y + 28, f"rate {_pct(item.rate, 2)}", 14, SOFT, align="right")
-        if item.effective:
-            draw.rounded_rectangle((plot_left, y + 6, x_of(item.effective), y + 34), radius=6, fill=color)
-            end = x_of(item.effective)
-            canvas.text(end + 10, y + 6, _pct(item.effective, 2), 22, INK, True)
-            if data["bill"] is not None:
-                canvas.text(end + 10, y + 32, f"+{item.effective - data['bill']:.1f} pp vs bill", 13, MUTED)
-    canvas.draw.rounded_rectangle((80, 230, 94, 242), radius=3, fill=GREEN)
-    canvas.text(100, 226, "variable-rate digital credit", 14, MUTED)
-    canvas.draw.rounded_rectangle((80, 252, 94, 264), radius=3, fill=mix(GREEN, CARD, .45))
-    canvas.text(100, 248, "fixed-rate preferreds", 14, MUTED)
-    canvas.text(80, 612, "Effective yield = stated rate × $100 ÷ price (Strategy KPIs; SATA from Strive's daily dividend × 252).",
-                14, SOFT, max_width=1030)
 
-    # Par tracker (coupon stub).
-    box = (1148, 176, 1744, 640)
-    canvas.card(box, CARD, 14, outline=LINE)
-    canvas.text(1172, 194, "PAR TRACKER · 12 WEEKS", 19, DEEP, True)
-    canvas.text(1720, 196, "band $99–$101", 15, MUTED, align="right")
-    for index, ticker in enumerate(("STRC", "SATA")):
-        stats = data["par"].get(ticker) or {}
-        y0 = 234 + index * 202
-        series = stats.get("series") or []
-        price = series[-1][1] if series else None
-        canvas.text(1172, y0, ticker, 24, INK, True)
-        if price is not None:
-            canvas.text(1250, y0 + 3, f"${price:,.2f}", 22, INK, True)
-            diff = price - 100
-            canvas.text(1720, y0 + 5, f"{'+' if diff >= 0 else '−'}${abs(diff):.2f} vs par", 18, GREEN if diff >= 0 else RED, True, align="right")
-        plot = (1216, y0 + 40, 1720, y0 + 128)
-        if len(series) > 2:
-            values = [value for _, value in series]
-            low, high = min(min(values), 98.5) - .3, max(max(values), 101.2) + .3
-            px = lambda i: plot[0] + i / (len(series) - 1) * (plot[2] - plot[0])
-            py = lambda v: plot[3] - (v - low) / (high - low) * (plot[3] - plot[1])
-            draw.rectangle((plot[0], py(101), plot[2], py(99)), fill=mix(GOLD, CARD, .16))
-            canvas.line([(plot[0], py(100)), (plot[2], py(100))], GOLD, 2)
-            canvas.text(plot[0] - 6, py(100) - 8, "$100", 13, GOLD, True, align="right")
-            canvas.text(plot[0] - 6, plot[3] - 12, f"${low:.0f}", 12, SOFT, align="right")
-            canvas.line([(px(i), py(v)) for i, v in enumerate(values)], INK, 2)
-            canvas.dot(px(len(values) - 1), py(values[-1]), 5, ORANGE)
-            canvas.text(plot[0], plot[3] + 4, _short(series[0][0]), 12, SOFT)
-            canvas.text(plot[2], plot[3] + 4, _short(series[-1][0]), 12, SOFT, align="right")
-        at = stats.get("at_par_20")
-        line = (f"Closed at/above par {at} of last {stats.get('sessions')} sessions · last ≥ $100 {_short(stats.get('last_par'))}"
-                if at is not None else "Price history unavailable")
-        canvas.text(1172, y0 + 150, line, 15, MUTED, max_width=548)
-        if ticker == "SATA" and stats.get("prior_avg"):
-            month = stats["prior_month"]
-            met = stats["prior_avg"] >= 99
-            canvas.text(1172, y0 + 170, f"Cut allowed only if prior-month avg ≥ $99: {month:%b} ${stats['prior_avg']:.2f} → {'allowed' if met else 'not allowed'}",
-                        15, ORANGE if met else GREEN, True, max_width=548)
-        elif ticker == "STRC":
-            canvas.text(1172, y0 + 170, f"Stated rate {_pct(strc.rate, 2) if strc else '—'} · effective {_pct(strc.effective, 2) if strc else '—'}",
-                        15, MUTED, max_width=548)
+def _heading(canvas, x, y, text, p, theme, right=None, right_x=None):
+    canvas.text(x, y, text.upper(), 19, p.deep, True, max_width=(right_x - x) * .66 if right_x else None)
+    if right and right_x:
+        canvas.text(right_x, y + 2, right, 15, p.muted, align="right", max_width=(right_x - x) * .34)
 
-    # Liquidity.
-    box = (56, 660, 700, 1010)
-    canvas.card(box, CARD, 14, outline=LINE)
-    canvas.text(80, 678, "LIQUIDITY · 30-DAY AVERAGE", 19, DEEP, True)
-    canvas.text(676, 680, "$ / day · % of shares / day", 15, MUTED, align="right")
-    ordered = sorted(data["liquidity"].items(), key=lambda item: -(item[1]["adv"] or 0))
-    top_adv = max((item["adv"] or 0) for _, item in ordered) or 1
-    for index, (ticker, item) in enumerate(ordered):
-        y = 718 + index * 46
-        canvas.text(80, y, ticker, 20, INK, True)
-        bar_left, bar_right = 160, 520
-        if item["adv"]:
-            draw.rounded_rectangle((bar_left, y + 4, bar_left + item["adv"] / top_adv * (bar_right - bar_left), y + 24), radius=5,
-                                   fill=GREEN if ticker in ("STRC", "SATA") else mix(GREEN, CARD, .45))
-        canvas.text(bar_right + 10, y + 1, _money(item["adv"]), 18, INK, True)
-        canvas.text(676, y + 2, _pct(item["turnover"], 2), 17, MUTED, align="right")
-    ratio = data["credit_adv"] / data["btc_adv"] * 100 if data["btc_adv"] else None
-    canvas.text(80, 956, f"STRC + SATA trade {_pct(ratio, 2)} of bitcoin's daily spot volume", 18, INK, True, max_width=600)
-    canvas.text(80, 982, "Yahoo daily close × volume · STRE (Luxembourg) excluded", 14, SOFT, max_width=600)
 
-    # Flow ledger.
-    box = (718, 660, 1744, 1010)
-    canvas.card(box, CARD, 14, outline=LINE)
-    canvas.text(742, 678, "FLOW LEDGER · LAST FOUR FILING WEEKS", 19, DEEP, True)
-    canvas.text(1720, 680, "+ issued / − repurchased", 15, MUTED, align="right")
-    columns = (("WEEK OF", 742, "left"), ("STRC", 990, "right"), ("STRF/K/D/E", 1150, "right"), ("MSTR ATM", 1300, "right"),
-               ("SATA", 1440, "right"), ("BUYBACK % VOL", 1590, "right"), ("BTC BOUGHT", 1720, "right"))
+def _hero(canvas, box, ticker, hero, scale, p, theme, stripe, data):
+    x0, y0, x1, y1 = box
+    L, R = x0 + 26, x1 - 26
+    item = hero["item"]
+    _card(canvas, box, p, theme, stripe)
+    end = canvas.text(L, y0 + 20, ticker, 48, p.ink, True, serif=True)
+    canvas.text(end + 16, y0 + 28, ISSUER[ticker], 20, p.ink, True)
+    canvas.text(end + 16, y0 + 54, HERO_NOTE[ticker], 16, p.muted)
+    if item.price is not None:
+        canvas.text(R, y0 + 20, f"${item.price:,.2f}", 32, p.ink, True, align="right")
+        diff = item.price - 100
+        canvas.text(R, y0 + 60, f"{'+' if diff >= 0 else '−'}${abs(diff):.2f} vs $100 par", 17,
+                    p.positive if diff >= 0 else p.negative, True, align="right")
+    canvas.draw.line((L, y0 + 96, R, y0 + 96), fill=p.line)
+
+    # Headline spread and yield.
+    bill_spread = hero["spreads"].get("3M bill")
+    canvas.text(L, y0 + 112, "SPREAD OVER 3M BILL", 15, p.muted, True)
+    canvas.text(L, y0 + 132, _bp(bill_spread), 58, stripe if theme.key != "classic" else p.ink, True)
+    canvas.text(L, y0 + 200, f"{_pct(item.effective)} effective − {_pct(data['bill'])} bill", 15, p.soft, max_width=250)
+    canvas.text(L, y0 + 236, "EFFECTIVE YIELD", 15, p.muted, True)
+    canvas.text(L, y0 + 256, _pct(item.effective), 34, p.ink, True)
+    canvas.text(L, y0 + 298, f"stated {_pct(item.rate)} × $100 ÷ price", 15, p.soft, max_width=250)
+
+    # Spread stack.
+    sx = L + 290
+    canvas.text(sx, y0 + 112, "SPREAD STACK · OVER", 15, p.muted, True)
+    canvas.text(R, y0 + 112, "bp", 15, p.muted, True, align="right")
+    bar_left, bar_right = sx + 150, R - 92
+    levels = {label: value for label, (_, value) in data["references"]}
+    for n, (label, _) in enumerate(BENCHMARKS):
+        y = y0 + 142 + n * 36
+        spread, level = hero["spreads"].get(label), levels.get(label)
+        key = label == "3M bill"
+        canvas.text(sx, y + 2, label, 18, p.ink, key)
+        canvas.text(sx + 76, y + 5, _pct(level) if level is not None else "—", 14, p.soft)
+        canvas.draw.rounded_rectangle((bar_left, y + 5, bar_right, y + 23), radius=min(4, p.radius), fill=p.tint)
+        if spread is not None and spread > 0:
+            canvas.draw.rounded_rectangle((bar_left, y + 5, bar_left + min(1, spread / scale) * (bar_right - bar_left), y + 23),
+                                          radius=min(4, p.radius), fill=stripe if key else mix(stripe, p.card, .45))
+        canvas.text(R, y + 1, _bp(spread).replace(" bp", ""), 20, p.ink, key, align="right")
+
+    # Twelve weeks of spread over the bill.
+    top = y0 + 336
+    history = hero["history"]
+    canvas.text(L, top, "SPREAD OVER 3M BILL · 12 WEEKS", 15, p.muted, True)
+    if len(history) > 2:
+        values = [value for _, value in history]
+        canvas.text(R, top, f"range {min(values):,.0f}–{max(values):,.0f} bp · now {values[-1]:,.0f}", 15, p.muted, align="right")
+        plot = (L + 64, top + 30, R - 8, top + 118)
+        low, high = min(values), max(values)
+        pad = max(10.0, (high - low) * .15)
+        low, high = low - pad, high + pad
+        px = lambda i: plot[0] + i / (len(values) - 1) * (plot[2] - plot[0])
+        py = lambda v: plot[3] - (v - low) / (high - low) * (plot[3] - plot[1])
+        for tick in (low + pad, high - pad):
+            canvas.line([(plot[0], py(tick)), (plot[2], py(tick))], p.line, 1, dashed=True, dash=(3, 5))
+            canvas.text(plot[0] - 10, py(tick) - 9, f"{tick:,.0f}", 14, p.soft, align="right")
+        points = [(px(i), py(v)) for i, v in enumerate(values)]
+        canvas.draw.polygon(points + [(plot[2], plot[3]), (plot[0], plot[3])], fill=mix(stripe, p.card, .12))
+        canvas.line(points, stripe, 3)
+        canvas.dot(*points[-1], 6, stripe)
+        canvas.text(plot[0], plot[3] + 6, _short(history[0][0]), 13, p.soft)
+        canvas.text(plot[2], plot[3] + 6, _short(history[-1][0]), 13, p.soft, align="right")
+    else:
+        canvas.text(L, top + 60, "Spread history unavailable", 16, p.muted)
+
+    # Par and liquidity strip.
+    strip = y0 + 482
+    canvas.draw.rounded_rectangle((L - 8, strip, R + 8, strip + 80), radius=min(8, p.radius), fill=p.tint)
+    par, liquidity = hero["par"], hero["liquidity"]
+    at = par.get("at_par_20")
+    cells = (("CLOSED ≥ $100", f"{at} of {par.get('sessions')}" if at is not None else "—", "last 20 sessions"),
+             ("30-DAY ADV", _money(liquidity.get("adv")), "Yahoo close × volume"),
+             ("TURNOVER", _pct(liquidity.get("turnover")) + "/day" if liquidity.get("turnover") else "—", "of shares outstanding"),
+             ("OUTSTANDING", _money(liquidity.get("notional")), "at $100 par"))
+    cell = (R - L) / 4
+    for n, (label, value, note) in enumerate(cells):
+        cx = L + n * cell
+        canvas.text(cx, strip + 10, label, 13, p.muted, True, max_width=cell - 12)
+        canvas.text(cx, strip + 28, value, 22, p.ink, True, max_width=cell - 12)
+        canvas.text(cx, strip + 56, note, 13, p.soft, max_width=cell - 12)
+    rule_y = strip + 92
+    if ticker == "SATA" and par.get("prior_avg"):
+        allowed = par["prior_avg"] >= 99
+        canvas.text(L, rule_y, f"Rate cut allowed only if the prior month averaged ≥ $99 · {par['prior_month']:%b} "
+                    f"${par['prior_avg']:.2f} → {'allowed' if allowed else 'not allowed'}", 16,
+                    p.accent if allowed else p.positive, True, max_width=R - L)
+    elif ticker == "STRC":
+        last = _short(par.get("last_par")) if par.get("last_par") else "—"
+        share = data["credit_adv"] / data["btc_adv"] * 100 if data["btc_adv"] else None
+        canvas.text(L, rule_y, f"Rate set monthly by Strategy · last close ≥ $100 {last} · "
+                    f"STRC + SATA trade {_pct(share)} of bitcoin's spot volume", 16, p.muted, True, max_width=R - L)
+
+
+def _rest(canvas, box, rest, p, theme):
+    x0, y0, x1, y1 = box
+    L, R = x0 + 24, x1 - 24
+    _card(canvas, box, p, theme)
+    _heading(canvas, L, y0 + 16, "The rest of the ladder · Strategy fixed-rate series", p, theme, "bp over benchmark · STRE in EUR", R)
+    columns = (("SERIES", L, "left"), ("PRICE", L + 420, "right"), ("STATED", L + 520, "right"),
+               ("EFFECTIVE", L + 640, "right"), ("OVER 3M BILL", L + 790, "right"), ("OVER HY", L + 900, "right"),
+               ("OUTSTANDING", R, "right"))
     for label, x, align in columns:
-        canvas.text(x, 716, label, 13, MUTED, True, align=align)
-    draw.line((742, 738, 1720, 738), fill=LINE)
+        canvas.text(x, y0 + 50, label, 13, p.muted, True, align=align)
+    canvas.draw.line((L, y0 + 70, R, y0 + 70), fill=p.line)
+    for index, row in enumerate(rest):
+        item = row["item"]
+        y = y0 + 80 + index * 34
+        currency = "€" if item.currency == "EUR" else "$"
+        canvas.text(L, y, item.ticker, 21, p.ink, True)
+        canvas.text(L + 72, y + 4, KIND[item.ticker], 15, p.soft, max_width=250)
+        values = (f"{currency}{item.price:,.2f}" if item.price else "—", _pct(item.rate), _pct(item.effective),
+                  _bp(row["spreads"].get("3M bill")).replace(" bp", ""), _bp(row["spreads"].get("HY corp")).replace(" bp", ""),
+                  _money(row["liquidity"].get("notional")))
+        for n, ((_, x, _), value) in enumerate(zip(columns[1:], values)):
+            canvas.text(x, y + 1, value, 19, p.ink, n in (2, 3), align="right")
+
+
+def _calendar(canvas, box, data, p, theme):
+    x0, y0, x1, y1 = box
+    L, R = x0 + 24, x1 - 24
+    _card(canvas, box, p, theme)
+    _heading(canvas, L, y0 + 16, "On the calendar", p, theme, "days away", R)
+    today = data["now"].date()
+    for index, (day, label, note) in enumerate(data["calendar"]):
+        y = y0 + 52 + index * 30
+        parsed = date.fromisoformat(day)
+        canvas.pill(L, y - 2, f"{parsed:%b} {parsed.day}".upper(), 13, p.card, p.deep)
+        canvas.text(L + 86, y, label, 16, p.ink, True, max_width=R - L - 150)
+        canvas.text(R, y + 1, f"{(parsed - today).days} d", 15, p.muted, align="right")
+
+
+def _cover(canvas, box, cover, p, theme):
+    x0, y0, x1, y1 = box
+    L, R = x0 + 24, x1 - 24
+    _card(canvas, box, p, theme)
+    _heading(canvas, L, y0 + 16, "USD cover · vs each issuer's own target", p, theme, "months of preferred dividends", R)
+    for index, ticker in enumerate(("MSTR", "ASST")):
+        item = cover[ticker]
+        top = y0 + 52 + index * 120
+        weeks, target, current = item["weeks"], item["target"], item["current"]
+        canvas.text(L, top, item["name"], 20, p.ink, True)
+        value = f"{current:.0f} months" if current else "—"
+        end = canvas.text(L + 110, top, value, 20, p.ink, True)
+        if current and target:
+            on = sum(1 for _, months in weeks if months >= target - .5)
+            if item["kind"] == "goal":
+                note = f"at its {target:.0f}-month goal {on} of {len(weeks)} weeks" if abs(current - target) < .5 else \
+                    f"{current - target:+.0f} vs its {target:.0f}-month goal"
+            else:
+                note = f"{current / target:.1f}× its {target:.0f}-month floor · above it {on} of {len(weeks)} weeks"
+            canvas.text(end + 14, top + 3, note, 16, p.positive if current >= target - .5 else p.negative, True, max_width=R - end - 14)
+        plot = (L, top + 28, R, top + 96)
+        if not weeks or not target:
+            canvas.text(L, top + 44, "Weekly history unavailable", 15, p.muted)
+            continue
+        high = max(max(months for _, months in weeks), target) * 1.18
+        gutter = 104
+        slot = (plot[2] - plot[0] - gutter) / 12
+        base = plot[3]
+        for n, (day, months) in enumerate(weeks):
+            bx = plot[0] + gutter + (12 - len(weeks) + n) * slot
+            height = months / high * (plot[3] - plot[1])
+            color = p.positive if months >= target - .5 else p.negative
+            canvas.draw.rectangle((bx + 3, base - height, bx + slot - 3, base), fill=mix(color, p.card, .78 if n < len(weeks) - 1 else 1))
+        ty = base - target / high * (plot[3] - plot[1])
+        canvas.line([(plot[0] + gutter - 6, ty), (plot[2], ty)], p.accent, 2, dashed=True, dash=(6, 4))
+        canvas.text(plot[0], ty - 9, f"{target:.0f}-mo {item['kind']}", 14, p.accent, True, max_width=gutter - 12)
+        canvas.draw.line((plot[0] + gutter - 6, base, plot[2], base), fill=p.line)
+        canvas.text(plot[2], base + 3, f"{_short(weeks[0][0])} → {_short(weeks[-1][0])}", 12, p.soft, align="right")
+
+
+def _flow(canvas, box, ledger, p, theme):
+    x0, y0, x1, y1 = box
+    L, R = x0 + 24, x1 - 24
+    _card(canvas, box, p, theme)
+    _heading(canvas, L, y0 + 16, "Flow ledger · last four filing weeks", p, theme, "+ issued / − repurchased", R)
+    columns = (("WEEK OF", L, "left"), ("STRC", L + 212, "right"), ("STRF/K/D/E", L + 324, "right"),
+               ("MSTR ATM", L + 442, "right"), ("SATA", L + 550, "right"), ("STRC BUYBACK", L + 654, "right"),
+               ("BTC BOUGHT", R, "right"))
+    for label, x, align in columns:
+        canvas.text(x, y0 + 50, label, 13, p.muted, True, align=align)
+    canvas.draw.line((L, y0 + 70, R, y0 + 70), fill=p.line)
     totals = {"strc": 0, "other": 0, "mstr": 0, "sata": 0}
-    for index, entry in enumerate(data["ledger"]):
-        y = 750 + index * 50
+    for index, entry in enumerate(ledger):
+        y = y0 + 80 + index * 34
         values = (_short(entry["week"]), _money(entry.get("strc"), signed=True), _money(entry.get("other"), signed=True),
                   _money(entry.get("mstr"), signed=True), _money(entry.get("sata"), signed=True),
-                  _pct(entry.get("buyback_share"), 0) if entry.get("buyback_share") else "—",
+                  f"{entry['buyback_share']:.0f}% of vol" if entry.get("buyback_share") else "—",
                   f"{(entry.get('mstr_btc') or 0):,.0f} · {(entry.get('asst_btc') or 0):,.0f}")
         for (_, x, align), value in zip(columns, values):
-            color = RED if value.startswith("−") else GREEN if value.startswith("+") else INK
-            canvas.text(x, y, value, 19, color if align == "right" and "$" in value else INK, True if "$" in value else False, align=align)
+            money = "$" in value
+            color = p.negative if money and value.startswith("−") else p.positive if money and value.startswith("+") else p.ink
+            canvas.text(x, y, value, 18, color, money, align=align)
         for key in totals:
             totals[key] += entry.get(key) or 0
-    y = 750 + len(data["ledger"]) * 50
-    draw.line((742, y - 8, 1720, y - 8), fill=LINE)
-    canvas.text(742, y, f"{len(data['ledger'])}-week total", 19, INK, True)
-    for (key, x) in (("strc", 990), ("other", 1150), ("mstr", 1300), ("sata", 1440)):
+    y = y0 + 84 + len(ledger) * 34
+    canvas.draw.line((L, y - 6, R, y - 6), fill=p.line)
+    canvas.text(L, y, f"{len(ledger)}-week total", 18, p.ink, True)
+    for key, (_, x, _) in zip(("strc", "other", "mstr", "sata"), columns[1:5]):
         value = _money(totals[key], signed=True)
-        canvas.text(x, y, value, 19, RED if value.startswith("−") else GREEN if value.startswith("+") else INK, True, align="right")
-    canvas.text(1720, y, "MSTR · ASST", 14, SOFT, align="right")
-    canvas.text(742, 982, "Monday 8-K cash (Strategy); SATA = net share change × $100. Buyback % = STRC repurchased ÷ STRC shares traded that week.",
-                14, SOFT, max_width=980)
+        canvas.text(x, y, value, 18, p.negative if value.startswith("−") else p.positive if value.startswith("+") else p.ink,
+                    True, align="right")
+    canvas.text(R, y + 2, "MSTR · ASST", 13, p.soft, align="right")
+    canvas.text(L, y1 - 28, "Strategy 8-K cash; SATA = net share change × $100. Buyback = STRC repurchased ÷ STRC shares traded.",
+                13, p.soft, max_width=R - L)
 
-    # Coverage.
-    box = (56, 1030, 980, 1318)
-    canvas.card(box, CARD, 14, outline=LINE)
-    canvas.text(80, 1048, "COVERAGE · WHAT STANDS BEHIND THE COUPONS", 19, DEEP, True)
-    for index, (ticker, name) in enumerate((("MSTR", "Strategy"), ("ASST", "Strive"))):
-        item = data["coverage"].get(ticker)
-        x0 = 80 + index * 452
-        canvas.text(x0, 1086, name, 22, INK, True)
-        if not item:
-            canvas.text(x0, 1120, "Monday balances unavailable", 16, MUTED)
-            continue
-        months = item.reserve_months
-        canvas.text(x0, 1122, "USD COVER", 13, MUTED, True)
-        canvas.text(x0 + 420, 1118, f"{months:.0f} months" if months else "—", 20, INK, True, align="right")
-        bar = (x0, 1146, x0 + 420, 1160)
-        draw.rounded_rectangle(bar, radius=7, fill=mix(GREEN, CARD, .12))
-        if months:
-            draw.rounded_rectangle((bar[0], bar[1], bar[0] + min(1, months / 48) * (bar[2] - bar[0]), bar[3]), radius=7, fill=GREEN)
-            fx = bar[0] + data["floor"] / 48 * (bar[2] - bar[0])
-            canvas.line([(fx, bar[1] - 6), (fx, bar[3] + 6)], ORANGE, 3)
-            canvas.text(fx, bar[3] + 6, "12-mo floor" if ticker == "MSTR" else "12 mo", 12, ORANGE, align="center")
-        stats = (("TOTAL COVERAGE", f"{item.coverage_years:.0f} yrs" if item.coverage_years else "—"),
-                 ("BTC BREAK-EVEN", f"{_pct(item.breakeven_pct, 2)}/yr"),
-                 ("DEBT + PREF ÷ BTC", _pct(item.amplification_pct, 1)))
-        for n, (label, value) in enumerate(stats):
-            sx = x0 + n * 146
-            canvas.text(sx, 1200, label, 12, MUTED, True, max_width=140)
-            canvas.text(sx, 1220, value, 22, INK, True, max_width=140)
-        net = item.net_leverage_pct
-        canvas.text(x0, 1262, "net cash (cash exceeds debt)" if net is not None and net < 0 else f"net leverage {_pct(net, 1)} (debt − cash) ÷ BTC",
-                    15, MUTED, max_width=420)
-    canvas.text(80, 1292, "Same dated balances as Monday's Accretion Ledger · coverage = (BTC + cash) ÷ annual preferred dividends",
-                14, SOFT, max_width=880)
 
-    # Calendar.
-    box = (998, 1030, 1744, 1318)
-    canvas.card(box, CARD, 14, outline=LINE)
-    _perforation(canvas, 998, 1030, 1318)
-    canvas.text(1022, 1048, "ON THE CALENDAR", 19, DEEP, True)
-    today = now.date()
-    for index, (day, label, note) in enumerate(data["calendar"]):
-        y = 1086 + index * 36
-        parsed = date.fromisoformat(day)
-        canvas.pill(1022, y - 2, f"{parsed:%b} {parsed.day}".upper(), 14, CARD, DEEP)
-        canvas.text(1112, y, label, 17, INK, True, max_width=380)
-        canvas.text(1720, y + 1, f"{(parsed - today).days} d · {note}", 14, MUTED, align="right", max_width=230)
-    if data.get("sata_rate"):
-        canvas.text(1022, 1292, f"SATA pays every business day at a stated {data['sata_rate']:.2f}% · STRC semi-monthly", 14, SOFT, max_width=700)
+def _header(canvas, data, p, theme):
+    on_space = theme.decor == "orbit"
+    muted = "#AEB6D6" if on_space else p.muted
+    light = "#F3F1EC" if on_space else p.deep
+    canvas.text(56, 44, "THE DIGITAL CREDIT REPORT  ·  WEDNESDAY  ·  DIGITAL CREDIT SPREADS", 18, p.accent, True)
+    themes.title(canvas, 56, 122, TITLE, 56, p, theme, on_space=on_space)
+    canvas.text(56, 138, "What STRC and SATA pay over cash, Treasuries and corporate credit · the rest of the ladder below",
+                20, muted, max_width=1060)
+    stamp = data["stamp"]
+    if stamp:
+        parsed = date.fromisoformat(stamp)
+        closed = parsed < data["now"].date() or data["now"].hour >= 16
+        canvas.text(WIDTH - 56, 46, f"{'CLOSE' if closed else 'INTRADAY'} · {parsed:%a %b} {parsed.day}, {parsed.year}".upper(),
+                    19, light, True, align="right")
+    refs = "  ·  ".join(f"{label} {value:.2f}%" for label, (_, value) in data["references"] if value is not None)
+    canvas.text(WIDTH - 56, 76, refs, 18, muted, align="right", max_width=620)
+    heroes = data["heroes"]
+    gap = (heroes["SATA"]["item"].effective - heroes["STRC"]["item"].effective) * 100 \
+        if heroes["SATA"]["item"].effective and heroes["STRC"]["item"].effective else None
+    canvas.text(WIDTH - 56, 104, f"FRED as of {_short(data['references'][0][1][0])} · SATA over STRC {_bp(gap)}", 16,
+                muted, align="right", max_width=620)
 
-    stale = data.get("stale") or ()
-    footer = ("Sources: strategy.com KPIs · Strive dashboard · Yahoo Finance · FRED (SOFR, DGS3MO, DGS10, ICE BofA IG/HY) · "
-              "SEC 8-K filings. Estimates are labeled; unavailable values show —.")
-    if stale:
-        footer += " Saved snapshot used for: " + ", ".join(stale) + "."
-    canvas.text(56, 1336, footer, 15, MUTED, max_width=1688)
-    png = canvas.save(metadata={"Title": "The Coupon Sheet", "Software": "The Digital Credit Report (preview)"})
+
+def render_png(data: dict, theme: themes.Theme = themes.CLASSIC) -> tuple[bytes, list[str]]:
+    p = theme.wednesday
+    with fontset(theme.fontset):
+        canvas = Canvas((WIDTH, HEIGHT), p.bg)
+        if theme.key == "classic":
+            _frame(canvas, p)
+            _guilloche(canvas, (760, 40, 1090, 108), mix(p.positive, p.bg, .16))
+        else:
+            themes.background(canvas, p, theme, header_height=160, orbit_at=(930, 70, .62))
+        _header(canvas, data, p, theme)
+        heroes = data["heroes"]
+        scale = max((value for hero in heroes.values() for value in hero["spreads"].values() if value is not None), default=1000) * 1.06
+        for index, ticker in enumerate(HEROES):
+            x0 = 56 + index * 852
+            _hero(canvas, (x0, 176, x0 + 836, 780), ticker, heroes[ticker], scale, p, theme,
+                  p.accent if ticker == "STRC" else p.accent2, data)
+        _rest(canvas, (56, 796, 1172, 1006), data["rest"], p, theme)
+        _calendar(canvas, (1190, 796, 1744, 1006), data, p, theme)
+        _cover(canvas, (56, 1022, 900, 1316), data["cover"], p, theme)
+        _flow(canvas, (918, 1022, 1744, 1316), data["ledger"], p, theme)
+        stale = data.get("stale") or ()
+        footer = ("Effective yield = stated rate × $100 ÷ price (Strategy KPIs; SATA = Strive daily dividend × 252). "
+                  "Sources: strategy.com · strive.com · Yahoo Finance · FRED (SOFR, DGS3MO, DGS10, ICE BofA IG/HY) · SEC 8-Ks.")
+        if stale:
+            footer += " Saved snapshot: " + ", ".join(stale) + "."
+        canvas.text(56, 1330, footer, 15, p.muted, max_width=1688)
+        canvas.text(56, 1352, "USD cover: Strategy (USD Reserve + USD Cash) ÷ current monthly dividends; Strive's dashboard reserve. "
+                    "Spread history uses each day's close, stated rate and 3M bill.", 14, p.soft, max_width=1688)
+        png = canvas.save(metadata={"Title": "The Coupon Sheet", "Theme": theme.key})
     return png, canvas.overflows
 
 
@@ -462,8 +627,15 @@ def audit_rows(data: dict) -> list[dict]:
         rows.append({"metric": f"{item.ticker} effective yield", "value": _pct(item.effective), "source": "rate × 100 ÷ price"})
     for label, (day, value) in data["references"]:
         rows.append({"metric": label, "value": f"{value:.2f}% ({day})" if value is not None else "—", "source": "FRED"})
-    for ticker, stats in data["par"].items():
-        rows.append({"metric": f"{ticker} closes at/above par, last 20", "value": str(stats.get("at_par_20")), "source": "Yahoo Finance"})
+    for ticker, hero in data["heroes"].items():
+        for label, spread in hero["spreads"].items():
+            rows.append({"metric": f"{ticker} spread over {label}", "value": _bp(spread), "source": "effective − benchmark"})
+        rows.append({"metric": f"{ticker} closes ≥ $100, last 20", "value": str(hero["par"].get("at_par_20")), "source": "Yahoo Finance"})
+    for ticker, item in data["cover"].items():
+        rows.append({"metric": f"{item['name']} USD cover (months) vs {item['kind']}",
+                     "value": f"{item['current']:.1f} vs {item['target']:.0f}" if item["current"] and item["target"] else "—",
+                     "source": item["basis"]})
     for entry in data["ledger"]:
-        rows.append({"metric": f"Week of {entry['week']} STRC net / SATA net", "value": f"{_money(entry.get('strc'), signed=True)} / {_money(entry.get('sata'), signed=True)}", "source": "SEC 8-K"})
+        rows.append({"metric": f"Week of {entry['week']} STRC net / SATA net",
+                     "value": f"{_money(entry.get('strc'), signed=True)} / {_money(entry.get('sata'), signed=True)}", "source": "SEC 8-K"})
     return rows

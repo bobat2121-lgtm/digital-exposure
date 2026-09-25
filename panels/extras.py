@@ -128,7 +128,7 @@ def fetch_strive() -> dict:
                                                   "fully_diluted_shares", "options_legacy", "rsu_rsa")} for row in shares[:20]],
         "transactions": [{key: row.get(key) for key in ("transaction_date", "type", "btc_amount", "cost", "total_btc_holdings",
                                                         "cost_basis", "total_cost_basis")} for row in trades[:40]],
-        "sata_dividends": [{key: row.get(key) for key in ("payDate", "recordDate", "cashAmount", "status")} for row in dividends[:60]],
+        "sata_dividends": [{key: row.get(key) for key in ("payDate", "recordDate", "cashAmount", "status")} for row in dividends[:120]],
         # SATA pays every business day; 252 payments per year is the stated-rate basis.
         "sata_daily_dividend": daily,
         "sata_rate_pct": daily * 252 if daily is not None else None,

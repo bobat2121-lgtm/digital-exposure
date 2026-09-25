@@ -80,7 +80,7 @@ class CombinedAppTests(TestCase):
 
     def app(self, query=None):
         app = AppTest.from_file(str(APP), default_timeout=10)
-        app.query_params.update(query or {})
+        app.query_params.update({"classic": "1", **(query or {})})
         return app.run()
 
     def assert_selected(self, app, report):

@@ -1,10 +1,11 @@
-"""Monday preview: "The Accretion Ledger." built on the live Monday report.
+"""Monday: "The Accretion Ledger." built on the live Monday report.
 
 All base values (NAV, capital, shares, sats, growth) come unchanged from the
-production ``ReportView``. This module only adds: USD/dividend coverage, the
-weekly funding bridge, amplification as a percent of BTC, a weekly sats/share
-sparkline, the Strive warrant flag, a single estimate legend, and larger
-secondary text for phones.
+production ``ReportView``. This module adds USD/dividend coverage read against
+each company's own target, a clear split between capital raised through the
+ATMs and cash drawn from (or added to) balances, the funding bridge, leverage
+as a percent of BTC, a same-window multi-week growth column for both
+companies, and Strive's warrant flag.
 """
 from __future__ import annotations
 
@@ -15,12 +16,13 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from report import live_report as lr
-from report.calculations import btc_value, liquid_assets
+from report.calculations import btc_value, calculate_company, liquid_assets, net_treasury_nav
 from report.models import Report
 from report.presentation import build_report_view
 from report.view_types import CompanyView, ReportView
 
-from .draw import Canvas, imprint, mix, sparkline, width
+from .draw import Canvas, fontset, mix, width
+from . import themes
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "data" / "preview-config.json"
@@ -30,8 +32,6 @@ WIDTH, HEIGHT = 1800, 1400
 MARGIN, GAP = 40, 36
 PANEL = (WIDTH - 2 * MARGIN - GAP) // 2
 INSET = 29
-BG, CARD, INK, MUTED, SOFT = "#F4F2EC", "#FFFFFF", "#182832", "#5B6C75", "#8A979E"
-ORANGE, GREEN, RED, LINE, TINT = "#EB7B21", "#15745E", "#AE4355", "#DEE5E6", "#F4F6F6"
 TITLE = ("The ", "Accretion", " Ledger")
 
 
@@ -43,14 +43,18 @@ class CompanyExtras:
     preferred_pct: float | None = None
     debt_pct: float | None = None
     net_leverage_pct: float | None = None
+    raised: float | None = None
+    liquid_balance: float | None = None
     liquid_change: float | None = None
     liquid_detail: str = ""
     net_funding: float | None = None
     reserve_months: float | None = None
+    target_months: float | None = None
+    target_kind: str = ""
     coverage_years: float | None = None
     breakeven_pct: float | None = None
     coverage_source: str = ""
-    history: tuple = ()
+    window: dict = field(default_factory=dict)
     warrants: dict | None = None
 
 
@@ -99,16 +103,42 @@ def _facts(rows, ticker, balance):
     return matches[-1]["extracted"]["facts"] if matches else {}
 
 
-def _history(rows, supplements, prices, ticker, through):
-    points = {}
+def _weekly_snapshots(rows, supplements, prices, ticker, through):
+    """Complete dated balances at today's marks, newest last."""
+    out = {}
     for row in sorted(rows, key=lambda item: item.get("acceptedAt", "")):
         extraction = row["extracted"]
         if row["ticker"] != ticker or extraction["balanceDate"] > through:
             continue
         snapshot = lr._snapshot(ticker, extraction["balanceDate"], extraction["facts"], supplements, prices)
-        if snapshot.btc_holdings and snapshot.effective_common_shares:
-            points[extraction["balanceDate"]] = snapshot.btc_holdings / snapshot.effective_common_shares * 1e8
-    return tuple(sorted(points.items()))[-12:]
+        if lr._complete(snapshot):
+            out[extraction["balanceDate"]] = snapshot
+    return sorted(out.items())
+
+
+def _windows(report, rows, supplements, prices):
+    """Same number of weekly filings back for both companies (up to four)."""
+    series = {c.ticker: _weekly_snapshots(rows, supplements, prices, c.ticker, c.balance_date) for c in report.companies}
+    weeks = min(min(len(points) - 1 for points in series.values()), 4) if series else 0
+    result = {}
+    for company in report.companies:
+        points = series[company.ticker]
+        if weeks < 1 or len(points) <= weeks:
+            result[company.ticker] = {}
+            continue
+        start_day, start = points[-1 - weeks]
+        current = company.current
+        btc_now = current.btc_holdings / current.effective_common_shares
+        btc_then = start.btc_holdings / start.effective_common_shares
+        nav_now = net_treasury_nav(current, report.current_btc_price)
+        nav_then = net_treasury_nav(start, report.current_btc_price)
+        result[company.ticker] = {
+            "weeks": weeks, "start": start_day,
+            "btc": (btc_now / btc_then - 1) * 100,
+            "nav": ((nav_now / current.effective_common_shares) / (nav_then / start.effective_common_shares) - 1) * 100
+            if nav_now and nav_then and nav_now > 0 and nav_then > 0 else None,
+        }
+    return result
 
 
 def _coverage(ticker, company, btc_price, extras, facts):
@@ -150,8 +180,9 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
     now = now or datetime.now(ET)
     view = build_report_view(report, prices=prices)
     rows = lr._merged_filings(feed, lr._load(lr.CHECKPOINT))
-    supplements = lr._load(lr.SUPPLEMENTS)
+    supplements = lr.load_supplements(rows)
     config = json.loads(CONFIG.read_text(encoding="utf-8")) if CONFIG.exists() else {}
+    windows = _windows(report, rows, supplements, prices)
     result = {}
     for company in report.companies:
         ticker = company.ticker
@@ -168,26 +199,27 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
         liquid_change = liquid - prior_liquid if liquid is not None and prior_liquid is not None else None
         if ticker == "MSTR":
             reserve, cash = _n(facts.get("usd_reserve_usd")), _n(facts.get("usd_cash_usd"))
-            old_reserve, old_cash = _n(prior_facts.get("usd_reserve_usd")), _n(prior_facts.get("usd_cash_usd"))
-            detail = (f"USD Reserve {_money(reserve, False)} ({_money(reserve - old_reserve)}) · USD Cash {_money(cash, False)} ({_money(cash - old_cash)})"
-                      if None not in (reserve, cash, old_reserve, old_cash) else "USD Reserve + USD Cash")
+            detail = (f"USD Reserve {_money(reserve, False)} · USD Cash {_money(cash, False)}"
+                      if None not in (reserve, cash) else "USD Reserve + USD Cash")
         else:
             detail = f"Cash {_money(current.cash, False)} · STRC held {_money(current.marketable_securities, False)}"
-        from report.calculations import calculate_company
         metrics = calculate_company(company, report.current_btc_price, report.prior_btc_price)
-        funding = (metrics.net_common_capital + metrics.net_preferred_capital - liquid_change
-                   if None not in (metrics.net_common_capital, metrics.net_preferred_capital, liquid_change) else None)
+        raised = (metrics.net_common_capital + metrics.net_preferred_capital
+                  if None not in (metrics.net_common_capital, metrics.net_preferred_capital) else None)
+        funding = raised - liquid_change if raised is not None and liquid_change is not None else None
         months, years, breakeven, source = _coverage(ticker, company, report.current_btc_price, extras, facts)
+        key = "strategy_reserve_floor_months" if ticker == "MSTR" else "strive_reserve_goal_months"
+        target = _n((config.get(key) or {}).get("value"))
         result[ticker] = CompanyExtras(
             ticker=ticker, amplification_pct=amp,
             amplification_change_pp=amp - prior_amp if amp is not None and prior_amp is not None else None,
             preferred_pct=current.preferred_claims / bitcoin * 100 if bitcoin and current.preferred_claims is not None else None,
             debt_pct=current.debt_principal / bitcoin * 100 if bitcoin and current.debt_principal is not None else None,
             net_leverage_pct=(current.debt_principal - liquid) / bitcoin * 100 if bitcoin and liquid is not None and current.debt_principal is not None else None,
-            liquid_change=liquid_change, liquid_detail=detail, net_funding=funding,
-            reserve_months=months, coverage_years=years, breakeven_pct=breakeven, coverage_source=source,
-            history=_history(rows, supplements, prices, ticker, company.balance_date),
-            warrants=_warrants(ticker, company, facts, config, now))
+            raised=raised, liquid_balance=liquid, liquid_change=liquid_change, liquid_detail=detail, net_funding=funding,
+            reserve_months=months, target_months=target, target_kind="floor" if ticker == "MSTR" else "goal",
+            coverage_years=years, breakeven_pct=breakeven, coverage_source=source,
+            window=windows.get(ticker, {}), warrants=_warrants(ticker, company, facts, config, now))
     period = report.capital_period_label.split("·")[-1].strip()
     kicker = f"THE DIGITAL CREDIT REPORT  ·  MONDAY  ·  8-K WEEK {period.upper()}"
     dates = " · ".join(f"{c.name} {_short(c.balance_date)}" for c in report.companies if c.balance_date)
@@ -197,161 +229,191 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
 
 
 # ── rendering ───────────────────────────────────────────────────────────────
-def _tone(value):
-    return GREEN if value is not None and value > 0 else RED if value is not None and value < 0 else INK
-
-
-def _tone_text(text):
+def _tone_text(text, p):
     stripped = text.replace("≈", "").strip()
-    return GREEN if stripped.startswith("+") else RED if stripped.startswith("−") else INK
+    return p.positive if stripped.startswith("+") else p.negative if stripped.startswith("−") else p.ink
 
 
-def _row(canvas, left, right, y, label, value, *, detail="", value_color=INK, label_size=23, value_size=29, detail_size=20):
-    canvas.text(left, y + 3, label, label_size, INK, True, max_width=(right - left) * .58)
-    canvas.text(right, y, value, value_size, value_color, True, align="right", max_width=(right - left) * .38)
-    if detail:
-        canvas.text(left, y + 38, detail, detail_size, MUTED, max_width=right - left, minimum=16)
+def _cover_note(e: CompanyExtras):
+    if not e.reserve_months or not e.target_months:
+        return "of preferred dividends"
+    if e.target_kind == "goal":
+        gap = e.reserve_months - e.target_months
+        return f"at its {e.target_months:.0f}-month goal" if abs(gap) < .5 else f"{gap:+.0f} vs {e.target_months:.0f}-month goal"
+    return f"{e.reserve_months / e.target_months:.1f}× the {e.target_months:.0f}-month floor"
 
 
-def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, index: int, period_label: str):
+def _chip(canvas, x, y, label, value, p, fill, *, strong=False, w=None):
+    w = w or max(width(label, 13, True), width(value, 22, True)) + 28
+    canvas.draw.rounded_rectangle((x, y, x + w, y + 58), radius=min(8, p.radius), fill=fill,
+                                  outline=p.outline if p.outline_width > 1 else None, width=2 if p.outline_width > 1 else 0)
+    canvas.text(x + 14, y + 8, label, 13, p.muted, True)
+    canvas.text(x + 14, y + 26, value, 22, p.ink, True)
+    return x + w
+
+
+def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, index: int, period_label: str, theme, p):
     x = MARGIN + index * (PANEL + GAP)
     left, right = x + INSET, x + PANEL - INSET
     span = right - left
-    top, bottom = 160, HEIGHT - 70
+    top, bottom = 172, HEIGHT - 72
     draw = canvas.draw
-    canvas.card((x, top, x + PANEL, bottom), CARD, radius=14)
-    draw.rectangle((x, top, x + PANEL, top + 5), fill=ORANGE if index == 0 else INK)
-    from report.png_export import _Canvas  # reuse the approved logo placement
-    logo_host = _Canvas.__new__(_Canvas)
-    logo_host.image, logo_host.draw = canvas.image, canvas.draw
-    logo_host.logo(c, left, top + 18)
-    canvas.text(right, top + 17, c.stock_price, 32, INK, True, align="right")
-    canvas.text(right, top + 58, f"{c.ticker} · last price", 18, MUTED, align="right")
-    canvas.text(right, top + 81, c.quote_timestamp, 18, MUTED, align="right")
+    stripe = p.accent if index == 0 else p.accent2
+    themes.card(canvas, (x, top, x + PANEL, bottom), p, stripe, theme, 5)
+    from report.png_export import _Canvas  # approved logo placement
+    host = _Canvas.__new__(_Canvas)
+    host.image, host.draw = canvas.image, canvas.draw
+    if theme.key == "classic" or theme.decor == "orbit" and p.card.startswith("#F"):
+        host.logo(c, left, top + 18)
+    else:
+        canvas.text(left, top + 26, c.name.upper(), 40, p.ink, True)
+    canvas.text(right, top + 17, c.stock_price, 32, p.ink, True, align="right")
+    canvas.text(right, top + 58, f"{c.ticker} · last price", 18, p.muted, align="right")
+    canvas.text(right, top + 81, c.quote_timestamp, 18, p.muted, align="right")
     y = top + 112
-    draw.line((left, y, right, y), fill=LINE)
-    canvas.text(left, y + 14, "NET TREASURY NAV / SHARE", 19, MUTED, True)
-    canvas.text(right, y + 14, "PRICE / BASIC NAV", 19, MUTED, True, align="right")
-    canvas.text(left, y + 44, _clean(c.nav_per_share), 40, INK, True)
-    canvas.text(right, y + 46, _clean(c.price_to_nav), 36, INK, True, align="right")
-    y += 104
-    draw.line((left, y, right, y), fill=LINE)
+    draw.line((left, y, right, y), fill=p.line)
+    canvas.text(left, y + 14, "NET TREASURY NAV / SHARE", 18, p.muted, True)
+    canvas.text(right, y + 14, "PRICE / BASIC NAV", 18, p.muted, True, align="right")
+    canvas.text(left, y + 42, _clean(c.nav_per_share), 40, p.ink, True)
+    canvas.text(right, y + 44, _clean(c.price_to_nav), 36, p.ink, True, align="right")
+    y += 100
+    draw.line((left, y, right, y), fill=p.line)
     activity = c.btc_activity[0] if c.btc_activity else None
-    canvas.text(left, y + 12, activity.label if activity else "Bitcoin activity", 21, MUTED, True)
-    canvas.text(left, y + 40, activity.value if activity else "—", 29, INK, True)
+    canvas.text(left, y + 12, activity.label if activity else "Bitcoin activity", 20, p.muted, True)
+    canvas.text(left, y + 38, activity.value if activity else "—", 29, p.ink, True)
     total = c.total_bitcoin.value if c.total_bitcoin else "—"
-    canvas.text(right, y + 12, "Total BTC held", 21, MUTED, True, align="right")
-    canvas.text(right, y + 40, total, 29, INK, True, align="right")
-    y += 90
-    canvas.text(left, y, period_label.upper(), 18, ORANGE, True, max_width=span * .62)
-    canvas.text(right, y + 1, "+ RAISED / − USED", 17, MUTED, align="right")
-    y += 30
-    _row(canvas, left, right, y, c.common.label, c.common.value, detail=" · ".join(c.common.post_details or c.common.details))
-    y += 74
-    _row(canvas, left, right, y, c.preferred.label, c.preferred.value,
-         detail=" · ".join((c.preferred.post_details or c.preferred.details)))
-    y += 74
-    cash_label = "USD Reserve + Cash change" if e.ticker == "MSTR" else "Cash change"
-    _row(canvas, left, right, y, cash_label, _money(e.liquid_change), detail=e.liquid_detail)
-    y += 74
-    # Funding bridge: capital raised plus cash drawn equals what funded BTC and other uses.
-    draw.rounded_rectangle((left, y, right, y + 44), radius=8, fill=mix(ORANGE, CARD, .09))
+    canvas.text(right, y + 12, "Total BTC held", 20, p.muted, True, align="right")
+    canvas.text(right, y + 38, total, 29, p.ink, True, align="right")
+
+    # A — capital raised through the ATMs.
+    y += 88
+    canvas.text(left, y, "CAPITAL RAISED · " + period_label.split("·")[-1].strip().upper(), 17, p.accent, True, max_width=span * .7)
+    canvas.text(right, y + 1, "ATM · + ISSUED / − REPURCHASED", 14, p.muted, True, align="right")
+    y += 28
+    for metric in (c.common, c.preferred):
+        canvas.text(left, y + 3, metric.label, 23, p.ink, True, max_width=span * .6)
+        canvas.text(right, y, metric.value, 29, _tone_text(metric.value, p), True, align="right")
+        detail = " · ".join(metric.post_details or metric.details)
+        canvas.text(left, y + 37, detail, 18, p.muted, max_width=span, minimum=15)
+        y += 70
+
+    # B — cash on hand: a balance, not new capital.
+    box = (left, y + 4, right, y + 96)
+    draw.rounded_rectangle(box, radius=min(10, p.radius + 2), fill=p.cash,
+                           outline=p.outline if p.outline_width > 1 else None, width=2 if p.outline_width > 1 else 0)
+    cash_label = "USD RESERVE + CASH" if e.ticker == "MSTR" else "CASH ON HAND"
+    canvas.text(left + 16, y + 16, f"{cash_label} · A BALANCE, NOT NEW CAPITAL", 14, p.muted, True, max_width=span * .7)
+    canvas.text(left + 16, y + 38, _money(e.liquid_balance, False), 28, p.ink, True)
+    canvas.text(left + 16, y + 72, e.liquid_detail, 16, p.muted, max_width=span * .62)
+    change = e.liquid_change
+    verb = "drawn this week" if change is not None and change < 0 else "added this week" if change else "unchanged"
+    canvas.text(right - 16, y + 30, _money(abs(change) if change is not None else None, False), 28,
+                p.negative if change is not None and change < 0 else p.positive if change else p.ink, True, align="right")
+    canvas.text(right - 16, y + 66, verb, 16, p.muted, align="right")
+    y += 110
+
+    # C — the funding bridge: raised + drawn = deployed.
+    drawn = -e.liquid_change if e.liquid_change is not None else None
+    cx = left
+    cx = _chip(canvas, cx, y, "RAISED (ATM)", _money(e.raised), p, mix(p.accent, p.card, .10))
+    canvas.text(cx + 12, y + 16, "+", 26, p.muted, True)
+    cx = _chip(canvas, cx + 36, y, "FROM CASH" if (drawn or 0) >= 0 else "TO CASH", _money(drawn), p, p.cash)
+    canvas.text(cx + 12, y + 16, "=", 26, p.muted, True)
+    cx = _chip(canvas, cx + 36, y, "DEPLOYED", _money(e.net_funding, False), p, mix(p.positive, p.card, .12))
     bought = activity.value if activity else "BTC"
-    canvas.text(left + 14, y + 11, f"Net funding for {bought} & other uses", 20, INK, True, max_width=span * .66)
-    canvas.text(right - 14, y + 9, _money(e.net_funding), 24, INK, True, align="right")
-    y += 60
-    canvas.text(left, y + 3, c.shares.label, 23, INK, True, max_width=span * .6)
-    canvas.text(right, y, c.shares.value, 29, INK, True, align="right")
-    canvas.text(left, y + 38, " · ".join(c.shares.details), 20, MUTED, max_width=span * .5)
-    canvas.text(right, y + 38, c.shares.change, 20, MUTED, align="right")
+    canvas.text(cx + 14, y + 8, f"into {bought}", 18, p.ink, True, max_width=right - cx - 14)
+    canvas.text(cx + 14, y + 32, "& other uses (dividends, fees)", 15, p.muted, max_width=right - cx - 14)
+    y += 76
+
+    canvas.text(left, y + 3, c.shares.label, 23, p.ink, True, max_width=span * .6)
+    canvas.text(right, y, c.shares.value, 29, p.ink, True, align="right")
+    canvas.text(right, y + 37, c.shares.change, 18, p.muted, align="right")
     if e.warrants:
         w = e.warrants
         flag = f"WARRANTS · DEADLINE {w['expires']:%b} {w['expires'].day}".upper()
-        canvas.pill(left, y + 70, flag, 15, "#FFFFFF", ORANGE)
-        itm = f"in the money +${w['in_the_money']:.2f}" if w["in_the_money"] and w["in_the_money"] > 0 else "out of the money"
-        canvas.text(left + width(flag, 15, True) + 36, y + 72,
-                    f"{w['count'] / 1e6:.1f}m @ ${w['strike']:.0f} · {_money(w['proceeds'], False, 0)} if exercised · {itm}",
-                    19, MUTED, max_width=span - width(flag, 15, True) - 36, minimum=15)
-    y += 108
-    draw.line((left, y, right, y), fill=LINE)
+        canvas.pill(left, y + 34, flag, 13, p.card, p.accent)
+        itm = f"+${w['in_the_money']:.2f} ITM" if w["in_the_money"] and w["in_the_money"] > 0 else "out of the money"
+        canvas.text(left + width(flag, 13, True) + 32, y + 36, f"{w['count'] / 1e6:.1f}m @ ${w['strike']:.0f} · {itm}",
+                    16, p.muted, max_width=span * .56 - width(flag, 13, True) - 32, minimum=13)
+    y += 72
+    draw.line((left, y, right, y), fill=p.line)
     value_x = left + span * .72
-    canvas.text(value_x, y + 12, "VALUE", 16, MUTED, True, align="right")
-    canvas.text(right, y + 12, "WEEKLY Δ", 16, MUTED, True, align="right")
-    y += 38
-    # BTC per share with a sparkline of every reconciled weekly balance.
-    canvas.text(left, y + 3, "Bitcoin per common share", 23, INK, True)
-    canvas.text(value_x, y, _clean(c.bitcoin.value), 28, INK, True, align="right")
-    canvas.text(right, y + 5, c.bitcoin.short_change, 22, _tone_text(c.bitcoin.short_change), True, align="right")
-    values = [value for _, value in e.history]
-    if len(values) >= 2:
-        sparkline(canvas, (left + 2, y + 40, left + 132, y + 62), values, ORANGE if index == 0 else INK, width_px=3)
-        first = e.history[0]
-        change = (e.history[-1][1] / first[1] - 1) * 100
-        canvas.text(left + 146, y + 40, f"{len(values)} weekly filings since {_short(first[0])}: {_pct(change, 2, True)} sats/share",
-                    19, MUTED, max_width=span - 150)
-    y += 76
-    nav = _clean(c.nav_change.value)
-    canvas.text(left, y + 3, "NAV per common share", 23, INK, True)
-    canvas.text(value_x, y, _clean(c.nav_per_share), 28, INK, True, align="right")
-    canvas.text(right, y + 5, nav, 22, _tone_text(nav), True, align="right")
-    y += 46
-    canvas.text(left, y + 3, "Amplification · debt + pref ÷ BTC", 23, INK, True, max_width=span * .56)
-    canvas.text(value_x, y, _pct(e.amplification_pct), 28, INK, True, align="right")
-    canvas.text(right, y + 5, _pct(e.amplification_change_pp, 2, True, " pp"), 22, INK, True, align="right")
-    net = ("net cash" if e.net_leverage_pct is not None and e.net_leverage_pct < 0
-           else f"net leverage {_pct(e.net_leverage_pct)}")
-    canvas.text(left, y + 36, f"Preferred {_pct(e.preferred_pct)} · debt {_pct(e.debt_pct)} · {net} (debt − cash)",
-                19, MUTED, max_width=span)
-    y += 70
-    # Coverage strip: three company-level funding-risk readings.
-    draw.rounded_rectangle((left, y, right, y + 92), radius=8, fill=TINT)
-    cells = (("USD COVER", f"{e.reserve_months:.0f} months" if e.reserve_months else "—", "of preferred dividends"),
+    canvas.text(value_x, y + 10, "VALUE", 15, p.muted, True, align="right")
+    canvas.text(right, y + 10, "WEEKLY Δ", 15, p.muted, True, align="right")
+    y += 34
+    rows = (("Bitcoin per common share", _clean(c.bitcoin.value), c.bitcoin.short_change),
+            ("NAV per common share", _clean(c.nav_per_share), _clean(c.nav_change.value)),
+            ("Debt + preferred ÷ BTC", _pct(e.amplification_pct), _pct(e.amplification_change_pp, 2, True, " pp")))
+    for index_row, (label, value, delta) in enumerate(rows):
+        canvas.text(left, y + 3, label, 23, p.ink, True)
+        canvas.text(value_x, y, value, 28, p.ink, True, align="right")
+        tone = _tone_text(delta, p) if index_row < 2 else p.ink
+        canvas.text(right, y + 5, delta, 21, tone, True, align="right")
+        y += 44
+    y += 8
+    # Coverage, read against each company's own target.
+    draw.rounded_rectangle((left, y, right, y + 90), radius=min(8, p.radius), fill=p.tint)
+    cells = (("USD COVER", f"{e.reserve_months:.0f} months" if e.reserve_months else "—", _cover_note(e)),
              ("TOTAL COVERAGE", f"{e.coverage_years:.0f} years" if e.coverage_years else "—", "BTC + cash ÷ dividends"),
              ("BTC BREAK-EVEN", f"{_pct(e.breakeven_pct, 2)}/yr" if e.breakeven_pct else "—", "dividends ÷ BTC value"))
     cell = (span - 32) / 3
     for n, (label, value, note) in enumerate(cells):
         cx = left + 16 + n * cell
-        canvas.text(cx, y + 12, label, 15, MUTED, True, max_width=cell - 10)
-        canvas.text(cx, y + 33, value, 26, INK, True, max_width=cell - 10)
-        canvas.text(cx, y + 66, note, 15, SOFT, max_width=cell - 10)
-    y += 104
-    draw.rounded_rectangle((left, y, right, bottom - 16), radius=8, fill=TINT)
-    canvas.text(left + 16, y + 13, "BASIC-SHARE GROWTH", 16, MUTED, True)
-    columns = (left + span * .72, right - 16)
-    for period, column in zip(c.periods, columns):
-        canvas.text(column, y + 13, period.period, 16, MUTED, True, align="right")
-        btc = _clean(period.btc_growth)
-        nav_growth = _clean(period.nav_growth)
-        canvas.text(column, y + 40, btc, 22, _tone_text(btc), True, align="right")
-        canvas.text(column, y + 71, nav_growth, 22, _tone_text(nav_growth), True, align="right")
-    notes = [f"{p.period} {p.baseline_note}" for p in c.periods if p.baseline_note]
-    if notes:
-        canvas.text(left + 16 + width("BASIC-SHARE GROWTH", 16, True) + 14, y + 14, " · ".join(notes), 14, SOFT, max_width=span * .3)
-    canvas.text(left + 16, y + 41, "BTC / share", 20, INK, True)
-    canvas.text(left + 16, y + 72, "NAV / share", 20, INK, True)
+        canvas.text(cx, y + 11, label, 14, p.muted, True, max_width=cell - 10)
+        canvas.text(cx, y + 31, value, 25, p.ink, True, max_width=cell - 10)
+        on_target = n == 0 and e.reserve_months and e.target_months and e.reserve_months >= e.target_months - .5
+        canvas.text(cx, y + 64, note, 14, p.positive if on_target else p.soft, on_target, max_width=cell - 10)
+    y += 102
+    draw.rounded_rectangle((left, y, right, bottom - 14), radius=min(8, p.radius), fill=p.tint)
+    canvas.text(left + 16, y + 12, "BASIC-SHARE GROWTH", 15, p.muted, True)
+    weeks = e.window.get("weeks")
+    columns = [(left + span * .52, f"{weeks} WK" if weeks else "WK", _pct(e.window.get("btc"), 2, True) if weeks else "—",
+                _pct(e.window.get("nav"), 2, True) if weeks else "—")]
+    for period, column in zip(c.periods, (left + span * .75, right - 16)):
+        columns.append((column, period.period, _clean(period.btc_growth), _clean(period.nav_growth)))
+    for column, label, btc, nav in columns:
+        canvas.text(column, y + 14, label, 15, p.muted, True, align="right")
+        canvas.text(column, y + 48, btc, 24, _tone_text(btc, p), True, align="right")
+        canvas.text(column, y + 88, nav, 24, _tone_text(nav, p), True, align="right")
+    canvas.text(left + 16, y + 50, "BTC / share", 21, p.ink, True)
+    canvas.text(left + 16, y + 90, "NAV / share", 21, p.ink, True)
+    start = e.window.get("start")
+    if start:
+        canvas.text(left + span * .52, bottom - 38, f"since {_short(start)} filing", 13, p.soft, align="right")
 
 
-def render_png(preview: MondayPreview) -> tuple[bytes, list[str]]:
+def _header(canvas, preview, theme, p):
     view = preview.view
-    canvas = Canvas((WIDTH, HEIGHT), BG)
-    canvas.draw.rectangle((0, 0, WIDTH, 6), fill=ORANGE)
-    canvas.text(MARGIN, 24, preview.kicker, 18, ORANGE, True, max_width=1080)
-    imprint(canvas, MARGIN, 104, TITLE, 54, ink="#1b2c34", muted="#52646d", dot="#e88029")
-    canvas.text(MARGIN, 120, preview.subtitle, 20, MUTED, max_width=1080)
-    canvas.text(WIDTH - MARGIN, 30, f"BTC {view.btc_price}", 31, INK, True, align="right")
+    on_space = theme.decor == "orbit"
+    light = "#F3F1EC" if on_space else p.ink
+    muted = "#AEB6D6" if on_space else p.muted
+    canvas.text(MARGIN, 26, preview.kicker, 18, p.accent, True, max_width=1080)
+    themes.title(canvas, MARGIN, 106, TITLE, 54, p, theme, on_space=on_space)
+    canvas.text(MARGIN, 122, preview.subtitle, 20, muted, max_width=1080)
+    canvas.text(WIDTH - MARGIN, 30, f"BTC {view.btc_price}", 31, light, True, align="right")
     stamp = view.report_time.replace("Updated ", "Quotes ", 1)
-    canvas.text(WIDTH - MARGIN, 72, stamp, 19, MUTED, align="right", max_width=620)
+    canvas.text(WIDTH - MARGIN, 72, stamp, 19, muted, align="right", max_width=620)
     if view.comparison_note:
-        canvas.text(WIDTH - MARGIN, 100, view.comparison_note, 17, SOFT, align="right", max_width=620)
-    for index, company in enumerate(view.companies):
-        _company(canvas, company, preview.extras[company.ticker], index, view.capital_period_label)
-    footer = ("Estimates: NAV, price/NAV, amplification, coverage and growth use dated balances, reconstructed "
-              "preferred claims and the displayed prices · NAV growth at constant prices · Methodology on Streamlit")
-    canvas.text(MARGIN, HEIGHT - 52, footer, 17, MUTED, max_width=WIDTH - 2 * MARGIN)
-    sources = " · ".join(f"{e.ticker} {e.coverage_source}" for e in preview.extras.values())
-    canvas.text(MARGIN, HEIGHT - 28, "Net funding = capital raised + cash drawn. Coverage inputs: " + sources
-                + " (SATA dividends paid each business day).", 16, SOFT, max_width=WIDTH - 2 * MARGIN)
-    png = canvas.save(metadata={"Title": "The Accretion Ledger", "Software": "The Digital Credit Report (preview)"})
+        canvas.text(WIDTH - MARGIN, 100, view.comparison_note, 17, muted, align="right", max_width=620)
+
+
+def render_png(preview: MondayPreview, theme: themes.Theme = themes.CLASSIC) -> tuple[bytes, list[str]]:
+    p = theme.monday
+    with fontset(theme.fontset):
+        canvas = Canvas((WIDTH, HEIGHT), p.bg)
+        themes.background(canvas, p, theme, header_height=158, orbit_at=(1200, 70, .8))
+        if theme.decor == "none":
+            canvas.draw.rectangle((0, 0, WIDTH, 6), fill=p.accent)
+        _header(canvas, preview, theme, p)
+        for index, company in enumerate(preview.view.companies):
+            _company(canvas, company, preview.extras[company.ticker], index, preview.view.capital_period_label, theme, p)
+        canvas.text(MARGIN, HEIGHT - 56, "Estimates: NAV, price/NAV, leverage, coverage and growth use dated balances, reconstructed "
+                    "preferred claims and the displayed prices · growth at constant prices · methodology on Streamlit",
+                    16, p.muted, max_width=WIDTH - 2 * MARGIN)
+        sources = " · ".join(f"{e.ticker} {e.coverage_source}" for e in preview.extras.values())
+        canvas.text(MARGIN, HEIGHT - 32, "Capital raised = ATM issuance − repurchases. Cash is an existing balance. "
+                    "Coverage inputs: " + sources + ".", 15, p.soft, max_width=WIDTH - 2 * MARGIN)
+        png = canvas.save(metadata={"Title": "The Accretion Ledger", "Theme": theme.key})
     return png, canvas.overflows
 
 
@@ -367,12 +429,14 @@ def audit_rows(preview: MondayPreview) -> list[dict]:
             {"metric": f"{company.ticker} total BTC held", "value": company.total_bitcoin.value if company.total_bitcoin else "—", "source": "SEC 8-K"},
             {"metric": f"{company.ticker} net common capital", "value": company.common.value, "source": "SEC 8-K ATM table" if company.ticker == "MSTR" else "share change × VWAP (est.)"},
             {"metric": f"{company.ticker} preferred capital", "value": company.preferred.value, "source": "SEC 8-K"},
-            {"metric": f"{company.ticker} cash / reserve change", "value": _money(extra.liquid_change), "source": "SEC 8-K"},
+            {"metric": f"{company.ticker} cash balance / change", "value": f"{_money(extra.liquid_balance, False)} / {_money(extra.liquid_change)}", "source": "SEC 8-K"},
+            {"metric": f"{company.ticker} deployed (raised + cash drawn)", "value": _money(extra.net_funding, False), "source": "derived"},
             {"metric": f"{company.ticker} NAV / share (est.)", "value": _clean(company.nav_per_share), "source": "derived"},
             {"metric": f"{company.ticker} price / basic NAV", "value": _clean(company.price_to_nav), "source": "derived"},
             {"metric": f"{company.ticker} sats per share", "value": company.bitcoin.value, "source": "derived"},
-            {"metric": f"{company.ticker} amplification (debt+pref ÷ BTC)", "value": _pct(extra.amplification_pct), "source": "derived"},
-            {"metric": f"{company.ticker} USD cover (months)", "value": f"{extra.reserve_months:.1f}" if extra.reserve_months else "—", "source": extra.coverage_source},
+            {"metric": f"{company.ticker} debt + preferred ÷ BTC", "value": _pct(extra.amplification_pct), "source": "derived"},
+            {"metric": f"{company.ticker} USD cover (months)", "value": f"{extra.reserve_months:.1f} ({_cover_note(extra)})" if extra.reserve_months else "—", "source": extra.coverage_source},
+            {"metric": f"{company.ticker} {extra.window.get('weeks', '?')}-week BTC/share", "value": _pct(extra.window.get("btc"), 2, True), "source": f"since {extra.window.get('start', '—')}"},
             {"metric": f"{company.ticker} QTD BTC/share", "value": next((_clean(p.btc_growth) for p in company.periods if p.period == "QTD"), "—"), "source": "derived"},
         ]
     return rows

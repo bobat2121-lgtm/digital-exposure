@@ -13,5 +13,9 @@
   "strategy_reserve_floor_months": {
     "value": 12,
     "note": "Strategy's USD Reserve policy: not below 12 months of dividends without board approval (digital credit capital framework)."
+  },
+  "strive_reserve_goal_months": {
+    "value": 18,
+    "note": "Strive's dashboard reports an 18-month dividend reserve every week; the panel reads cover against that goal."
   }
 }
