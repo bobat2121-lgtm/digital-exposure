@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "note": "Curated dates the panels cannot fetch reliably: confirmed earnings dates, STRC/SATA rate announcements, index or corporate events. The weekly audit task maintains this file. Confirmed earnings dates replace Nasdaq's estimates. Past events are ignored automatically.",
+  "events": []
+}

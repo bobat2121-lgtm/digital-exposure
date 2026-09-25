@@ -1,0 +1,61 @@
+# Renders the three X panels from live data, runs the independent audit and
+# publishes the results to the `audit` branch, where the weekly ChatGPT task
+# reads them as plain files:
+#   https://raw.githubusercontent.com/bobat2121-lgtm/digital-exposure/audit/checks.json
+#   https://raw.githubusercontent.com/bobat2121-lgtm/digital-exposure/audit/audit.json
+#   https://raw.githubusercontent.com/bobat2121-lgtm/digital-exposure/audit/{monday,wednesday,friday}.png
+# Nothing is pushed to main, so Streamlit does not redeploy. A FAIL check marks
+# the run red, which GitHub emails to the repository owner.
+name: Panel audit
+
+on:
+  schedule:
+    - cron: "10 16 * * 1"   # Monday, after both 8-Ks (12:10 pm EDT / 11:10 am EST)
+    - cron: "40 22 * * 3"   # Wednesday, after the close and Treasury's curve (6:40 pm EDT)
+    - cron: "40 21 * * 5"   # Friday, after the 4:00 pm ET mark (5:40 pm EDT / 4:40 pm EST)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: panel-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Render panels and audit values
+        run: python scripts/render_previews.py --out published
+      - name: Independent checks
+        run: python scripts/audit_panels.py --out published
+      - name: Publish to the audit branch
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd published
+          git init -q
+          git checkout -q -b audit
+          git add -A
+          git -c user.name="panel-audit" -c user.email="panel-audit@users.noreply.github.com" \
+            commit -q -m "Panel audit $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git" audit
+      - name: Mark the run red on any FAIL
+        run: |
+          python - <<'PY'
+          import json, sys
+          data = json.load(open("published/checks.json"))
+          print(data["summary"])
+          for item in data["checks"]:
+              if item["status"] != "PASS":
+                  print(item["status"], item["label"], "|", item["detail"])
+          sys.exit(1 if data["summary"]["FAIL"] else 0)
+          PY

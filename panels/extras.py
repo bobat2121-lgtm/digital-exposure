@@ -42,7 +42,7 @@ FRED_SERIES = {
     "BAMLC0A0CMEY": "ICE BofA US Corporate (IG) effective yield",
 }
 YAHOO_SYMBOLS = ("STRC", "SATA", "STRF", "STRK", "STRD", "PFF", "HYG", "DX-Y.NYB", "^TNX", "BTC-USD")
-SECTIONS = ("strategy", "strive", "fred", "yahoo", "onchain")
+SECTIONS = ("strategy", "strive", "fred", "yahoo", "onchain", "calendar")
 
 
 def number(value):
@@ -154,7 +154,108 @@ def fetch_fred_series(series: str, keep: int = 420) -> list[list]:
 def fetch_fred() -> dict:
     with ThreadPoolExecutor(max_workers=len(FRED_SERIES)) as pool:
         jobs = {series: pool.submit(fetch_fred_series, series) for series in FRED_SERIES}
-        return {series: job.result() for series, job in jobs.items()}
+        result = {series: job.result() for series, job in jobs.items()}
+    # FRED republishes these a day or two late; overlay the same-day official
+    # sources when they are newer. An overlay failure keeps the FRED series.
+    for overlay in (fetch_treasury_curve, fetch_nyfed_rates):
+        try:
+            _overlay(result, overlay())
+        except Exception:  # network or format change: FRED alone is still valid
+            pass
+    return result
+
+
+def _overlay(series_map: dict, newer: dict) -> None:
+    for series, rows in newer.items():
+        if series not in series_map:
+            continue
+        known = series_map[series]
+        last = known[-1][0] if known else ""
+        known.extend([day, value] for day, value in sorted(rows) if day > last)
+
+
+TREASURY_CURVE = ("https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/"
+                  "{year}/all?type=daily_treasury_yield_curve&field_tdr_date_value={year}&page&_format=csv")
+TREASURY_COLUMNS = {"3 Mo": "DGS3MO", "2 Yr": "DGS2", "10 Yr": "DGS10"}
+
+
+def fetch_treasury_curve(today: date | None = None) -> dict:
+    """US Treasury daily par yield curve: same-day source of FRED's DGS series."""
+    today = today or datetime.now(UTC).date()
+    text = _get(TREASURY_CURVE.format(year=today.year), "text/csv").decode("utf-8")
+    reader = csv.DictReader(io.StringIO(text))
+    result = {series: [] for series in TREASURY_COLUMNS.values()}
+    for row in reader:
+        try:
+            day = datetime.strptime(row["Date"], "%m/%d/%Y").date().isoformat()
+        except (KeyError, ValueError):
+            continue
+        for column, series in TREASURY_COLUMNS.items():
+            value = number(row.get(column))
+            if value is not None:
+                result[series].append((day, value))
+    return result
+
+
+def fetch_nyfed_rates() -> dict:
+    """New York Fed SOFR and EFFR, published each morning for the prior business day."""
+    result = {}
+    for series, path in (("SOFR", "rates/secured/sofr/last/10.json"), ("DFF", "rates/unsecured/effr/last/10.json")):
+        rows = json.loads(_get("https://markets.newyorkfed.org/api/" + path, "application/json"))["refRates"]
+        result[series] = [(row["effectiveDate"], number(row["percentRate"])) for row in rows if number(row.get("percentRate")) is not None]
+    return result
+
+
+# ── Calendar ────────────────────────────────────────────────────────────────
+FOMC_PAGE = "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+MONTHS = {name: index for index, name in enumerate(
+    ("january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"), 1)}
+MONTHS.update({name[:3]: index for name, index in list(MONTHS.items())})
+
+
+def parse_fomc(html: str) -> list[str]:
+    """Decision days (the last day of each scheduled meeting) from the Fed's calendar page."""
+    import re
+    days = []
+    for block in re.split(r'<h4><a id="\d+">', html)[1:]:
+        year = re.match(r"(\d{4}) FOMC Meetings", block)
+        if not year:
+            continue
+        for month_text, day_text in re.findall(r'fomc-meeting__month[^>]*>\s*<strong>([^<]+)</strong>.*?'
+                                               r'fomc-meeting__date[^>]*>([^<]+)<', block, re.S):
+            if "notation" in day_text.lower() or "unscheduled" in day_text.lower():
+                continue
+            months = [MONTHS.get(part.strip().lower()[:3]) for part in month_text.split("/")]
+            numbers = [int(value) for value in re.findall(r"\d+", day_text)]
+            if not numbers or not months[0]:
+                continue
+            month = months[-1] if len(numbers) > 1 and numbers[-1] < numbers[0] and months[-1] else months[0]
+            days.append(date(int(year.group(1)), month, numbers[-1]).isoformat())
+    return sorted(set(days))
+
+
+def fetch_earnings(ticker: str) -> dict | None:
+    """Nasdaq's next earnings date. Usually Zacks' estimate until the company confirms it."""
+    import re
+    data = _json(f"https://api.nasdaq.com/api/analyst/{ticker}/earnings-date")
+    text = ((data or {}).get("data") or {}).get("reportText") or ""
+    found = re.search(r"(\d{1,2})/(\d{1,2})/(\d{4})", text)
+    if not found:
+        return None
+    month, day, year = (int(value) for value in found.groups())
+    return {"date": date(year, month, day).isoformat(), "estimated": "estimated" in text.lower(), "source": "nasdaq.com"}
+
+
+def fetch_calendar() -> dict:
+    result = {"fomc": parse_fomc(_get(FOMC_PAGE, "text/html").decode("utf-8", "replace")), "earnings": {}}
+    for ticker in ("MSTR", "ASST"):
+        try:
+            result["earnings"][ticker] = fetch_earnings(ticker)
+        except Exception:  # an estimate is optional; FOMC dates still stand
+            result["earnings"][ticker] = None
+    if not result["fomc"]:
+        raise ValueError("FOMC calendar returned no meetings")
+    return result
 
 
 # ── Yahoo ───────────────────────────────────────────────────────────────────
@@ -225,7 +326,7 @@ def fetch_onchain() -> dict:
     }
 
 
-FETCHERS = {"strategy": fetch_strategy, "strive": fetch_strive, "fred": fetch_fred,
+FETCHERS = {"strategy": fetch_strategy, "strive": fetch_strive, "fred": fetch_fred, "calendar": lambda: fetch_calendar(),
             "yahoo": fetch_yahoo, "onchain": fetch_onchain}
 
 

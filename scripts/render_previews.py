@@ -46,15 +46,21 @@ def main():
     extras = extras_module.load_extras(offline=args.offline)
     if args.save_extras and not extras["stale"]:
         extras_module.save_snapshot(extras)
-    prices = load_current_prices() if args.offline else pull_current_prices()
+    try:
+        prices = load_current_prices() if args.offline else pull_current_prices()
+    except Exception as exc:  # quote outage: saved quotes keep the panels building
+        print(f"Price refresh failed ({type(exc).__name__}); using saved quotes")
+        prices = load_current_prices()
     feed = json.loads((ROOT / "data" / "latest-report-filings.json").read_text(encoding="utf-8"))
     if not args.offline:
         from report.filing_monitor import load_monitor_snapshot
         feed = load_monitor_snapshot(force=True).feed or feed
 
-    audit = {"rendered_at": datetime.now().astimezone().isoformat(), "stale_sections": extras["stale"], "panels": {}}
-    report = resolve_complete_report(prices, feed).report
-    monday = monday_preview.build_preview(report, prices, feed, extras)
+    audit = {"rendered_at": datetime.now().astimezone().isoformat(), "stale_sections": extras["stale"],
+             "errors": extras.get("errors", []), "panels": {}}
+    result = resolve_complete_report(prices, feed)
+    audit["monday_notice"] = result.notice
+    monday = monday_preview.build_preview(result.report, prices, feed, extras)
     overflows = []
     for theme in chosen:
         for layout in chosen_layouts:
@@ -73,11 +79,16 @@ def main():
     audit["panels"]["wednesday"] = {"overflows": overflows, "values": wednesday.audit_rows(data), "notes": wednesday.notes(data)}
 
     from friday import data as friday_data, metrics
-    if args.offline:
-        dataset = friday_data.load_demo()
-    else:
-        from friday.live_inputs import fetch_snapshot
-        dataset = fetch_snapshot()
+    try:
+        if args.offline:
+            dataset = friday_data.load_demo()
+        else:
+            from friday.live_inputs import fetch_snapshot
+            dataset = fetch_snapshot()
+    except Exception as exc:  # one day's outage must not hide the other panels
+        audit["panels"]["friday"] = {"error": f"{type(exc).__name__}: {exc}", "overflows": []}
+        _write(args.out, audit, chosen, chosen_layouts)
+        return
     panel = metrics.compute_panel(dataset)
     derived = friday_preview.derive(panel, dataset, extras, feed)
     overflows = []
@@ -88,9 +99,15 @@ def main():
     audit["panels"]["friday"] = {"overflows": overflows, "values": friday_preview.audit_rows(panel, derived),
                                  "notes": friday_preview.notes(panel, derived, tuple(extras["stale"])), "demo_data": args.offline}
 
-    (args.out / "audit.json").write_text(json.dumps(audit, indent=1), encoding="utf-8")
-    print(f"Wrote {len(chosen) * (2 + len(chosen_layouts))} panels and audit.json to {args.out}")
+    _write(args.out, audit, chosen, chosen_layouts)
+
+
+def _write(out, audit, chosen, chosen_layouts):
+    (out / "audit.json").write_text(json.dumps(audit, indent=1), encoding="utf-8")
+    print(f"Wrote {len(chosen) * (2 + len(chosen_layouts))} panels and audit.json to {out}")
     for name, item in audit["panels"].items():
+        if item.get("error"):
+            print(f"{name}: {item['error']}")
         if item["overflows"]:
             print(f"{name}: shortened text {item['overflows']}")
 

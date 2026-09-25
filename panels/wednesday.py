@@ -25,6 +25,8 @@ ET = ZoneInfo("America/New_York")
 WIDTH, HEIGHT = 1440, 1920
 TITLE = ("The ", "Coupon", " Sheet")
 CONFIG = Path(__file__).resolve().parents[1] / "data" / "preview-config.json"
+EVENTS = Path(__file__).resolve().parents[1] / "data" / "calendar-events.json"
+CALENDAR_ROWS = 6
 HEROES = ("STRC", "SATA")
 REST = ("STRF", "STRK", "STRD", "STRE")
 ISSUER = {"STRC": "Strategy", "STRF": "Strategy", "STRK": "Strategy", "STRD": "Strategy", "STRE": "Strategy", "SATA": "Strive"}
@@ -234,6 +236,33 @@ def _cover_history(rows, extras, config, monday):
     }
 
 
+def _scheduled_events(extras: dict, today: date) -> list[tuple]:
+    """FOMC decisions (Fed calendar), earnings (curated, else Nasdaq's estimate) and curated events."""
+    events = []
+    calendar = extras.get("calendar") or {}
+    horizon = (today + timedelta(days=75)).isoformat()
+    for day in calendar.get("fomc") or []:
+        if today.isoformat() <= day <= horizon:
+            events.append((day, "FOMC decision", "federalreserve.gov"))
+            break  # the next decision is enough
+    try:
+        curated = json.loads(EVENTS.read_text(encoding="utf-8")).get("events") or [] if EVENTS.exists() else []
+    except ValueError:
+        curated = []
+    confirmed = set()
+    for event in curated:
+        day, label = event.get("date"), event.get("label")
+        if not day or not label or day < today.isoformat():
+            continue
+        events.append((day, label, event.get("source") or "curated"))
+        if event.get("kind") == "earnings" and event.get("ticker"):
+            confirmed.add(event["ticker"])
+    for ticker, item in (calendar.get("earnings") or {}).items():
+        if item and ticker not in confirmed and today.isoformat() <= item["date"] <= horizon:
+            events.append((item["date"], f"{ticker} earnings{' (est.)' if item.get('estimated') else ''}", item.get("source", "")))
+    return events
+
+
 def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None) -> dict:
     from report import live_report
     now = now or datetime.now(ET)
@@ -319,12 +348,13 @@ def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None)
     quarter_end = date(today.year, 3 * ((today.month - 1) // 3) + 3, 1)
     quarter_end = (quarter_end.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
     calendar.append((quarter_end.isoformat(), "Quarter end · QTD restarts", "next Monday ledger"))
-    calendar.sort()
+    calendar += _scheduled_events(extras, today)
+    calendar = sorted(event for event in calendar if event[0] >= today.isoformat())
     coverage = dict(monday.extras) if monday is not None else {}
     stamp = max((row["date"] for row in _rows(extras, "STRC")), default=None)
     return {"ladder": ladder, "references": references, "bill": bill, "headline": headline, "heroes": heroes, "rest": rest,
             "liquidity": liquidity, "btc_adv": btc_adv, "credit_adv": credit_adv, "ledger": ledger,
-            "calendar": calendar[:5], "coverage": coverage, "cover": _cover_history(rows, extras, config, monday),
+            "calendar": calendar[:CALENDAR_ROWS], "coverage": coverage, "cover": _cover_history(rows, extras, config, monday),
             "sata_rate": sata_rate, "stamp": stamp, "now": now, "stale": tuple(extras.get("stale") or ())}
 
 
@@ -496,8 +526,8 @@ def _calendar(canvas, box, data, p, theme):
     _card(canvas, box, p, theme)
     _heading(canvas, L, y0 + 18, "Calendar", p, "days", R)
     today = data["now"].date()
-    for index, (day, label, note) in enumerate(data["calendar"][:5]):
-        y = y0 + 64 + index * 42
+    for index, (day, label, note) in enumerate(data["calendar"][:CALENDAR_ROWS]):
+        y = y0 + 62 + index * 38
         parsed = date.fromisoformat(day)
         canvas.pill(L, y - 4, f"{parsed:%b} {parsed.day}".upper(), T_MIN, p.card, p.deep, pad=(10, 4))
         short = label.replace(" dividend ", " ").replace("STRF · STRK · STRD · STRE", "STRF/K/D/E").replace(

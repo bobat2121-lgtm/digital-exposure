@@ -350,7 +350,7 @@ def cash_step_label(e: CompanyExtras) -> str:
 
 
 def _top_waterfall(canvas, e, L, R, y, p, stripe):
-    """C · Waterfall: common + preferred ± cash = what went into bitcoin.
+    """C · Waterfall: common + preferred ± cash = deployed (BTC, dividends and fees).
 
     Cash is labeled by direction: FROM CASH when the balance funded purchases,
     TO CASH when part of the raise was kept (the bar then steps down).
@@ -377,7 +377,8 @@ def _top_waterfall(canvas, e, L, R, y, p, stripe):
     canvas.line([(L, py(0)), (R, py(0))], p.line, 2)
     bars = [(label, value, a, b, p.soft if n == 2 else p.positive if value >= 0 else p.negative)
             for n, ((label, value), (a, b)) in enumerate(zip(steps, levels))]
-    bars.append(("INTO BTC", level, 0.0, level, stripe))
+    # Deployed = BTC purchases plus dividends and fees; the 8-K feed has no purchase cost.
+    bars.append(("DEPLOYED", level, 0.0, level, stripe))
     for n, (label, value, a, b, color) in enumerate(bars):
         x, slot = edges[n], edges[n + 1] - edges[n]
         y0, y1 = sorted((py(a), py(b)))
@@ -528,6 +529,7 @@ def notes(preview: MondayPreview) -> list[str]:
     windows = " · ".join(f"{e.ticker} since {_short(e.window['start'])}" for e in preview.extras.values() if e.window.get("start"))
     return [line for line in (
         "Capital raised = ATM issuance − repurchases, common and preferred. Cash is an existing balance, never counted as a raise. "
+        "Deployed = raised + cash drawn (or − cash kept): bitcoin purchases plus dividends and fees. "
         "Strive's common figure is an estimate: net share change × prior-week VWAP.",
         "Amplification = (debt + preferred) ÷ BTC value. NAV, price/NAV, amplification, coverage and growth are estimates from "
         "dated balances and reconstructed preferred claims at the displayed prices; growth holds prices constant.",
