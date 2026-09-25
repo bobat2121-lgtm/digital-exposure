@@ -46,7 +46,8 @@ Nasdaq estimates; the weekly task replaces them with confirmed dates.
 - **Filing worker.** The parser now also records `weekly_btc_cost_usd`,
   `btc_cost_basis_usd`, `btc_average_cost_usd` and `usd_reserve_dividends_interest_usd`.
   Deployed Sep 25 (version `dd589cb4`); the new facts start with the Sep 28 filings.
-- **Test copies** (`?extra=1`) add the top items from section 3; see PANELS.md.
+- **Extra data** from section 3 is on the web report; the X images leave it out.
+  Test copies of the X images (`render_previews.py --extra`) still carry it; see PANELS.md.
 
 ## 1. Does everything update automatically?
 
@@ -260,8 +261,9 @@ Ranked by importance to each sheet's theme. All sources are keyless.
    Friday test copy.*
 5. **Stablecoin supply:** DefiLlama, daily. *In the Friday test copy.*
 
-The test copies (`?extra=1`) show these next to the regular panels so you can judge
-them before anything changes on X.
+The web report shows these; the X images leave them out. Test copies of the X images
+(`render_previews.py --extra`, published by the Panel audit Action) show them in the
+image so you can judge them before anything changes on X.
 
 ## 4. Design pass
 

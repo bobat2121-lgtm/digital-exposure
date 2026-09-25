@@ -209,7 +209,7 @@ class FridayPreviewTests(unittest.TestCase):
         self.assertIsNotNone(markets["dvol"])
         self.assertIsNotNone(markets["basis"])
         self.assertIsNotNone(markets["stablecoins"])
-        self.assertTrue(any(line.startswith("Test copy: DVOL") for line in friday_preview.notes(panel, derived, extra=True)))
+        self.assertTrue(any(line.startswith("DVOL = ") for line in friday_preview.notes(panel, derived, extra=True)))
 
 
 if __name__ == "__main__":

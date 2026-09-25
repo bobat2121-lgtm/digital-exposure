@@ -71,9 +71,10 @@ class CompanyExtras:
     coverage_source: str = ""
     window: dict = field(default_factory=dict)
     warrants: dict | None = None
-    cost_basis: float | None = None             # test copy: aggregate BTC purchase cost, fees included
+    cost_basis: float | None = None             # aggregate BTC purchase cost, fees included
     average_cost: float | None = None
     cost_source: str = ""
+    filing_url: str | None = None               # the week's 8-K
 
 
 @dataclass(frozen=True)
@@ -325,7 +326,9 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
             reserve_months=months, target_months=target, target_kind="floor" if ticker == "MSTR" else "goal",
             coverage_years=years, breakeven_pct=breakeven, coverage_source=source,
             window=windows.get(ticker, {}), warrants=_warrants(ticker, company, facts, config, now),
-            cost_basis=cost_basis, average_cost=average_cost, cost_source=basis_source)
+            cost_basis=cost_basis, average_cost=average_cost, cost_source=basis_source,
+            filing_url=next((row.get("primaryDocumentUrl") for row in reversed(rows) if row["ticker"] == ticker
+                             and row["extracted"]["balanceDate"] == company.balance_date), None))
     period = report.capital_period_label.split("·")[-1].strip()
     kicker = f"THE DIGITAL CREDIT REPORT  ·  MONDAY  ·  8-K WEEK {period.upper()}"
     dates = " · ".join(f"{c.name} {_short(c.balance_date)}" for c in report.companies if c.balance_date)
@@ -650,9 +653,6 @@ def notes(preview: MondayPreview) -> list[str]:
     stated = " ".join(f"Strategy's 8-K put the week's dividends and interest at {_money(e.stated_dividends, False)}; the "
                       "difference is rounding in its $0.01B balances." for e in preview.extras.values()
                       if e.ticker == "MSTR" and e.stated_dividends is not None)
-    strive = preview.extras.get("ASST")
-    strive_amp = (f" ({strive.amplification_pct:.1f}% there, so {strive.amplification_x:.2f}× here)"
-                  if strive and strive.amplification_x is not None and strive.amplification_pct is not None else "")
     return [line for line in (
         "Capital raised = ATM issuance − repurchases, common and preferred. Cash is an existing balance, never counted as a raise. "
         "The waterfall reads down: common + preferred + cash drawn (or − cash kept) = BTC + DIVs. "
@@ -661,7 +661,7 @@ def notes(preview: MondayPreview) -> list[str]:
         f"dividends and interest, plus fees and other uses. {stated}".strip(),
         "Amplification uses each issuer's own formula, shown in ×. Strategy: BTC reserve ÷ net BTC reserve (BTC + USD − "
         "debt − preferred), its strategy.com KPI since July 23, 2026. Strive: 1 + (debt + SATA notional) ÷ BTC value, "
-        f"where the ratio is the \"Amplification Ratio\" on its treasury dashboard{strive_amp}; Strive has no debt. "
+        "where the ratio is the \"Amplification Ratio\" on its treasury dashboard; Strive has no debt. "
         "The two measure different things and are not comparable. Weekly changes come from the filed balances.",
         "NAV, price/NAV, coverage and growth are estimates from dated balances and reconstructed preferred "
         "claims at the displayed prices; growth holds prices constant.",

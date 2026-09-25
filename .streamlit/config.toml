@@ -8,6 +8,8 @@ font = "sans serif"
 
 [server]
 headless = true
+# Serves static/ at /app/static: the panels page's self-hosted fonts (SIL OFL).
+enableStaticServing = true
 
 [browser]
 gatherUsageStats = false

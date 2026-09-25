@@ -1,24 +1,53 @@
 # Monday, Wednesday and Friday panels
 
-The public app opens on three tabs, one panel per posting day. Each tab fetches
-fresh data when a browser session opens it, and offers **Refresh data**, a PNG
-download, the footnotes and an **Audit values** list. Only the open tab builds.
+The public app opens on three tabs, one report per posting day. Each tab has two
+forms built from the same data:
 
-| Day | Title | Size | Posting time |
+- **The web report** fills the tab. It is laid out for reading on a computer and
+  reflows for a phone, and carries more than the X image: every hero figure as a
+  tile, the charts with hover values, and full tables.
+- **The X image** is the phone-first PNG for posting on X. **Download X image**
+  saves it; **Preview X image** shows it first.
+
+At the bottom of every tab, two collapsed sections list **Formulas** (every figure's
+definition) and **Sources, notes and audit values**. Each tab fetches fresh data
+when a browser session opens it and offers **Refresh data**. Only the open tab
+builds.
+
+| Day | Title | X image size | Posting time |
 | --- | --- | --- | --- |
 | Monday | The **Accretion** Ledger | 1440 × 1884 | after both 8-Ks |
 | Wednesday | The **Coupon** Sheet | 1440 × 1920 (3:4) | after the 4:00 pm ET close |
 | Friday | The **Closing** Mark | 1440 × 1920 (3:4) | Friday 4:00 pm ET mark |
 
-Links:
+The page has one style (Neon Ledger) and one Monday funding layout (the waterfall),
+so every shared link looks the same. Links:
 
-- `?report=monday|wednesday|friday` opens a tab.
-- `?theme=neon|classic|orbit` picks a style. Neon Ledger is the default.
-- `?layout=a|b|c` picks Monday's funding block.
-- `?extra=1` shows the **test copies** with the extra data under review (off by default; see below).
+- `?report=monday|wednesday|friday` opens a tab, e.g.
+  <https://digital-credit-report.streamlit.app/?report=wednesday>.
 - `?classic=1` opens the detailed Monday and Friday reports, which are unchanged.
+- The retired `?theme=`, `?layout=` and `?extra=` options are dropped from the
+  address when a link still carries them.
 
-## Built for phones
+## The web report
+
+`panels/web.py` builds each tab from Streamlit elements, HTML tables and Altair
+charts in the Neon Ledger palette (Strategy #12A6C1, Strive #C43596, one neon per
+day). Chakra Petch and Orbitron are served from `static/` (Streamlit static
+serving, `.streamlit/config.toml`), so no font request leaves the app.
+
+- **Computer:** cards sit side by side (Strategy next to Strive, STRC next to SATA)
+  and the tables show every column.
+- **Phone (640 px or narrower):** cards stack, tiles wrap to the screen width, text columns
+  wrap while numbers stay on one line, and wide tables scroll sideways inside
+  their card, never the page.
+- **More than the X image:** Monday adds the 8-K link and filing detail per company;
+  Wednesday adds the backing tiles (BTC floor, stated rate, prior month's average
+  close), all six preferreds against every benchmark, and 30-day dollar volume;
+  Friday adds the markets tiles (DVOL, 3-month basis, stablecoins) and turnover as
+  small multiples.
+
+## The X image: built for phones
 
 X shows single images up to 3:4 uncropped in the mobile timeline. Taller images
 are center-cropped. Tapping an image shows it at the phone's width, about 390 CSS
@@ -28,12 +57,15 @@ px, which is 0.27× of a 1440-px panel. So every panel follows these rules:
 - **Type.** No text is smaller than 28 px (about 7.6 CSS px on a phone). Key
   figures are 44–92 px (`panels/draw.py`, `T_*`). The canvas flags any smaller text
   as an overflow, and the tests require zero overflows in every style and layout.
-- **No footnotes in the image.** Methods, sources and definitions appear under the
-  image on the web page and in `audit.json`, never in the downloaded PNG.
+- **No footnotes in the image.** Methods, sources and definitions appear in the
+  Formulas and Sources sections of the web page and in `audit.json`, never in the
+  downloaded PNG.
 
 ## Styles
 
-All three styles draw the same numbers. Only the palette, type and decoration change.
+The page uses Neon Ledger only. Classic and Brutal Orbit remain in the renderer for
+`render_previews.py --themes` and are no longer offered on the page. All three styles
+draw the same numbers. Only the palette, type and decoration change.
 
 | Style | Look | Type (SIL OFL, in `assets/`) |
 | --- | --- | --- |
@@ -71,7 +103,8 @@ then what it did per share.
 
 - **Header:** price, price/NAV and the balance date.
 - **Bitcoin bought and held.**
-- **The funding block, in three layouts** (page selector, `?layout=`):
+- **The funding block.** The page and the X image use the waterfall. Layouts A and
+  B remain in the renderer only (`panels/monday_preview.py`):
   - **C · Waterfall** (default, the main format), read top to bottom, one row per
     step: COMMON + PREF, plus cash drawn (FROM CASH) or minus cash kept (TO CASH),
     then where it went: **BTC** (the week's bitcoin purchase cost, fees included)
@@ -96,8 +129,8 @@ then what it did per share.
   - Strategy: BTC reserve ÷ net BTC reserve (BTC + USD − debt − preferred),
     strategy.com's `amplification` KPI since Jul 23, 2026 (about 1.25×).
   - Strive: 1 + (debt + SATA notional) ÷ BTC value. The ratio is the "Amplification
-    Ratio" on Strive's treasury dashboard (50.5%), so the panel shows 1.51×. The
-    audit checks the ratio against Strive's dashboard figure.
+    Ratio" on Strive's treasury dashboard, shown as 1 + that ratio in ×. The audit
+    checks the ratio against Strive's dashboard figure.
 
   The two measure different things and are not comparable.
 
@@ -200,13 +233,13 @@ headline counts the cells in each state. These are rule-based states, not foreca
 | Puell Multiple | below the low band (mean − 0.85 sd, about 0.38) | above the high band (mean + 1.25 sd, about 3.16) | otherwise |
 | Supply in profit | below 50% | above 95% | otherwise |
 
-## Test copies with extra data (`?extra=1`)
+## Extra data: on the web report, test copies of the X image
 
-A toggle on the page (**Test copy: extra data**) and `render_previews.py --extra`
-show the Wednesday and Friday panels with the extra data under review. They stay
-1440 wide and within 3:4, with no text under 28 px. Remove them by deleting the
-`extra` branches if you decide against them. (Monday's bitcoin cost box, first tried
-here, is now part of the regular panel.)
+The web report always shows this extra data. The X images leave it out to stay
+succinct. `render_previews.py --extra` (and the Panel audit Action) still draws test
+copies of the Wednesday and Friday X images with it (`wednesday-extra.png`,
+`friday-extra.png`); they stay 1440 wide and within 3:4, with no text under 28 px.
+(Monday's bitcoin cost box, first tried here, is now part of the regular panel.)
 
 - **Wednesday:** a backing row in each hero card, the same for STRC and SATA: BTC
   floor, stated rate and the prior month's average close. BTC floor = (debt +
@@ -231,7 +264,7 @@ file with `scripts/render_previews.py --save-extras`.
 | Checkonchain public charts | MVRV with mean/±sd, realized price, Puell Multiple with bands |
 | Monday filing feed (Cloudflare Worker) and committed checkpoint | issuance, buybacks, USD reserve/cash, BTC purchase cost and cost basis, SATA shares, warrants |
 | `data/strategy-weekly-8k.json` (transcribed from SEC EDGAR, each week linked) | Strategy's weekly BTC cost, USD Reserve/Cash and cost basis from Mar 1, 2026, before the feed carried them |
-| Deribit public API, DefiLlama (test copies only) | DVOL, 3-month futures basis, stablecoin supply |
+| Deribit public API, DefiLlama (web report and test copies) | DVOL, 3-month futures basis, stablecoin supply |
 
 Rates come from the same-day official sources first:
 

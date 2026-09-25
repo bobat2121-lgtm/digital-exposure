@@ -248,7 +248,7 @@ def derive(panel: dict, data: dict, extras: dict, feed: dict) -> dict:
 
 
 def _markets(extras):
-    """Test copy: BTC implied volatility, 3-month futures basis and stablecoin supply, with weekly changes."""
+    """BTC implied volatility, 3-month futures basis and stablecoin supply, with weekly changes (web page and test copy)."""
     markets = extras.get("markets") or {}
 
     def latest_and_week(rows):
@@ -614,7 +614,7 @@ def _render(panel: dict, derived: dict, stale: tuple, extra: bool = False) -> tu
 
 
 def _markets_band(canvas, box, markets):
-    """Test copy: one row of market-structure readings with their weekly change."""
+    """The X test copy: one row of market-structure readings with their weekly change."""
     x0, y0, x1, _ = box
     _card(canvas, box)
     cells = (("BTC IMPLIED VOL · DVOL", f"{markets['dvol']:.1f}" if markets.get("dvol") is not None else "—",
@@ -687,7 +687,7 @@ def notes(panel: dict, derived: dict, stale: tuple = (), extra: bool = False) ->
            f"{_short(b['start'])}–{_short(b['end'])} filing week." if b else ""),
         "Fear & Greed: CoinMarketCap 3-day average; the regime is its current band.",
         "Sources: Yahoo Finance · CoinMarketCap · Checkonchain · FRED (DFF, DGS2) · strategy.com.",
-        (f"Test copy: DVOL = Deribit's 30-day BTC implied volatility index (daily close {_short(m.get('dvol_day'))}). "
+        (f"DVOL = Deribit's 30-day BTC implied volatility index (daily close {_short(m.get('dvol_day'))}). "
          f"3M futures basis = the {m.get('basis_instrument') or 'nearest-quarter'} future's premium over the BTC index, "
          f"annualized ({m.get('basis_days') or '—'} days to expiry; Deribit). Stablecoin supply = USD-pegged stablecoins "
          f"in circulation (DefiLlama, {_short(m.get('stablecoins_day'))}). Changes are over 7 days. These are live "
@@ -719,11 +719,11 @@ def audit_rows(panel: dict, derived: dict) -> list[dict]:
         rows.append({"metric": f"{company} price / NAV", "value": f"{item.get('nav_multiple'):.2f}x" if item.get("nav_multiple") else "—", "source": "derived"})
     m = derived.get("markets") or {}
     rows += [
-        {"metric": "Test copy · BTC DVOL", "value": f"{m['dvol']:.2f} ({m.get('dvol_day')})" if m.get("dvol") is not None else "—",
+        {"metric": "BTC DVOL", "value": f"{m['dvol']:.2f} ({m.get('dvol_day')})" if m.get("dvol") is not None else "—",
          "source": "Deribit get_volatility_index_data"},
-        {"metric": "Test copy · 3M futures basis (annualized)", "value": _pct(m.get("basis"), 2),
+        {"metric": "3M futures basis (annualized)", "value": _pct(m.get("basis"), 2),
          "source": f"Deribit {m.get('basis_instrument') or '—'} mark ÷ index"},
-        {"metric": "Test copy · stablecoin supply", "value": f"${m['stablecoins'] / 1e9:,.2f}B ({m.get('stablecoins_day')})" if m.get("stablecoins") else "—",
+        {"metric": "stablecoin supply", "value": f"${m['stablecoins'] / 1e9:,.2f}B ({m.get('stablecoins_day')})" if m.get("stablecoins") else "—",
          "source": "DefiLlama stablecoincharts/all (peggedUSD)"},
     ]
     return rows

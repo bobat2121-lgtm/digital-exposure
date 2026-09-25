@@ -394,7 +394,7 @@ def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None)
 
 
 def _backing(credit, monday, heroes):
-    """Test copy: the same three figures behind each hero's coupon.
+    """The same three figures behind each hero's coupon (web page and X test copy).
 
     BTC floor = (debt + preferred notional senior to and including the series − USD
     cash) ÷ BTC held: the BTC price at which the claims through that series would
@@ -713,7 +713,7 @@ def notes(data: dict, extra: bool = False) -> list[str]:
         "balances from its 8-K (USD Cash began Aug 23, 2026; earlier weeks are the USD Reserve alone); Strive's dashboard "
         "reserve against its 18-month goal.",
         "Flow ledger: Strategy 8-K cash; SATA = net share change × $100.",
-        ("Test copy: BTC floor = (debt + preferred notional senior to and including the series − USD cash) ÷ BTC held, "
+        ("BTC floor = (debt + preferred notional senior to and including the series − USD cash) ÷ BTC held, "
          "the BTC price below which those claims would exceed the bitcoin. strategy.com publishes STRC's; SATA's uses "
          "the same formula with Strive's cash and the STRC it holds. Stated rate = the annual dividend on $100 par. "
          "The prior-month average close is the price each issuer weighs when it resets the rate (SATA's rate-cut test "
@@ -738,7 +738,7 @@ def audit_rows(data: dict) -> list[dict]:
             rows.append({"metric": f"SATA {hero['par']['prior_month']:%b} average close (rate cut allowed at ≥ $99)",
                          "value": f"${hero['par']['prior_avg']:.2f}", "source": "Yahoo Finance"})
     for ticker, item in (data.get("backing") or {}).items():
-        rows.append({"metric": f"Test copy · {ticker} BTC floor", "value": f"${item['floor']:,.0f}" if item.get("floor") else "—",
+        rows.append({"metric": f"{ticker} BTC floor", "value": f"${item['floor']:,.0f}" if item.get("floor") else "—",
                      "source": item["floor_source"]})
     for ticker, item in data["cover"].items():
         rows.append({"metric": f"{item['name']} USD cover (months) vs {item['kind']}",

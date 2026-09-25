@@ -1,13 +1,12 @@
-"""The public app: Monday, Wednesday and Friday panels.
+"""The public app: Monday, Wednesday and Friday reports.
 
-Each tab fetches fresh data when a browser session opens it (cached briefly
-across sessions) and renders the downloadable PNG from those inputs. Only the
-open tab builds. ``?report=monday|wednesday|friday`` deep-links a tab,
-``?theme=neon|classic|orbit`` picks a style (Neon Ledger is the default) and
-``?layout=a|b|c`` picks Monday's funding block (c, the waterfall, is the default) and ``?extra=1`` shows the
-test copies with extra data (off by default). The detailed Monday and Friday
-reports remain at ``?classic=1``. Footnotes live on the page, never in the
-downloadable X images.
+Each tab shows a web layout built for reading on a computer or a phone
+(``panels.web``), from the same data as the X image. The X image, the phone-first
+PNG, is the tab's download. Each tab fetches fresh data when a browser session
+opens it (cached briefly across sessions), and only the open tab builds.
+``?report=monday|wednesday|friday`` deep-links a tab; the detailed Monday and
+Friday reports remain at ``?classic=1``. The page has one style (Neon Ledger) and
+one Monday funding layout (the waterfall), so every shared link looks the same.
 """
 from __future__ import annotations
 
@@ -20,12 +19,8 @@ import streamlit as st
 
 ROOT = Path(__file__).resolve().parent
 ET = ZoneInfo("America/New_York")
-TABS = {"monday": "Monday · The Accretion Ledger", "wednesday": "Wednesday · The Coupon Sheet",
-        "friday": "Friday · The Closing Mark"}
-STYLES = {"neon": "Neon Ledger", "classic": "Classic", "orbit": "Brutal Orbit"}
-DEFAULT_STYLE = "neon"
-LAYOUTS = {"a": "headline", "b": "ledger", "c": "waterfall"}
-DEFAULT_LAYOUT = "c"  # the waterfall is the Accretion Ledger's main format
+TABS = {"monday": "Monday · Accretion Ledger", "wednesday": "Wednesday · Coupon Sheet",
+        "friday": "Friday · Closing Mark"}
 
 
 @st.cache_data(ttl=900, show_spinner=False)
@@ -68,117 +63,102 @@ def _monday():
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def monday_png(style=DEFAULT_STYLE, layout=DEFAULT_LAYOUT):
-    from panels import themes
+def monday_report():
     from panels.monday_preview import audit_rows, notes, render_png
     preview, notice, saved = _monday()
-    png, overflows = render_png(preview, themes.get(style), LAYOUTS.get(layout, LAYOUTS[DEFAULT_LAYOUT]))
-    return png, overflows, notice, saved, audit_rows(preview), notes(preview)
+    png, overflows = render_png(preview)
+    return {"preview": preview, "png": png, "overflows": overflows, "audit": audit_rows(preview), "notes": notes(preview),
+            "notices": [line for line in (notice, "Saved quotes (price refresh unavailable)." if saved else "") if line]}
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def wednesday_png(style=DEFAULT_STYLE, extra=False):
-    from panels import themes
+def wednesday_report():
     from panels.wednesday import audit_rows, build, notes, render_png
     preview, _, _ = _monday()
     data = build(_extras(), _feed(), preview)
-    png, overflows = render_png(data, themes.get(style), extra=extra)
-    return png, overflows, audit_rows(data), notes(data, extra)
+    png, overflows = render_png(data)
+    return {"data": data, "png": png, "overflows": overflows, "audit": audit_rows(data), "notes": notes(data, extra=True),
+            "notices": []}
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def friday_png(style=DEFAULT_STYLE, extra=False):
+def friday_report():
     from friday import metrics
-    from panels import themes
     from panels.friday_preview import audit_rows, derive, notes, render_png
     data = _friday_data()
     panel = metrics.compute_panel(data)
     extras = _extras()
     stale = tuple(extras.get("stale") or ())
     derived = derive(panel, data, extras, _feed())
-    png, overflows = render_png(panel, derived, stale=stale, theme=themes.get(style), extra=extra)
-    return png, overflows, panel["period"].get("end"), audit_rows(panel, derived), notes(panel, derived, stale, extra)
+    png, overflows = render_png(panel, derived, stale=stale)
+    week_end = panel["period"].get("end")
+    return {"panel": panel, "derived": derived, "png": png, "overflows": overflows, "audit": audit_rows(panel, derived),
+            "notes": notes(panel, derived, stale, extra=True),
+            "notices": [f"Week ended {week_end}. After 4:00 pm ET on Friday this becomes the current week."] if week_end else []}
 
 
 def _refresh():
     st.cache_data.clear()
 
 
-def _show(png, name, style, overflows, notes=(), audit=(), footnotes=(), extra=False):
-    # The image is the X post: phone-sized type, no footnotes. Notes stay on the page.
-    st.image(png, width="stretch")
-    suffix = ("" if style == DEFAULT_STYLE else f"-{style}") + ("-extra" if extra else "")
-    st.download_button(f"Download {name} panel", data=png, file_name=f"{name.lower()}{suffix}.png", mime="image/png",
-                       icon=":material/download:", on_click="ignore", key=f"download_{name}")
-    for note in notes:
-        if note:
-            st.caption(note)
-    if overflows:
-        st.warning("Some text was shortened to fit: " + "; ".join(overflows[:5]))
-    if footnotes:
-        st.caption("\n\n".join(footnotes))
-    if audit:
-        with st.expander(f"Audit values · {name}", expanded=False):
-            st.markdown("\n".join(f"- **{row['metric']}**: {row['value']} · _{row['source']}_" for row in audit))
+def _download(name: str, report: dict):
+    """The X image: the phone-first PNG, offered as a download with a preview."""
+    def draw():
+        with st.container(horizontal=True, gap="small", vertical_alignment="center"):
+            st.download_button("Download X image", data=report["png"], file_name=f"{name.lower()}.png", mime="image/png",
+                               icon=":material/download:", on_click="ignore", key=f"download_{name}")
+            with st.popover("Preview X image", icon=":material/image:"):
+                st.image(report["png"], width="stretch")
+        for notice in report["notices"]:
+            st.caption(notice)
+        if report["overflows"]:
+            st.warning("Some text in the X image was shortened to fit: " + "; ".join(report["overflows"][:5]))
+    return draw
+
+
+def _footer(formulas, report: dict):
+    from panels import web
+    web.formulas(formulas)
+    web.sources(report["notes"], report["audit"])
 
 
 def render():
+    from panels import web
+    web.style()
     if "panel_tabs" not in st.session_state:
         st.session_state["panel_tabs"] = TABS.get(st.query_params.get("report"), TABS["monday"])
-    if "panel_style" not in st.session_state:
-        st.session_state["panel_style"] = st.query_params.get("theme") if st.query_params.get("theme") in STYLES else DEFAULT_STYLE
-    if "panel_layout" not in st.session_state:
-        st.session_state["panel_layout"] = st.query_params.get("layout") if st.query_params.get("layout") in LAYOUTS else DEFAULT_LAYOUT
-    if "panel_extra" not in st.session_state:
-        st.session_state["panel_extra"] = st.query_params.get("extra") == "1"
-    top = st.columns([3, 2, 2], vertical_alignment="center")
-    with top[0]:
-        st.segmented_control("Style", list(STYLES), format_func=STYLES.get, key="panel_style", label_visibility="collapsed")
-    with top[1]:
-        st.toggle("Test copy: extra data", key="panel_extra",
-                  help="Adds the extra data under review: a backing row with BTC floor, stated rate and prior-month "
-                       "average (Wednesday), and implied volatility, futures basis and stablecoin supply (Friday).")
-    with top[2]:
+    with st.container(horizontal=True, vertical_alignment="center"):
+        st.html('<div class="dcr-kicker" style="color:#8FA2CC">The Digital Credit Report</div>')
         st.button("Refresh data", on_click=_refresh, key="panels_refresh", icon=":material/refresh:")
-    extra = bool(st.session_state.get("panel_extra"))
-    if (st.query_params.get("extra") == "1") != extra:
-        if extra:
-            st.query_params["extra"] = "1"
-        else:
-            del st.query_params["extra"]
-    style = st.session_state.get("panel_style") or DEFAULT_STYLE
-    if st.query_params.get("theme", DEFAULT_STYLE) != style:
-        st.query_params["theme"] = style
-    if style != DEFAULT_STYLE:
-        st.caption(f"{STYLES[style]}: same numbers, different styling.")
     extras = _extras()
-    stale = [section for section in extras.get("stale") or () if extra or section != "markets"]
+    stale = [section for section in extras.get("stale") or ()]
     if stale:
         st.caption("Saved snapshot used for: " + ", ".join(stale))
     monday, wednesday, friday = st.tabs(list(TABS.values()), key="panel_tabs", on_change="rerun")
     active = next((key for key, tab in zip(TABS, (monday, wednesday, friday)) if tab.open), "monday")
     if st.query_params.get("report") != active:
         st.query_params["report"] = active
+    for retired in ("theme", "layout", "extra"):  # options removed so every shared link looks the same
+        if retired in st.query_params:
+            del st.query_params[retired]
     # Only the open tab fetches and renders.
     if active == "monday":
         with monday:
-            st.segmented_control("Funding layout", list(LAYOUTS), key="panel_layout",
-                                 format_func=lambda key: {"a": "A · Headline", "b": "B · Ledger", "c": "C · Waterfall"}[key])
-            layout = st.session_state.get("panel_layout") or DEFAULT_LAYOUT
-            if st.query_params.get("layout", DEFAULT_LAYOUT) != layout:
-                st.query_params["layout"] = layout
             with st.spinner("Building Monday…"):
-                png, overflows, notice, saved, audit, footnotes = monday_png(style, layout)
-            _show(png, "Monday", style, overflows, (notice, "Saved quotes (price refresh unavailable)." if saved else ""),
-                  audit, footnotes)
+                report = monday_report()
+            web.monday(report["preview"], download=_download("Monday", report))
+            _footer(web.MONDAY_FORMULAS, report)
     elif active == "wednesday":
-        with wednesday, st.spinner("Building Wednesday…"):
-            png, overflows, audit, footnotes = wednesday_png(style, extra)
-            _show(png, "Wednesday", style, overflows, (), audit, footnotes, extra)
+        with wednesday:
+            with st.spinner("Building Wednesday…"):
+                report = wednesday_report()
+            web.wednesday(report["data"], download=_download("Wednesday", report))
+            _footer(web.WEDNESDAY_FORMULAS, report)
     else:
-        with friday, st.spinner("Building Friday… (full price history, about 10 seconds)"):
-            png, overflows, week_end, audit, footnotes = friday_png(style, extra)
-            _show(png, "Friday", style, overflows,
-                  (f"Week ended {week_end}. After 4:00 pm ET on Friday this becomes the current week.",), audit, footnotes, extra)
+        with friday:
+            with st.spinner("Building Friday… (full price history, about 10 seconds)"):
+                report = friday_report()
+            web.friday(report["panel"], report["derived"], download=_download("Friday", report))
+            _footer(web.FRIDAY_FORMULAS, report)
     st.caption(f"Rendered {datetime.now(ET):%b %d, %Y · %I:%M %p ET} · "
                "[Detailed Monday and Friday reports](?classic=1)")
