@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "asst_warrants": {
+    "label": "PIPE (traditional) warrants",
+    "strike_usd": 27.0,
+    "expires_at": "2026-10-13T17:00:00-04:00",
+    "note": "Exercise deadline moved from Oct 12 (Columbus Day) to 5:00 pm ET Oct 13. Outstanding count comes from each weekly filing (traditional_warrant_shares).",
+    "sources": [
+      "https://www.kucoin.com/news/flash/strive-extends-exercise-deadline-for-718m-pipe-warrants-to-october-13",
+      "https://www.strive.com/treasury/api/dashboard/base-data"
+    ]
+  },
+  "strategy_reserve_floor_months": {
+    "value": 12,
+    "note": "Strategy's USD Reserve policy: not below 12 months of dividends without board approval (digital credit capital framework)."
+  }
+}

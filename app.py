@@ -11,6 +11,12 @@ if str(friday_source) not in sys.path:
 
 st.set_page_config(page_title="Weekly Reports | Digital Credit", page_icon="₿", layout="wide")
 
+# Redesign previews (Monday, Wednesday, Friday) never replace the live tabs.
+if st.query_params.get("preview") == "1":
+    from preview_page import render as render_preview
+    render_preview()
+    st.stop()
+
 MONDAY = "Monday · Digital Credit"
 FRIDAY = "Friday · Bitcoin & Digital Credit"
 if "weekly_report_tabs" not in st.session_state:
