@@ -71,14 +71,16 @@ then what it did per share.
 - **Header:** price, price/NAV and the balance date.
 - **Bitcoin bought and held.**
 - **The funding block, in three layouts** (page selector, `?layout=`):
+  - **C · Waterfall** (default, the main format): common + preferred, plus cash
+    drawn (FROM CASH) or minus cash kept (TO CASH), = into BTC.
+  - **B · Ledger:** common ATM + preferred ATM = raised, as a short statement, with
+    cash below.
   - **A · Headline:** common ATM and preferred ATM as two large tiles, then one
     cash line.
-  - **B · Ledger** (default): common ATM + preferred ATM = raised, as a short
-    statement, with cash below.
-  - **C · Waterfall:** a waterfall of common + preferred + cash = into BTC.
 
-  In every layout, cash is a balance ("drew $310.0m · $6.09B on hand") and is never
-  counted as a raise.
+  In every layout, cash is a balance and is never counted as a raise. The cash box
+  shows its makeup: Strategy's "$5.04B reserve + $1.05B USD cash", and Strive's
+  "$229.6m cash + $49.7m STRC" (the STRC it holds).
 - **Per share:** BTC/share, NAV/share, amplification ((debt + preferred) ÷ BTC
   value) and shares, each with its weekly change. Strive's PIPE warrant tag (25.8M @
   $27, due Oct 13) disappears after the deadline.

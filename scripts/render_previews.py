@@ -32,14 +32,14 @@ def main():
     parser.add_argument("--offline", action="store_true", help="Use saved prices, committed filings and demo Friday data")
     parser.add_argument("--save-extras", action="store_true", help="Save the fetched extras as the offline snapshot")
     parser.add_argument("--themes", default=themes.DEFAULT.key, help="Comma-separated: " + ", ".join(themes.THEMES))
-    parser.add_argument("--layouts", default="b", help="Monday funding layouts: a (headline), b (ledger), c (waterfall)")
+    parser.add_argument("--layouts", default="c", help="Monday funding layouts: c (waterfall, default), b (ledger), a (headline)")
     args = parser.parse_args()
     chosen = [themes.get(key.strip()) for key in args.themes.split(",") if key.strip()]
     layouts = {"a": "headline", "b": "ledger", "c": "waterfall"}
-    chosen_layouts = [key.strip() for key in args.layouts.split(",") if key.strip() in layouts] or ["b"]
+    chosen_layouts = [key.strip() for key in args.layouts.split(",") if key.strip() in layouts] or ["c"]
 
-    def name(day, theme, layout="b"):
-        suffix = ("" if theme.key == themes.DEFAULT.key else f"-{theme.key}") + ("" if layout == "b" else f"-{layout}")
+    def name(day, theme, layout="c"):
+        suffix = ("" if theme.key == themes.DEFAULT.key else f"-{theme.key}") + ("" if layout == "c" else f"-{layout}")
         return f"{day}{suffix}.png"
     args.out.mkdir(parents=True, exist_ok=True)
 

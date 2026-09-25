@@ -4,7 +4,7 @@ Each tab fetches fresh data when a browser session opens it (cached briefly
 across sessions) and renders the downloadable PNG from those inputs. Only the
 open tab builds. ``?report=monday|wednesday|friday`` deep-links a tab,
 ``?theme=neon|classic|orbit`` picks a style (Neon Ledger is the default) and
-``?layout=a|b|c`` picks Monday's funding block. The detailed Monday and Friday
+``?layout=a|b|c`` picks Monday's funding block (c, the waterfall, is the default). The detailed Monday and Friday
 reports remain at ``?classic=1``. Footnotes live on the page, never in the
 downloadable X images.
 """
@@ -24,6 +24,7 @@ TABS = {"monday": "Monday · The Accretion Ledger", "wednesday": "Wednesday · T
 STYLES = {"neon": "Neon Ledger", "classic": "Classic", "orbit": "Brutal Orbit"}
 DEFAULT_STYLE = "neon"
 LAYOUTS = {"a": "headline", "b": "ledger", "c": "waterfall"}
+DEFAULT_LAYOUT = "c"  # the waterfall is the Accretion Ledger's main format
 
 
 @st.cache_data(ttl=900, show_spinner=False)
@@ -66,11 +67,11 @@ def _monday():
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def monday_png(style=DEFAULT_STYLE, layout="b"):
+def monday_png(style=DEFAULT_STYLE, layout=DEFAULT_LAYOUT):
     from panels import themes
     from panels.monday_preview import audit_rows, notes, render_png
     preview, notice, saved = _monday()
-    png, overflows = render_png(preview, themes.get(style), LAYOUTS.get(layout, "ledger"))
+    png, overflows = render_png(preview, themes.get(style), LAYOUTS.get(layout, LAYOUTS[DEFAULT_LAYOUT]))
     return png, overflows, notice, saved, audit_rows(preview), notes(preview)
 
 
@@ -126,7 +127,7 @@ def render():
     if "panel_style" not in st.session_state:
         st.session_state["panel_style"] = st.query_params.get("theme") if st.query_params.get("theme") in STYLES else DEFAULT_STYLE
     if "panel_layout" not in st.session_state:
-        st.session_state["panel_layout"] = st.query_params.get("layout") if st.query_params.get("layout") in LAYOUTS else "b"
+        st.session_state["panel_layout"] = st.query_params.get("layout") if st.query_params.get("layout") in LAYOUTS else DEFAULT_LAYOUT
     top = st.columns([3, 2], vertical_alignment="center")
     with top[0]:
         st.segmented_control("Style", list(STYLES), format_func=STYLES.get, key="panel_style", label_visibility="collapsed")
@@ -149,8 +150,8 @@ def render():
         with monday:
             st.segmented_control("Funding layout", list(LAYOUTS), key="panel_layout",
                                  format_func=lambda key: {"a": "A · Headline", "b": "B · Ledger", "c": "C · Waterfall"}[key])
-            layout = st.session_state.get("panel_layout") or "b"
-            if st.query_params.get("layout", "b") != layout:
+            layout = st.session_state.get("panel_layout") or DEFAULT_LAYOUT
+            if st.query_params.get("layout", DEFAULT_LAYOUT) != layout:
                 st.query_params["layout"] = layout
             with st.spinner("Building Monday…"):
                 png, overflows, notice, saved, audit, footnotes = monday_png(style, layout)

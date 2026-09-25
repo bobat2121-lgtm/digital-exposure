@@ -43,7 +43,7 @@ class PanelsPageTests(TestCase):
         app = self.app()
         self.assertEqual(len(app.exception), 0, [item.message for item in app.exception])
         self.assertEqual([tab.label for tab in app.tabs], list(panels_page.TABS.values()))
-        self.calls["monday_png"].assert_called_once_with("neon", "b")
+        self.calls["monday_png"].assert_called_once_with("neon", "c")
         self.calls["wednesday_png"].assert_not_called()
         self.calls["friday_png"].assert_not_called()
         self.assertEqual(app.query_params["report"], ["monday"])
@@ -59,13 +59,13 @@ class PanelsPageTests(TestCase):
     def test_unknown_values_fall_back_to_monday_neon(self):
         app = self.app({"report": "sunday", "theme": "vapor", "layout": "z"})
         self.assertEqual(len(app.exception), 0, [item.message for item in app.exception])
-        self.calls["monday_png"].assert_called_once_with("neon", "b")
+        self.calls["monday_png"].assert_called_once_with("neon", "c")
         self.assertEqual(app.query_params["theme"], ["neon"])
 
     def test_monday_layout_link(self):
-        app = self.app({"layout": "c"})
+        app = self.app({"layout": "b"})
         self.assertEqual(len(app.exception), 0, [item.message for item in app.exception])
-        self.calls["monday_png"].assert_called_once_with("neon", "c")
+        self.calls["monday_png"].assert_called_once_with("neon", "b")
 
     def test_classic_link_keeps_the_detailed_reports(self):
         with patch("monday_page.render") as monday:

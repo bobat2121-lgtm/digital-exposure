@@ -250,7 +250,7 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
 # Portrait, phone-first: 1440 px wide so a phone shows it ~0.27× (see draw.T_*).
 # Both company cards share one row grid so every figure lines up across.
 VARIANTS = {"headline": "A · Headline", "ledger": "B · Ledger", "waterfall": "C · Waterfall"}
-DEFAULT_VARIANT = "ledger"
+DEFAULT_VARIANT = "waterfall"
 TOP_H = 372        # the variant-specific funding block
 ROW_H = 76         # per-share rows
 
