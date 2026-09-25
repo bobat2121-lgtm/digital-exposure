@@ -174,6 +174,11 @@ def audit_monday(report, monday, extras, rows, now):
                 status = "PASS" if -0.02 * cost <= other <= 0.25 * cost else "WARN"
                 check("monday", "ASST.deployed_vs_cost", "ASST deployed vs BTC cost (rest = dividends, fees)", status,
                       round(e.net_funding), round(cost), f"other uses {other / 1e6:+.1f}m", "strive.com transactions cost")
+            feed = strive.get("treasury_feed") or {}
+            if feed.get("totalDividendCoverage"):
+                compare("monday", "ASST.coverage_feed", "ASST coverage years vs Strive treasury feed", e.coverage_years,
+                        number(feed["totalDividendCoverage"]), .06, relative=True, warn_only=True,
+                        source="strive.com/api/treasury totalDividendCoverage", detail="BTC price timing differs")
             dash_months = number(((strive.get("cash") or [{}])[0]).get("dividend_reserve_months"))
             compare("monday", "ASST.cover", "ASST dividend reserve months vs dashboard", e.reserve_months, dash_months, 0,
                     source="strive.com dashboard")
@@ -208,12 +213,18 @@ def audit_wednesday(data, extras, now):
     pending = sorted((row for row in strive.get("sata_dividends") or [] if row.get("status") != "paid"),
                      key=lambda row: row["payDate"])
     if paid:
-        rate = number(paid[-1]["cashAmount"]) * 252
-        compare("wednesday", "SATA.rate", "SATA stated rate = latest daily dividend × 252", data["sata_rate"], rate, .001,
-                source="strive.com dashboard preferredDividends")
+        from panels.extras import sata_rate_from_daily
+        last_pay = date.fromisoformat(paid[-1]["payDate"])
+        rate = sata_rate_from_daily(number(paid[-1]["cashAmount"]), last_pay.year, last_pay.month)
+        compare("wednesday", "SATA.rate", "SATA stated rate vs daily dividend × business days × 12", data["sata_rate"], rate, .05,
+                source="strive.com preferredDividends and the federal business-day calendar")
+        feed = strive.get("treasury_feed") or {}
+        if feed.get("dividendRate"):
+            compare("wednesday", "SATA.rate_feed", "SATA stated rate vs Strive treasury feed", data["sata_rate"],
+                    number(feed["dividendRate"]) * 100, .001, source="strive.com/api/treasury dividendRate")
         change = next((row for row in pending if number(row["cashAmount"]) != number(paid[-1]["cashAmount"])), None)
         check("wednesday", "SATA.next_rate", "SATA announced next rate", "WARN" if change else "PASS",
-              f"{number(change['cashAmount']) * 252:.2f}% from {change['payDate']}" if change else "unchanged",
+              f"daily ${number(change['cashAmount']):.4f} from {change['payDate']}" if change else "unchanged",
               None, "a scheduled change will move the spread" if change else "pending payments match the current rate",
               "strive.com dashboard preferredDividends (pending)")
     for ticker, hero in heroes.items():

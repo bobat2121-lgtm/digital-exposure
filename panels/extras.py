@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 import csv
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 import io
 import json
 import math
@@ -119,6 +119,18 @@ def fetch_strive() -> dict:
     paid = [row for row in dividends if row.get("status") == "paid"]
     latest_paid = paid[0] if paid else {}
     daily = number(latest_paid.get("cashAmount"))
+    # Strive's stated annual rate (e.g. 0.13) from its public treasury feed. The
+    # daily amount is that rate ÷ 12 split over the month's business days.
+    stated, feed = None, {}
+    try:
+        feed = _json("https://strive.com/api/treasury").get("treasury") or {}
+        stated = number(feed.get("dividendRate"))
+    except Exception:  # the dashboard data above still gives the rate
+        feed = {}
+    computed = None
+    if daily is not None and latest_paid.get("payDate"):
+        pay = date.fromisoformat(latest_paid["payDate"])
+        computed = sata_rate_from_daily(daily, pay.year, pay.month)
     return {
         "as_of": datetime.fromtimestamp(number(data.get("pulledAtTimestamp")) / 1000, UTC).isoformat()
         if number(data.get("pulledAtTimestamp")) else None,
@@ -129,11 +141,44 @@ def fetch_strive() -> dict:
         "transactions": [{key: row.get(key) for key in ("transaction_date", "type", "btc_amount", "cost", "total_btc_holdings",
                                                         "cost_basis", "total_cost_basis")} for row in trades[:40]],
         "sata_dividends": [{key: row.get(key) for key in ("payDate", "recordDate", "cashAmount", "status")} for row in dividends[:120]],
-        # SATA pays every business day; 252 payments per year is the stated-rate basis.
         "sata_daily_dividend": daily,
-        "sata_rate_pct": daily * 252 if daily is not None else None,
+        "sata_rate_pct": stated * 100 if stated else computed,
+        "sata_rate_source": "strive.com/api/treasury dividendRate" if stated else "daily dividend × business days × 12",
+        "treasury_feed": {key: feed.get(key) for key in ("asOf", "reserveMonths", "totalDividendCoverage", "dividendRate",
+                                                         "btcHoldings", "cash", "marketableSecurities", "debt")} if feed else None,
         "sata_rate_as_of": latest_paid.get("payDate"),
     }
+
+
+def federal_holidays(year: int) -> set[date]:
+    """US federal holidays as observed (Saturday → Friday, Sunday → Monday)."""
+    def nth(month, weekday, n):
+        first = date(year, month, 1)
+        return first + timedelta(days=(weekday - first.weekday()) % 7 + 7 * (n - 1))
+
+    def last(month, weekday):
+        day = date(year, month + 1, 1) - timedelta(days=1) if month < 12 else date(year, 12, 31)
+        return day - timedelta(days=(day.weekday() - weekday) % 7)
+
+    fixed = [date(year, 1, 1), date(year, 6, 19), date(year, 7, 4), date(year, 11, 11), date(year, 12, 25)]
+    observed = {day - timedelta(days=1) if day.weekday() == 5 else day + timedelta(days=1) if day.weekday() == 6 else day
+                for day in fixed}
+    return observed | {nth(1, 0, 3), nth(2, 0, 3), last(5, 0), nth(9, 0, 1), nth(10, 0, 2), nth(11, 3, 4)}
+
+
+def business_days_in_month(year: int, month: int) -> int:
+    holidays = federal_holidays(year)
+    day, count = date(year, month, 1), 0
+    while day.month == month:
+        if day.weekday() < 5 and day not in holidays:
+            count += 1
+        day += timedelta(days=1)
+    return count
+
+
+def sata_rate_from_daily(daily: float, year: int, month: int) -> float:
+    """Annual % rate: the monthly dividend (daily × business days) × 12, to the nearest 0.05%."""
+    return round(daily * business_days_in_month(year, month) * 12 * 100 / 5) * 5 / 100
 
 
 # ── FRED ────────────────────────────────────────────────────────────────────

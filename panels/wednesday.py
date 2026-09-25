@@ -26,7 +26,7 @@ WIDTH, HEIGHT = 1440, 1920
 TITLE = ("The ", "Coupon", " Sheet")
 CONFIG = Path(__file__).resolve().parents[1] / "data" / "preview-config.json"
 EVENTS = Path(__file__).resolve().parents[1] / "data" / "calendar-events.json"
-CALENDAR_ROWS = 6
+CALENDAR_ROWS = 7
 HEROES = ("STRC", "SATA")
 REST = ("STRF", "STRK", "STRD", "STRE")
 ISSUER = {"STRC": "Strategy", "STRF": "Strategy", "STRK": "Strategy", "STRD": "Strategy", "STRE": "Strategy", "SATA": "Strive"}
@@ -129,27 +129,33 @@ def _strc_rate_at(item):
 def _sata_rate_at(strive):
     """SATA's stated rate on a date from Strive's dividend history.
 
-    Daily payments (June 2026 onward) annualize over 252 business days; the
-    earlier monthly payments over 12.
+    Since June 2026 SATA pays every business day: the monthly dividend (rate ÷ 12)
+    is split evenly over the month's business days, so the rate is the daily
+    amount × that month's business days × 12. Earlier monthly payments × 12.
     """
+    from .extras import sata_rate_from_daily
     changes, last = [], None
     for row in sorted(strive.get("sata_dividends") or [], key=lambda row: row.get("payDate") or ""):
         amount = number(row.get("cashAmount"))
         if amount is None or not row.get("payDate"):
             continue
-        rate = round(amount * (252 if amount < .5 else 12), 4)
-        if rate != last:
-            changes.append((row["payDate"], rate))
-            last = rate
+        changes.append((row["payDate"], amount))
     current = number(strive.get("sata_rate_pct"))
 
     def rate(day):
-        value = None
-        for pay, level in changes:
+        amount = None
+        for pay, value in changes:
             if pay > day:
                 break
-            value = level
-        return value if value is not None else (changes[0][1] if changes else current)
+            amount = value
+        if amount is None:
+            amount = changes[0][1] if changes else None
+        if amount is None:
+            return current
+        if amount >= .5:  # a monthly payment
+            return amount * 12
+        parsed = date.fromisoformat(day[:10])
+        return sata_rate_from_daily(amount, parsed.year, parsed.month)
     return rate
 
 
@@ -243,7 +249,7 @@ def _scheduled_events(extras: dict, today: date) -> list[tuple]:
     horizon = (today + timedelta(days=75)).isoformat()
     for day in calendar.get("fomc") or []:
         if today.isoformat() <= day <= horizon:
-            events.append((day, "FOMC decision", "federalreserve.gov"))
+            events.append((day, "FOMC decision", "fomc"))
             break  # the next decision is enough
     try:
         curated = json.loads(EVENTS.read_text(encoding="utf-8")).get("events") or [] if EVENTS.exists() else []
@@ -254,13 +260,18 @@ def _scheduled_events(extras: dict, today: date) -> list[tuple]:
         day, label = event.get("date"), event.get("label")
         if not day or not label or day < today.isoformat():
             continue
-        events.append((day, label, event.get("source") or "curated"))
+        events.append((day, label, "curated"))
         if event.get("kind") == "earnings" and event.get("ticker"):
             confirmed.add(event["ticker"])
     for ticker, item in (calendar.get("earnings") or {}).items():
         if item and ticker not in confirmed and today.isoformat() <= item["date"] <= horizon:
-            events.append((item["date"], f"{ticker} earnings{' (est.)' if item.get('estimated') else ''}", item.get("source", "")))
+            events.append((item["date"], f"{ticker} earnings{' est.' if item.get('estimated') else ''}", "earnings"))
     return events
+
+
+def _pick(events: list[tuple], today: date) -> list[tuple]:
+    """The next dates in order: pay dates, rate announcements, FOMC, earnings, deadlines."""
+    return sorted(event for event in events if event[0] >= today.isoformat())[:CALENDAR_ROWS]
 
 
 def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None) -> dict:
@@ -335,21 +346,17 @@ def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None)
     events = {}
     for series in ("STRC",) + REST:
         item = strategy.get(series) or {}
-        for label, key in (("record", "nextRecordDate"), ("pay", "nextPayoutDate")):
+        for label, key in (("pay", "nextPayoutDate"),):  # pay dates only: record dates add noise
             day = item.get(key)
             if day and date.fromisoformat(day) >= today:
                 events.setdefault((day, label), []).append(series)
-    calendar = [(day, f"{' · '.join(series)} dividend {label}", "record date" if label == "record" else "payment")
+    calendar = [(day, f"{' · '.join(series)} dividend {label}", "dividend")
                 for (day, label), series in events.items()]
     warrants = (monday.extras.get("ASST") and monday.extras["ASST"].warrants) or None if monday is not None else None
     if warrants:
-        calendar.append((warrants["expires"].date().isoformat(), "ASST warrant exercise deadline",
-                         f"{warrants['count'] / 1e6:.1f}m @ ${warrants['strike']:.0f} · 5 pm ET"))
-    quarter_end = date(today.year, 3 * ((today.month - 1) // 3) + 3, 1)
-    quarter_end = (quarter_end.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
-    calendar.append((quarter_end.isoformat(), "Quarter end · QTD restarts", "next Monday ledger"))
+        calendar.append((warrants["expires"].date().isoformat(), "ASST warrant exercise deadline", "deadline"))
     calendar += _scheduled_events(extras, today)
-    calendar = sorted(event for event in calendar if event[0] >= today.isoformat())
+    calendar = _pick(calendar, today)
     coverage = dict(monday.extras) if monday is not None else {}
     stamp = max((row["date"] for row in _rows(extras, "STRC")), default=None)
     return {"ladder": ladder, "references": references, "bill": bill, "headline": headline, "heroes": heroes, "rest": rest,
@@ -459,7 +466,7 @@ def _hero(canvas, box, ticker, hero, scale, p, theme, stripe, data):
         canvas.text(L, top + 70, "History unavailable", T_BODY, p.muted)
 
     # Par (or SATA's rate-cut test), liquidity and size.
-    strip = top + 188
+    strip = top + 180
     canvas.draw.rounded_rectangle((L - 10, strip, R + 10, strip + 104), radius=min(10, p.radius + 4), fill=p.tint)
     par, liquidity = hero["par"], hero["liquidity"]
     at = par.get("at_par_20")
@@ -478,7 +485,7 @@ def _hero(canvas, box, ticker, hero, scale, p, theme, stripe, data):
 
     # The issuer's USD cover against its own target: what stands behind the coupon.
     cover = data["cover"]["MSTR" if ticker == "STRC" else "ASST"]
-    y = strip + 124
+    y = strip + 116
     weeks, target, current = cover["weeks"], cover["target"], cover["current"]
     canvas.text(L, y, "USD COVER", T_MIN, p.muted, True)
     canvas.text(L, y + 34, f"{current:.0f} mo" if current else "—", T_VALUE - 4, p.ink, True)
@@ -505,13 +512,13 @@ def _rest(canvas, box, rest, p, theme, headline):
     L, R = x0 + 28, x1 - 28
     _card(canvas, box, p, theme)
     _heading(canvas, L, y0 + 18, "The rest of the ladder", p, "bp", R)
-    columns = (("PRICE", L + 262), ("YIELD", L + 412), (f"OVER {SHORT[headline].upper()}", L + 646), ("OVER HY", R))
+    columns = (("PRICE", L + 262), ("YIELD", L + 412), (f"OVER {SHORT[headline].upper()}", L + 626), ("OVER HY", R))
     for label, x in columns:
         canvas.text(x, y0 + 64, label, T_MIN, p.muted, True, align="right")
     canvas.draw.line((L, y0 + 102, R, y0 + 102), fill=p.line, width=2)
     for index, row in enumerate(rest):
         item = row["item"]
-        y = y0 + 112 + index * 42
+        y = y0 + 116 + index * 48
         currency = "€" if item.currency == "EUR" else "$"
         canvas.text(L, y, item.ticker, T_BODY, p.ink, True)
         values = (f"{currency}{item.price:,.2f}" if item.price else "—", _pct(item.effective),
@@ -527,11 +534,11 @@ def _calendar(canvas, box, data, p, theme):
     _heading(canvas, L, y0 + 18, "Calendar", p, "days", R)
     today = data["now"].date()
     for index, (day, label, note) in enumerate(data["calendar"][:CALENDAR_ROWS]):
-        y = y0 + 62 + index * 38
+        y = y0 + 60 + index * 37
         parsed = date.fromisoformat(day)
-        canvas.pill(L, y - 4, f"{parsed:%b} {parsed.day}".upper(), T_MIN, p.card, p.deep, pad=(10, 4))
+        canvas.pill(L, y - 1, f"{parsed:%b} {parsed.day}".upper(), T_MIN, p.card, p.deep, pad=(10, 1))
         short = label.replace(" dividend ", " ").replace("STRF · STRK · STRD · STRE", "STRF/K/D/E").replace(
-            "ASST warrant exercise deadline", "ASST warrants").replace("Quarter end · QTD restarts", "Quarter end")
+            "ASST warrant exercise deadline", "ASST warrants due")
         canvas.text(L + 128, y, short, T_MIN, p.ink, True, max_width=R - L - 180)
         canvas.text(R, y, f"{(parsed - today).days}", T_MIN, p.muted, align="right")
 
@@ -545,11 +552,11 @@ def _flow(canvas, box, ledger, p, theme):
     span = (R - L) / len(labels)
     centers = [L + span * (n + .5) for n in range(len(labels))]
     for label, x in zip(labels, centers):
-        canvas.text(x, y0 + 66, label, T_MIN, p.muted, True, align="center", max_width=span - 8)
-    canvas.draw.line((L, y0 + 104, R, y0 + 104), fill=p.line, width=2)
+        canvas.text(x, y0 + 62, label, T_MIN, p.muted, True, align="center", max_width=span - 8)
+    canvas.draw.line((L, y0 + 100, R, y0 + 100), fill=p.line, width=2)
     totals = {"strc": 0, "other": 0, "mstr": 0, "sata": 0}
     for index, entry in enumerate(ledger):
-        y = y0 + 114 + index * 46
+        y = y0 + 110 + index * 40
         values = (_short(entry["week"]), _money(entry.get("strc"), signed=True), _money(entry.get("other"), signed=True),
                   _money(entry.get("mstr"), signed=True), _money(entry.get("sata"), signed=True),
                   f"{(entry.get('mstr_btc') or 0):,.0f} · {(entry.get('asst_btc') or 0):,.0f}")
@@ -559,7 +566,7 @@ def _flow(canvas, box, ledger, p, theme):
             canvas.text(x, y, value, T_BODY - 2, color, money, align="center", max_width=span - 8)
         for key in totals:
             totals[key] += entry.get(key) or 0
-    y = y0 + 118 + len(ledger) * 46
+    y = y0 + 116 + len(ledger) * 40
     canvas.draw.line((L, y - 8, R, y - 8), fill=p.line, width=2)
     canvas.text(centers[0], y + 2, f"{len(ledger)} WK", T_BODY - 2, p.ink, True, align="center")
     for key, x in zip(("strc", "other", "mstr", "sata"), centers[1:5]):
@@ -601,11 +608,11 @@ def render_png(data: dict, theme: themes.Theme = themes.DEFAULT) -> tuple[bytes,
             x0 = M + index * (HALF + GAP)
             _hero(canvas, (x0, top, x0 + HALF, top + 966), ticker, heroes[ticker], scale, p, theme, p.company(ticker), data)
         y = top + 984
-        split = M + 868
-        _rest(canvas, (M, y, split, y + 300), data["rest"], p, theme, data["headline"])
-        _calendar(canvas, (split + GAP, y, WIDTH - M, y + 300), data, p, theme)
-        y += 318
-        _flow(canvas, (M, y, WIDTH - M, y + 356), data["ledger"], p, theme)
+        split = M + 820
+        _rest(canvas, (M, y, split, y + 330), data["rest"], p, theme, data["headline"])
+        _calendar(canvas, (split + GAP, y, WIDTH - M, y + 330), data, p, theme)
+        y += 348
+        _flow(canvas, (M, y, WIDTH - M, y + 328), data["ledger"], p, theme)
         png = canvas.save(metadata={"Title": "The Coupon Sheet", "Theme": theme.key})
     return png, canvas.overflows
 
@@ -615,7 +622,8 @@ def notes(data: dict) -> list[str]:
     headline = data["headline"]
     stale = data.get("stale") or ()
     return [line for line in (
-        "Effective yield = stated rate × $100 ÷ price (Strategy KPIs; SATA = Strive's daily dividend × 252). "
+        "Effective yield = stated rate × $100 ÷ price (Strategy KPIs; SATA's stated rate from Strive, whose daily "
+        "dividend is the rate ÷ 12 split over the month's business days). "
         f"Spreads = effective yield − benchmark, in basis points. Headline benchmark: {headline} — Strategy's stated "
         "risk-free rate and the bill Jeff Walton compares digital credit to; both preferreds reset monthly around $100 par.",
         "Benchmarks from FRED: SOFR, DGS3MO (3M bill), DGS10 (10Y), ICE BofA US Corporate (IG) and "

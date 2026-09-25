@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "data" / "preview-config.json"
 ET = ZoneInfo("America/New_York")
 
-WIDTH, HEIGHT = 1440, 1800
+WIDTH, HEIGHT = 1440, 1760
 MARGIN, GAP = 40, 24
 PANEL = (WIDTH - 2 * MARGIN - GAP) // 2
 INSET = 30
@@ -430,22 +430,20 @@ def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, report_company, i
     canvas.draw.line((L, top + 146, R, top + 146), fill=p.line, width=2)
 
     # Bitcoin bought — the point of the week — then how it was funded.
-    y = top + 164
-    canvas.text(L, y, "BITCOIN BOUGHT", T_LABEL, p.muted, True)
-    canvas.text(R, y, "HELD", T_LABEL, p.muted, True, align="right")
-    canvas.text(L, y + 36, _btc(e.btc_bought, True), T_BIG + 8, p.ink, True, max_width=(R - L) * .6)
-    canvas.text(R, y + 52, _btc(e.btc_held), T_VALUE - 4, p.ink, True, align="right", max_width=(R - L) * .4)
-    y += 146
-    canvas.draw.line((L, y, R, y), fill=p.line, width=2)
-    TOPS.get(variant, _top_ledger)(canvas, e, L, R, y + 22, p, stripe)
-    y += 22 + TOP_H + 26
+    y = top + 168
+    canvas.text(L, y, "BITCOIN BOUGHT", T_MIN, p.muted, True)
+    canvas.text(R, y, "HELD", T_MIN, p.muted, True, align="right")
+    canvas.text(L, y + 34, _btc(e.btc_bought, True), T_BIG + 8, p.ink, True, max_width=(R - L) * .6)
+    canvas.text(R, y + 50, _btc(e.btc_held), T_VALUE - 4, p.ink, True, align="right", max_width=(R - L) * .4)
+    y = top + 300
+    TOPS.get(variant, _top_waterfall)(canvas, e, L, R, y, p, stripe)
 
     # Per share: value and weekly change.
-    canvas.draw.line((L, y, R, y), fill=p.line, width=2)
+    y += TOP_H + 36
     value_x = L + (R - L) * .74
-    canvas.text(L, y + 14, "PER SHARE", T_MIN, p.muted, True)
-    canvas.text(R, y + 14, "WEEK", T_MIN, p.muted, True, align="right")
-    y += 58
+    canvas.text(L, y, "PER SHARE", T_MIN, p.muted, True)
+    canvas.text(R, y, "WEEK", T_MIN, p.muted, True, align="right")
+    y += 44
     rows = (("BTC / share", _clean(c.bitcoin.value).replace(" sats", ""), c.bitcoin.short_change, True),
             ("NAV / share", _clean(c.nav_per_share), _clean(c.nav_change.value), True),
             ("Amplification", _pct(e.amplification_pct), _pct(e.amplification_change_pp, 2, True, " pp"), False),
@@ -458,13 +456,14 @@ def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, report_company, i
         y += ROW_H
     if e.warrants:
         w = e.warrants
-        canvas.pill(L, y - 8, f"{w['count'] / 1e6:.1f}M WARRANTS @ ${w['strike']:.0f} · DUE {w['expires']:%b} {w['expires'].day}".upper(),
+        canvas.pill(L, y - 6, f"{w['count'] / 1e6:.1f}M WARRANTS @ ${w['strike']:.0f} · DUE {w['expires']:%b} {w['expires'].day}".upper(),
                     T_MIN, p.card, stripe, pad=(14, 6))
-    y += 52
+    y += 58
 
     # Coverage against each issuer's own target.
     box_h = 132
-    canvas.draw.rounded_rectangle((L - 10, y, R + 10, y + box_h), radius=min(10, p.radius + 4), fill=p.tint)
+    radius = min(12, p.radius)
+    canvas.draw.rounded_rectangle((L - 12, y, R + 12, y + box_h), radius=radius, fill=p.tint)
     on_target = e.reserve_months and e.target_months and e.reserve_months >= e.target_months - .5
     cells = (("USD COVER", f"{e.reserve_months:.0f} mo" if e.reserve_months else "—", _cover_note(e), on_target),
              ("COVERAGE", f"{e.coverage_years:.0f} yrs" if e.coverage_years else "—", "", False),
@@ -476,23 +475,25 @@ def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, report_company, i
         canvas.text(cx, y + 52, value, T_VALUE - 4, p.ink, True, max_width=cell - 12)
         if note:
             canvas.text(cx, y + 96, note, T_MIN, p.positive if good else p.soft, good, max_width=cell - 12)
-    y += box_h + 26
+    y += box_h + 20
 
     # Growth: the same multi-week window for both companies, then QTD and YTD.
     weeks = e.window.get("weeks")
     columns = [(f"{weeks} WK" if weeks else "WK", _pct(e.window.get("btc"), 1, True) if weeks else "—",
                 _pct(e.window.get("nav"), 1, True) if weeks else "—")]
     columns += [(period.period, _one_decimal(period.btc_growth), _one_decimal(period.nav_growth)) for period in c.periods[:2]]
+    box_h = min(186, bottom - 28 - y)
+    canvas.draw.rounded_rectangle((L - 12, y, R + 12, y + box_h), radius=radius, fill=p.tint)
     label_w = (R - L) * .34
     col_w = (R - L - label_w) / max(1, len(columns))
-    canvas.text(L, y + 8, "GROWTH", T_MIN, p.muted, True)
+    canvas.text(L + 6, y + 16, "GROWTH", T_MIN, p.muted, True)
     for n, (label, btc, nav) in enumerate(columns):
-        cx = L + label_w + (n + 1) * col_w
-        canvas.text(cx, y + 8, label, T_MIN, p.muted, True, align="right")
-        canvas.text(cx, y + 52, btc, T_BODY + 2, _tone_text(btc, p), True, align="right", max_width=col_w - 8)
-        canvas.text(cx, y + 112, nav, T_BODY + 2, _tone_text(nav, p), True, align="right", max_width=col_w - 8)
-    canvas.text(L, y + 56, "BTC / share", T_BODY - 2, p.ink, True, max_width=label_w - 8)
-    canvas.text(L, y + 116, "NAV / share", T_BODY - 2, p.ink, True, max_width=label_w - 8)
+        cx = L + label_w + (n + 1) * col_w - 6
+        canvas.text(cx, y + 16, label, T_MIN, p.muted, True, align="right")
+        canvas.text(cx, y + 62, btc, T_BODY + 2, _tone_text(btc, p), True, align="right", max_width=col_w - 8)
+        canvas.text(cx, y + 122, nav, T_BODY + 2, _tone_text(nav, p), True, align="right", max_width=col_w - 8)
+    canvas.text(L + 6, y + 66, "BTC / share", T_BODY - 2, p.ink, True, max_width=label_w - 8)
+    canvas.text(L + 6, y + 126, "NAV / share", T_BODY - 2, p.ink, True, max_width=label_w - 8)
 
 
 def _header(canvas, preview, theme, p):
@@ -531,10 +532,13 @@ def notes(preview: MondayPreview) -> list[str]:
         "Capital raised = ATM issuance − repurchases, common and preferred. Cash is an existing balance, never counted as a raise. "
         "Deployed = raised + cash drawn (or − cash kept): bitcoin purchases plus dividends and fees. "
         "Strive's common figure is an estimate: net share change × prior-week VWAP.",
-        "Amplification = (debt + preferred) ÷ BTC value. NAV, price/NAV, amplification, coverage and growth are estimates from "
-        "dated balances and reconstructed preferred claims at the displayed prices; growth holds prices constant.",
-        "USD cover = months of preferred dividends, read against Strategy's 12-month floor and Strive's 18-month goal. "
-        f"Coverage = (BTC + cash) ÷ annual dividends; break-even = dividends ÷ BTC value. {sources}.",
+        "Amplification = (debt + preferred claims) ÷ BTC value, Strive's definition and Strategy's before July 23, 2026 "
+        "(strategy.com's debtPrefByBN). Strategy's current \"amplification\" KPI is BTC reserve ÷ net reserve (about 1.25×). "
+        "NAV, price/NAV, amplification, coverage and growth are estimates from dated balances and reconstructed preferred "
+        "claims at the displayed prices; growth holds prices constant.",
+        "USD cover = months of dividend (and, for Strategy, interest) obligations held in USD, read against Strategy's 12-month "
+        "floor and Strive's 18-month goal. Coverage = (BTC + cash) ÷ annual obligations; break-even = obligations ÷ BTC value. "
+        f"{sources}.",
         f"Multi-week growth window: {windows}." if windows else "",
         *preview.notes,
     ) if line]

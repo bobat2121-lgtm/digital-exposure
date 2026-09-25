@@ -71,13 +71,13 @@ CLASSIC = Theme(
 NEON = Theme(
     "neon", "Neon Ledger (cyberpunk)", "cyber",
     monday=Palette("#060A14", "#0C1324", "#E8F1FF", "#8FA2CC", "#5D6E96", "#1B2842", "#101B31", "#22E3FF",
-                   "#3DFFA2", "#FF4D7A", "#FFE14D", "#FF3DCB", "#FFE14D", outline="#1F3358", radius=4, cash="#0F2338",
+                   "#3DFFA2", "#FF4D7A", "#FFE14D", "#FF3DCB", "#FFE14D", outline="#1C2B4A", radius=18, cash="#0F2338",
                    strategy="#22E3FF", strive="#FF3DCB"),
     wednesday=Palette("#0A0714", "#120D22", "#F2E9FF", "#A796C9", "#6C5E8E", "#271C40", "#181129", "#FF3DCB",
-                      "#3DFFA2", "#FF4D7A", "#FFE14D", "#22E3FF", "#FFE14D", deep="#FF3DCB", outline="#34245A", radius=4,
+                      "#3DFFA2", "#FF4D7A", "#FFE14D", "#22E3FF", "#FFE14D", deep="#FF3DCB", outline="#2C2050", radius=18,
                       strategy="#22E3FF", strive="#FF3DCB"),
     friday=Palette("#04090A", "#0A1416", "#E6FFFB", "#88AEB0", "#557577", "#16292C", "#0E1C1F", "#FFC23D",
-                   "#3DFFA2", "#FF4D7A", "#FFE14D", "#22E3FF", "#FF3DCB", band="#3DFFA2", outline="#1B3A3E", radius=4,
+                   "#3DFFA2", "#FF4D7A", "#FFE14D", "#22E3FF", "#FF3DCB", band="#3DFFA2", outline="#18333A", radius=18,
                    strategy="#22E3FF", strive="#FF3DCB"),
     title_style="neon", decor="grid", uppercase_titles=True,
 )
@@ -114,27 +114,31 @@ def card(canvas: Canvas, box, p: Palette, accent: str | None = None, theme: Them
         canvas.draw.rectangle((x0 + 8, y0 + 8, x1 + 8, y1 + 8), fill=p.outline or p.ink)
     canvas.draw.rounded_rectangle(box, radius=p.radius, fill=p.card,
                                   outline=p.outline, width=p.outline_width if p.outline else 0)
-    if accent:
+    if accent and theme.decor == "grid":
+        # Neon: a rounded light bar inset along the top edge, with a faint wash beneath it.
+        inset = p.radius + 6
+        wash = mix(accent, p.card, .07)
+        canvas.draw.rounded_rectangle((x0 + 2, y0 + 2, x1 - 2, y0 + 2 + 2 * p.radius), radius=p.radius, fill=wash)
+        canvas.draw.rectangle((x0 + 2, y0 + 2 + p.radius, x1 - 2, y0 + 2 + 2 * p.radius), fill=p.card)
+        canvas.draw.rounded_rectangle((x0 + inset, y0 - 1, x1 - inset, y0 + accent_height - 1), radius=accent_height // 2, fill=accent)
+    elif accent:
         inset = p.radius / 2
         canvas.draw.rectangle((x0 + inset, y0, x1 - inset, y0 + accent_height), fill=accent)
-    if theme.decor == "grid":
-        # HUD corner brackets.
-        color, arm = accent or p.accent, 22
-        for cx, cy, dx, dy in ((x0, y0, 1, 1), (x1, y0, -1, 1), (x0, y1, 1, -1), (x1, y1, -1, -1)):
-            canvas.draw.line((cx, cy, cx + dx * arm, cy), fill=color, width=3)
-            canvas.draw.line((cx, cy, cx, cy + dy * arm), fill=color, width=3)
 
 
 def background(canvas: Canvas, p: Palette, theme: Theme, header_height=150, orbit_at=(1190, 76, .8)):
     """``orbit_at`` = (x, y, scale) of the planet, placed in each header's free space."""
     w, h = canvas.image.size
     if theme.decor == "grid":
-        for x in range(0, w, 40):
-            canvas.draw.line((x, 0, x, h), fill=mix(p.line, p.bg, .45), width=1)
-        for y in range(0, h, 40):
-            canvas.draw.line((0, y, w, y), fill=mix(p.line, p.bg, .45), width=1)
+        # A faint 48-px grid and a soft glow behind the title.
+        glow = Image.new("RGB", (w, header_height * 2), p.bg)
+        ImageDraw.Draw(glow).ellipse((-w * .2, -header_height, w * .75, header_height * 1.2), fill=mix(p.accent, p.bg, .10))
+        canvas.image.paste(glow.filter(ImageFilter.GaussianBlur(90)), (0, 0))
+        for x in range(0, w, 48):
+            canvas.draw.line((x, 0, x, h), fill=mix(p.line, p.bg, .28), width=1)
+        for y in range(0, h, 48):
+            canvas.draw.line((0, y, w, y), fill=mix(p.line, p.bg, .28), width=1)
         canvas.draw.rectangle((0, 0, w, 4), fill=p.accent)
-        canvas.draw.rectangle((0, 4, w * .38, 6), fill=p.accent2)
     elif theme.decor == "orbit":
         space = "#07091A"
         canvas.draw.rectangle((0, 0, w, header_height), fill=space)

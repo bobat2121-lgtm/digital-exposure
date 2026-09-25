@@ -1,5 +1,38 @@
 {
   "schemaVersion": 1,
-  "note": "Curated dates the panels cannot fetch reliably: confirmed earnings dates, STRC/SATA rate announcements, index or corporate events. The weekly audit task maintains this file. Confirmed earnings dates replace Nasdaq's estimates. Past events are ignored automatically.",
-  "events": []
+  "note": "Curated dates the panels cannot fetch reliably: confirmed earnings dates, STRC/SATA rate announcements, votes and other corporate events. The weekly audit task maintains this file. A confirmed earnings entry (kind 'earnings' with its ticker) replaces Nasdaq's estimate. Past events drop off automatically. Keep labels to 16 characters or fewer so they fit the card.",
+  "events": [
+    {
+      "date": "2026-09-30",
+      "label": "STRC Oct rate",
+      "kind": "rate",
+      "ticker": "STRC",
+      "confirmed": false,
+      "source": "Strategy posts STRC's next rate on strategy.com/strc on the month's last business day, then files an 8-K (e.g. Aug 31, 2026: https://www.sec.gov/Archives/edgar/data/1050446/000119312526377583/mstr-20260831.htm)"
+    },
+    {
+      "date": "2026-10-15",
+      "label": "SATA rate est.",
+      "kind": "rate",
+      "ticker": "SATA",
+      "confirmed": false,
+      "source": "Strive announced the Aug, Sep and Oct rates on Jul 15, Aug 14 and Sep 15, 2026 (e.g. https://www.sec.gov/Archives/edgar/data/1920406/000162828026061949/asst-20260914.htm)"
+    },
+    {
+      "date": "2026-10-28",
+      "label": "STRC vote",
+      "kind": "corporate",
+      "ticker": "STRC",
+      "confirmed": true,
+      "source": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526401636/mstr-20260924.htm"
+    },
+    {
+      "date": "2026-11-02",
+      "label": "STRC daily pay",
+      "kind": "corporate",
+      "ticker": "STRC",
+      "confirmed": false,
+      "source": "If approved Oct 28: https://www.sec.gov/Archives/edgar/data/1050446/000119312526401636/mstr-20260924.htm"
+    }
+  ]
 }

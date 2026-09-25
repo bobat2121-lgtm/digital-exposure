@@ -100,7 +100,7 @@ class MondayPreviewTests(unittest.TestCase):
 
     def test_footnotes_live_on_the_page(self):
         lines = monday_preview.notes(self.preview)
-        self.assertTrue(any("Amplification = (debt + preferred) ÷ BTC value" in line for line in lines))
+        self.assertTrue(any("Amplification = (debt + preferred claims) ÷ BTC value" in line for line in lines))
 
 
 class WednesdayTests(unittest.TestCase):

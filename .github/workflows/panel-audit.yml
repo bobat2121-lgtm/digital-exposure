@@ -11,7 +11,7 @@ name: Panel audit
 on:
   schedule:
     - cron: "10 16 * * 1"   # Monday, after both 8-Ks (12:10 pm EDT / 11:10 am EST)
-    - cron: "40 22 * * 3"   # Wednesday, after the close and Treasury's curve (6:40 pm EDT)
+    - cron: "10 23 * * 3"   # Wednesday, after Treasury posts the curve by 6 pm ET (7:10 pm EDT / 6:10 pm EST)
     - cron: "40 21 * * 5"   # Friday, after the 4:00 pm ET mark (5:40 pm EDT / 4:40 pm EST)
   workflow_dispatch: {}
 
@@ -27,8 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip

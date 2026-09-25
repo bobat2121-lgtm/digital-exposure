@@ -72,7 +72,8 @@ then what it did per share.
 - **Bitcoin bought and held.**
 - **The funding block, in three layouts** (page selector, `?layout=`):
   - **C · Waterfall** (default, the main format): common + preferred, plus cash
-    drawn (FROM CASH) or minus cash kept (TO CASH), = into BTC.
+    drawn (FROM CASH) or minus cash kept (TO CASH), = DEPLOYED (bitcoin
+    purchases plus dividends and fees).
   - **B · Ledger:** common ATM + preferred ATM = raised, as a short statement, with
     cash below.
   - **A · Headline:** common ATM and preferred ATM as two large tiles, then one
@@ -131,7 +132,13 @@ The rest of the panel:
 
 - **The rest of the ladder** (STRF, STRK, STRD, STRE): price, effective yield, and
   spread over the bill and over HY.
-- **The calendar:** record and pay dates, the warrant deadline and quarter end.
+- **The calendar** (next six dates), assembled from:
+  - Strategy's record and pay dates.
+  - The warrant deadline and quarter end.
+  - The next FOMC decision, from the Fed's calendar.
+  - Earnings dates: confirmed dates from `data/calendar-events.json`, else Nasdaq's
+    estimate marked "est.".
+  - Any other curated events. The weekly audit task maintains the curated file.
 - **The four-week flow ledger**, with centered columns.
 
 ### Friday — The Closing Mark
@@ -178,11 +185,27 @@ file with `scripts/render_previews.py --save-extras`.
 | Source | Used for |
 | --- | --- |
 | api.strategy.com `bitcoinKpis`, `mstrKpiData`, `{strc,strf,strk,strd,stre}KpiData` | USD months of dividends, annual dividends, preferred prices, rates and rate history, effective yields, notional, record/pay dates |
-| strive.com `treasury/api/dashboard/base-data` | dividend reserve months, SATA dividend history (rate = daily × 252, monthly × 12), cash, shares |
+| strive.com `treasury/api/dashboard/base-data`, `api/treasury` | dividend reserve months, SATA stated rate and dividend history (daily amount × the month's business days × 12), cash, shares |
 | fred.stlouisfed.org `fredgraph.csv` | DGS10, DGS2, DGS3MO, DFF, SOFR, BAMLH0A0HYM2EY, BAMLC0A0CMEY |
 | Yahoo chart API | preferred prices/volume, DX-Y.NYB, ^TNX, PFF, HYG, BTC-USD volume |
 | Checkonchain public charts | MVRV with mean/±sd, realized price, Puell Multiple with bands |
 | Monday filing feed (Cloudflare Worker) and committed checkpoint | issuance, buybacks, USD reserve/cash, SATA shares, warrants |
+
+Rates come from the same-day official sources first:
+
+- **Treasury daily par yield curve:** 3M, 2Y and 10Y.
+- **NY Fed API:** SOFR and EFFR.
+
+FRED fills in history and serves as the fallback.
+
+## Audit
+
+`scripts/audit_panels.py` recomputes every headline figure and cross-checks it
+against strategy.com and Strive's dashboard. The **Panel audit** GitHub Action
+(`.github/workflows/panel-audit.yml`) runs it Monday, Wednesday and Friday. It
+publishes `checks.json`, `audit.json` and the PNGs to the `audit` branch for the
+weekly ChatGPT task (`CHATGPT_AUDIT_TASK.md`). Findings and the auto-update map
+are in `PANEL_AUDIT.md`.
 
 `data/preview-config.json` holds, each with a source:
 
