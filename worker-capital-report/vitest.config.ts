@@ -12,5 +12,6 @@ export default defineConfig({
   plugins: [cloudflareTest({ wrangler: { configPath: "./wrangler.jsonc" },
     miniflare: { bindings: { SEC_USER_AGENT: process.env.SEC_USER_AGENT, ADMIN_TOKEN: process.env.ADMIN_TOKEN,
       DISCORD_WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL } } })],
-  test: { include: ["test/**/*.test.ts"], fileParallelism: false },
+  // The alarm clock setup keeps Durable Object alarms from firing on the real clock (see the file).
+  test: { include: ["test/**/*.test.ts"], setupFiles: ["./test/setup/alarm-clock.ts"], fileParallelism: false },
 });
