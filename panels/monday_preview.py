@@ -3,9 +3,10 @@
 All base values (NAV, capital, shares, sats, growth) come unchanged from the
 production ``ReportView``. This module adds USD/dividend coverage read against
 each company's own target, a clear split between capital raised through the
-ATMs and cash drawn from (or added to) balances, amplification ((debt +
-preferred) ÷ BTC), a same-window multi-week growth column for both companies
-and Strive's warrant tag. The funding block has three layouts (``VARIANTS``).
+ATMs and cash drawn from (or added to) balances, where the money went (bitcoin
+versus dividends), each issuer's own amplification ratio, a same-window
+multi-week growth column for both companies and Strive's warrant tag. The
+funding block has three layouts (``VARIANTS``).
 """
 from __future__ import annotations
 
@@ -21,7 +22,8 @@ from report.models import Report
 from report.presentation import build_report_view
 from report.view_types import CompanyView, ReportView
 
-from .draw import T_BIG, T_BODY, T_HERO, T_LABEL, T_MIN, T_VALUE, Canvas, fontset, mix, width
+from .draw import T_BIG, T_BODY, T_HERO, T_LABEL, T_MIN, T_VALUE, Canvas, font, fontset, mix, width
+from .extras import strategy_weeks
 from . import themes
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,6 +31,7 @@ CONFIG = ROOT / "data" / "preview-config.json"
 ET = ZoneInfo("America/New_York")
 
 WIDTH, HEIGHT = 1440, 1760
+EXTRA_HEIGHT = 1920  # the extra-data test copy adds a bitcoin cost box (still 3:4)
 MARGIN, GAP = 40, 24
 PANEL = (WIDTH - 2 * MARGIN - GAP) // 2
 INSET = 30
@@ -39,8 +42,11 @@ TITLE = ("The ", "Accretion", " Ledger")
 @dataclass(frozen=True)
 class CompanyExtras:
     ticker: str
-    amplification_pct: float | None = None
+    amplification_pct: float | None = None      # Strive: (notional preferred + debt) ÷ BTC, in %
     amplification_change_pp: float | None = None
+    amplification_x: float | None = None        # Strategy: BTC reserve ÷ net BTC reserve, in ×
+    amplification_change_x: float | None = None
+    amplification_source: str = ""
     preferred_pct: float | None = None
     debt_pct: float | None = None
     net_leverage_pct: float | None = None
@@ -54,6 +60,10 @@ class CompanyExtras:
     liquid_change: float | None = None
     liquid_detail: str = ""
     net_funding: float | None = None
+    btc_cost: float | None = None               # the week's bitcoin purchases (− sale proceeds)
+    btc_cost_source: str = ""
+    dividends: float | None = None              # the rest of the week's funding: dividends, interest, fees
+    stated_dividends: float | None = None       # Strategy's 8-K figure for dividends and interest, if given
     reserve_months: float | None = None
     target_months: float | None = None
     target_kind: str = ""
@@ -62,6 +72,9 @@ class CompanyExtras:
     coverage_source: str = ""
     window: dict = field(default_factory=dict)
     warrants: dict | None = None
+    cost_basis: float | None = None             # test copy: aggregate BTC purchase cost, fees included
+    average_cost: float | None = None
+    cost_source: str = ""
 
 
 @dataclass(frozen=True)
@@ -169,6 +182,61 @@ def _coverage(ticker, company, btc_price, extras, facts):
     return months, years, breakeven, source
 
 
+def _average_close(extras, start, end):
+    """Mean BTC-USD daily close over (start, end], for an estimated purchase cost."""
+    rows = ((extras.get("yahoo") or {}).get("BTC-USD") or {}).get("rows") or []
+    closes = [row["close"] for row in rows if row.get("close") and start < row.get("date", "") <= end]
+    return sum(closes) / len(closes) if closes else None
+
+
+def _btc_cost(ticker, company, facts, extras, btc_price):
+    """The week's bitcoin cost, with its source: filed figures first, an estimate last."""
+    bought, sold = _n(facts.get("weekly_btc_purchases")), _n(facts.get("weekly_btc_sales"))
+    start, end = company.prior_balance_date or "", company.balance_date or ""
+    if ticker == "MSTR":
+        cost = _n(facts.get("weekly_btc_cost_usd"))
+        if cost is not None:
+            return cost, "SEC 8-K aggregate purchase price"
+        week = strategy_weeks().get(end) or {}
+        if "btc_cost_usd" in week or "btc_sale_proceeds_usd" in week:
+            return ((_n(week.get("btc_cost_usd")) or 0) - (_n(week.get("btc_sale_proceeds_usd")) or 0),
+                    "SEC 8-K aggregate purchase price (data/strategy-weekly-8k.json)")
+    else:
+        trades = [row for row in (extras.get("strive") or {}).get("transactions") or []
+                  if row.get("type") == "purchase" and start < (row.get("transaction_date") or "") <= end
+                  and _n(row.get("cost")) and _n(row.get("btc_amount"))]
+        if trades and bought:
+            # Price the filed quantity at the dashboard's cost per BTC for the same dates.
+            per_btc = sum(_n(row["cost"]) for row in trades) / sum(_n(row["btc_amount"]) for row in trades)
+            return bought * per_btc, "strive.com dashboard purchase cost"
+    if bought == 0 and not sold:
+        return 0.0, "no purchases"
+    if bought and not sold:
+        price = _average_close(extras, start, end) or btc_price
+        return bought * price, "estimate: BTC bought × average BTC close for the week"
+    return None, ""
+
+
+def _cost_basis(ticker, company, facts, extras):
+    """Aggregate and average BTC purchase cost at the balance date (test copy)."""
+    if ticker == "MSTR":
+        basis, average = _n(facts.get("btc_cost_basis_usd")), _n(facts.get("btc_average_cost_usd"))
+        if basis and average:
+            return basis, average, "SEC 8-K"
+        week = strategy_weeks().get(company.balance_date) or {}
+        if week.get("btc_cost_basis_usd") and week.get("btc_average_cost_usd"):
+            return week["btc_cost_basis_usd"], week["btc_average_cost_usd"], "SEC 8-K (data/strategy-weekly-8k.json)"
+        return None, None, ""
+    rows = sorted((row for row in (extras.get("strive") or {}).get("transactions") or []
+                   if (row.get("transaction_date") or "") <= (company.balance_date or "")
+                   and _n(row.get("total_cost_basis")) and _n(row.get("total_btc_holdings"))),
+                  key=lambda row: row["transaction_date"])
+    if not rows:
+        return None, None, ""
+    basis, held = _n(rows[-1]["total_cost_basis"]), _n(rows[-1]["total_btc_holdings"])
+    return basis, basis / held, "strive.com dashboard cost basis"
+
+
 def _warrants(ticker, company, facts, config, now):
     terms = (config or {}).get("asst_warrants")
     count = _n(facts.get("traditional_warrant_shares"))
@@ -198,6 +266,7 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
         bitcoin = btc_value(company.current, report.current_btc_price)
         prior_bitcoin = btc_value(company.prior, report.prior_btc_price)
         current, prior = company.current, company.prior
+        # Strive's amplification ratio: (notional preferred + debt) ÷ BTC value.
         amp = ((current.debt_principal + current.preferred_claims) / bitcoin * 100
                if bitcoin and current.debt_principal is not None and current.preferred_claims is not None else None)
         prior_amp = ((prior.debt_principal + prior.preferred_claims) / prior_bitcoin * 100
@@ -215,6 +284,18 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
         raised = (metrics.net_common_capital + metrics.net_preferred_capital
                   if None not in (metrics.net_common_capital, metrics.net_preferred_capital) else None)
         funding = raised - liquid_change if raised is not None and liquid_change is not None else None
+        btc_cost, cost_source = _btc_cost(ticker, company, facts, extras, report.current_btc_price)
+        stated = _n(facts.get("usd_reserve_dividends_interest_usd"))
+        if stated is None and ticker == "MSTR":
+            stated = _n((strategy_weeks().get(company.balance_date) or {}).get("reserve_dividends_interest_usd"))
+        if ticker == "MSTR":
+            # Strategy's amplification (strategy.com KPI since Jul 23, 2026): BTC reserve ÷ net BTC reserve.
+            kpi = _n(((extras.get("strategy") or {}).get("btc") or {}).get("amplification"))
+            amp_x, amp_source = (kpi, "strategy.com KPI") if kpi else (metrics.net_btc_amplification, "derived")
+            amp_change_x = metrics.amplification_change
+        else:
+            amp_x = amp_change_x = None
+            amp_source = "derived: (SATA notional + debt) ÷ BTC value"
         months, years, breakeven, source = _coverage(ticker, company, report.current_btc_price, extras, facts)
         key = "strategy_reserve_floor_months" if ticker == "MSTR" else "strive_reserve_goal_months"
         target = _n((config.get(key) or {}).get("value"))
@@ -226,23 +307,29 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
         else:
             change = _n(facts.get("net_sata_shares_change"))
             note = f"SATA {change / 1e3:+,.0f}k sh" if change is not None else "SATA"
+        strive_amp = ticker != "MSTR"
+        cost_basis, average_cost, basis_source = _cost_basis(ticker, company, facts, extras)
         result[ticker] = CompanyExtras(
-            ticker=ticker, amplification_pct=amp,
+            ticker=ticker, amplification_pct=amp if strive_amp else None,
+            amplification_x=amp_x, amplification_change_x=amp_change_x, amplification_source=amp_source,
             common_capital=metrics.net_common_capital, preferred_capital=metrics.net_preferred_capital,
             preferred_note=note, btc_bought=_n(facts.get("weekly_btc_purchases")), btc_held=current.btc_holdings,
-            amplification_change_pp=amp - prior_amp if amp is not None and prior_amp is not None else None,
+            amplification_change_pp=amp - prior_amp if strive_amp and amp is not None and prior_amp is not None else None,
+            btc_cost=btc_cost, btc_cost_source=cost_source, stated_dividends=stated,
+            dividends=funding - btc_cost if funding is not None and btc_cost is not None else None,
             preferred_pct=current.preferred_claims / bitcoin * 100 if bitcoin and current.preferred_claims is not None else None,
             debt_pct=current.debt_principal / bitcoin * 100 if bitcoin and current.debt_principal is not None else None,
             net_leverage_pct=(current.debt_principal - liquid) / bitcoin * 100 if bitcoin and liquid is not None and current.debt_principal is not None else None,
             raised=raised, liquid_balance=liquid, liquid_change=liquid_change, liquid_detail=detail, net_funding=funding,
             reserve_months=months, target_months=target, target_kind="floor" if ticker == "MSTR" else "goal",
             coverage_years=years, breakeven_pct=breakeven, coverage_source=source,
-            window=windows.get(ticker, {}), warrants=_warrants(ticker, company, facts, config, now))
+            window=windows.get(ticker, {}), warrants=_warrants(ticker, company, facts, config, now),
+            cost_basis=cost_basis, average_cost=average_cost, cost_source=basis_source)
     period = report.capital_period_label.split("·")[-1].strip()
     kicker = f"THE DIGITAL CREDIT REPORT  ·  MONDAY  ·  8-K WEEK {period.upper()}"
     dates = " · ".join(f"{c.name} {_short(c.balance_date)}" for c in report.companies if c.balance_date)
     subtitle = f"What last week's filings did to each common share  ·  Balances: {dates}"
-    notes = tuple(f"{t} data stale" for t in extras.get("stale", []))
+    notes = tuple(f"{t} data stale" for t in extras.get("stale", []) if t != "markets")  # markets: Friday test copy only
     return MondayPreview(report, view, result, kicker, subtitle, notes, f"8-K week {period}")
 
 
@@ -349,49 +436,60 @@ def cash_step_label(e: CompanyExtras) -> str:
     return "TO CASH" if (e.liquid_change or 0) > 0 else "FROM CASH"
 
 
-def _top_waterfall(canvas, e, L, R, y, p, stripe):
-    """C · Waterfall: common + preferred ± cash = deployed (BTC, dividends and fees).
+def _cap_middle(size: int) -> float:
+    """Offset from a line's top to the middle of its capitals (text is drawn top-anchored)."""
+    box = font(size, True).getbbox("H", anchor="lt")
+    return (box[1] + box[3]) / 2
 
-    Cash is labeled by direction: FROM CASH when the balance funded purchases,
-    TO CASH when part of the raise was kept (the bar then steps down).
+
+def _top_waterfall(canvas, e, L, R, y, p, stripe):
+    """C · Waterfall, read down: common + preferred ± cash = BTC + DIVs.
+
+    One row per step, so every label and amount stays at phone size. Cash is
+    labeled by direction: FROM CASH when the balance funded the week, TO CASH
+    when part of the raise was kept (its bar steps back). BTC is the week's
+    bitcoin cost; DIVs is the rest (dividends, interest and fees).
     """
     drawn = -e.liquid_change if e.liquid_change is not None else None
-    steps = (("COMMON", e.common_capital), ("PREF", e.preferred_capital), (cash_step_label(e), drawn))
-    if any(value is None for _, value in steps):
+    sources = (("COMMON", e.common_capital), ("PREF", e.preferred_capital), (cash_step_label(e), drawn))
+    if any(value is None for _, value in sources):
         canvas.text(L, y + 60, "Funding detail unavailable", T_BODY, p.muted)
         return
-    levels, level = [], 0.0
-    for _, value in steps:
-        levels.append((level, level + value))
+    steps, level = [], 0.0
+    for n, (label, value) in enumerate(sources):
+        # Raises carry their sign; cash is a plain amount (its label gives the direction).
+        text = _money(value, signed=True) if n < 2 else _money(abs(value), signed=False)
+        steps.append((label, text, level, level + value, p.soft if n == 2 else p.positive if value >= 0 else p.negative,
+                      _tone_text(text, p) if n < 2 else p.ink))
         level += value
-    points = [v for pair in levels for v in pair] + [0.0, level]
+    if e.btc_cost is not None:
+        rest = level - e.btc_cost
+        steps.append(("BTC", _money(e.btc_cost, signed=False), 0.0, e.btc_cost, stripe, p.ink))
+        steps.append(("DIVs", _money(rest, signed=False), e.btc_cost, level, mix(stripe, p.card, .45), p.ink))
+    else:
+        steps.append(("BTC + DIVs", _money(level, signed=False), 0.0, level, stripe, p.ink))
+    row_h, gap = 50, 12
+    label_w, value_w = 180, 146
+    bx0, bx1 = L + label_w, R - value_w - 10
+    points = [0.0] + [value for step in steps for value in step[2:4]]
     low, high = min(points), max(points)
     span = (high - low) or 1
-    top, bottom = y + 40, y + 184
-    py = lambda v: bottom - (v - low) / span * (bottom - top)
-    # The cash column is wider so "FROM CASH" fits at the phone minimum.
-    shares = (.24, .22, .29, .25)
-    edges = [L]
-    for share in shares:
-        edges.append(edges[-1] + share * (R - L))
-    canvas.line([(L, py(0)), (R, py(0))], p.line, 2)
-    bars = [(label, value, a, b, p.soft if n == 2 else p.positive if value >= 0 else p.negative)
-            for n, ((label, value), (a, b)) in enumerate(zip(steps, levels))]
-    # Deployed = BTC purchases plus dividends and fees; the 8-K feed has no purchase cost.
-    bars.append(("DEPLOYED", level, 0.0, level, stripe))
-    for n, (label, value, a, b, color) in enumerate(bars):
-        x, slot = edges[n], edges[n + 1] - edges[n]
-        y0, y1 = sorted((py(a), py(b)))
-        canvas.draw.rectangle((x + 14, y0, x + slot - 14, max(y1, y0 + 4)), fill=mix(color, p.card, .85))
-        if n < 3:
-            canvas.line([(x + slot - 14, py(b)), (x + slot + 14, py(b))], p.soft, 2, dashed=True, dash=(5, 4))
-        # Raises carry their sign; cash and the total are plain amounts (the label gives direction).
-        text = _money(value, signed=True) if n < 2 else _money(abs(value), signed=False)
-        above = value >= 0 or n == 3
-        ty = y0 - 38 if above else y1 + 6
-        canvas.text(x + slot / 2, ty, text, T_MIN, _tone_text(text, p) if n < 2 else p.ink, True, align="center",
-                    max_width=slot - 4)
-        canvas.text(x + slot / 2, y + 230, label, T_MIN, p.muted, True, align="center", max_width=slot - 4)
+    px = lambda v: bx0 + (v - low) / span * (bx1 - bx0)
+    rows_y = [y + 2 + n * row_h + (gap if n >= 3 else 0) for n in range(len(steps))]
+    canvas.draw.line((px(0), rows_y[0] + 2, px(0), rows_y[-1] + 48), fill=p.line, width=2)
+    canvas.draw.line((L, rows_y[3] - gap / 2 - 1, R, rows_y[3] - gap / 2 - 1), fill=p.line, width=2)
+    for n, (label, text, a, b, color, tone) in enumerate(steps):
+        ry = rows_y[n]
+        x0, x1 = sorted((px(a), px(b)))
+        fill = color if isinstance(color, tuple) else mix(color, p.card, .85)  # DIVs arrives pre-tinted
+        canvas.draw.rounded_rectangle((x0, ry + 8, max(x1, x0 + 4), ry + 42), radius=min(4, p.radius), fill=fill)
+        # Center both texts on the bar (ry + 25) by their cap height, not the font box.
+        canvas.text(L, ry + 25 - _cap_middle(T_MIN), label, T_MIN, p.muted, True, max_width=label_w - 10)
+        canvas.text(R, ry + 25 - _cap_middle(T_LABEL), text, T_LABEL, tone, True, align="right", max_width=value_w)
+        if n + 1 < len(steps) and steps[n + 1][2] == b:  # each step starts where the last one ended
+            canvas.line([(px(b), ry + 42), (px(b), rows_y[n + 1] + 8)], p.soft, 2, dashed=True, dash=(4, 4))
+    # The total carries down to where the uses end.
+    canvas.line([(px(level), rows_y[2] + 42), (px(level), rows_y[-1] + 8)], p.soft, 2, dashed=True, dash=(4, 4))
     _cash_box(canvas, e, L, R, y + TOP_H - CASH_BOX_H, p, f"Cash on hand {_money(e.liquid_balance, False)}")
 
 
@@ -408,6 +506,22 @@ def _logo(canvas, c, theme, p, x, y):
         canvas.text(x, y + 6, c.name.upper(), T_VALUE, p.ink, True)
 
 
+def _times(value, signed=False):
+    if value is None:
+        return "—"
+    if round(value, 2) == 0:
+        return "0.00×"
+    sign = "−" if value < 0 else "+" if signed else ""
+    return f"{sign}{abs(value):.2f}×"
+
+
+def _amplification(e: CompanyExtras) -> tuple[str, str]:
+    """Each issuer's own ratio: Strategy's in ×, Strive's in %."""
+    if e.amplification_x is not None:
+        return _times(e.amplification_x), _times(e.amplification_change_x, True)
+    return _pct(e.amplification_pct), _pct(e.amplification_change_pp, 2, True, " pp")
+
+
 def _share_change(c: CompanyView):
     text = _clean(c.shares.change)
     # "+2.03m (+2.14%) WoW" → "+2.14%"
@@ -416,11 +530,12 @@ def _share_change(c: CompanyView):
     return text.replace(" WoW", "")
 
 
-def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, report_company, index: int, theme, p, variant):
+def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, report_company, index: int, theme, p, variant,
+             btc_price=None, extra=False):
     x0 = MARGIN + index * (PANEL + GAP)
     x1 = x0 + PANEL
     L, R = x0 + INSET, x1 - INSET
-    top, bottom = CARD_TOP, HEIGHT - MARGIN
+    top, bottom = CARD_TOP, (EXTRA_HEIGHT if extra else HEIGHT) - MARGIN
     stripe = p.company(c.ticker)
     themes.card(canvas, (x0, top, x1, bottom), p, stripe, theme, 6)
     _logo(canvas, c, theme, p, L, top + 22)
@@ -446,7 +561,7 @@ def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, report_company, i
     y += 44
     rows = (("BTC / share", _clean(c.bitcoin.value).replace(" sats", ""), c.bitcoin.short_change, True),
             ("NAV / share", _clean(c.nav_per_share), _clean(c.nav_change.value), True),
-            ("Amplification", _pct(e.amplification_pct), _pct(e.amplification_change_pp, 2, True, " pp"), False),
+            ("Amplification", *_amplification(e), False),
             ("Shares", c.shares.value, _share_change(c), False))
     for label, value, delta, toned in rows:
         canvas.text(L, y + 6, label, T_BODY, p.ink, True, max_width=(R - L) * .36)
@@ -476,6 +591,21 @@ def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, report_company, i
         if note:
             canvas.text(cx, y + 96, note, T_MIN, p.positive if good else p.soft, good, max_width=cell - 12)
     y += box_h + 20
+
+    if extra:
+        # Test copy: what the bitcoin cost, and where the price sits against it.
+        gain = btc_price / e.average_cost * 100 - 100 if btc_price and e.average_cost else None
+        canvas.draw.rounded_rectangle((L - 12, y, R + 12, y + box_h), radius=radius, fill=p.tint)
+        cells = (("AVG COST", f"${e.average_cost:,.0f}" if e.average_cost else "—", None),
+                 ("VS COST", _pct(gain, 1, True), gain),
+                 ("COST BASIS", _money(e.cost_basis, False), None))
+        for n, (label, value, tone) in enumerate(cells):
+            cx = L + 6 + n * cell
+            canvas.text(cx, y + 16, label, T_MIN, p.muted, True, max_width=cell - 12)
+            canvas.text(cx, y + 52, value, T_VALUE - 4, _tone_text(value, p) if tone is not None else p.ink, True,
+                        max_width=cell - 12)
+        canvas.text(L + 6, y + 96, "bitcoin bought to date, fees included", T_MIN, p.soft, max_width=R - L - 12)
+        y += box_h + 20
 
     # Growth: the same multi-week window for both companies, then QTD and YTD.
     weeks = e.window.get("weeks")
@@ -509,37 +639,51 @@ def _header(canvas, preview, theme, p):
     canvas.text(WIDTH - MARGIN, 176, stamp, T_MIN, muted, align="right", max_width=760)
 
 
-def render_png(preview: MondayPreview, theme: themes.Theme = themes.DEFAULT, variant: str = DEFAULT_VARIANT) -> tuple[bytes, list[str]]:
+def render_png(preview: MondayPreview, theme: themes.Theme = themes.DEFAULT, variant: str = DEFAULT_VARIANT,
+               extra: bool = False) -> tuple[bytes, list[str]]:
+    """``extra`` renders the test copy with the extra data (bitcoin cost box)."""
     p = theme.monday
     with fontset(theme.fontset):
-        canvas = Canvas((WIDTH, HEIGHT), p.bg, floor=T_MIN)
+        canvas = Canvas((WIDTH, EXTRA_HEIGHT if extra else HEIGHT), p.bg, floor=T_MIN)
         themes.background(canvas, p, theme, header_height=226, orbit_at=(1060, 92, .6))
         if theme.decor == "none":
             canvas.draw.rectangle((0, 0, WIDTH, 8), fill=p.accent)
         _header(canvas, preview, theme, p)
         for index, company in enumerate(preview.view.companies):
             source = next(item for item in preview.report.companies if item.ticker == company.ticker)
-            _company(canvas, company, preview.extras[company.ticker], source, index, theme, p, variant)
-        png = canvas.save(metadata={"Title": "The Accretion Ledger", "Theme": theme.key, "Variant": variant})
+            _company(canvas, company, preview.extras[company.ticker], source, index, theme, p, variant,
+                     preview.report.current_btc_price, extra)
+        png = canvas.save(metadata={"Title": "The Accretion Ledger", "Theme": theme.key, "Variant": variant,
+                                    "Extra": "yes" if extra else "no"})
     return png, canvas.overflows
 
 
-def notes(preview: MondayPreview) -> list[str]:
+def notes(preview: MondayPreview, extra: bool = False) -> list[str]:
     """Footnotes for the web page; the X image carries none."""
     sources = " · ".join(f"{e.ticker}: {e.coverage_source}" for e in preview.extras.values())
     windows = " · ".join(f"{e.ticker} since {_short(e.window['start'])}" for e in preview.extras.values() if e.window.get("start"))
+    costs = " · ".join(f"{e.ticker}: {e.btc_cost_source}" for e in preview.extras.values() if e.btc_cost_source)
+    stated = " ".join(f"Strategy's 8-K put the week's dividends and interest at {_money(e.stated_dividends, False)}; the "
+                      "difference is rounding in its $0.01B balances." for e in preview.extras.values()
+                      if e.ticker == "MSTR" and e.stated_dividends is not None)
     return [line for line in (
         "Capital raised = ATM issuance − repurchases, common and preferred. Cash is an existing balance, never counted as a raise. "
-        "Deployed = raised + cash drawn (or − cash kept): bitcoin purchases plus dividends and fees. "
+        "The waterfall reads down: common + preferred + cash drawn (or − cash kept) = BTC + DIVs. "
         "Strive's common figure is an estimate: net share change × prior-week VWAP.",
-        "Amplification = (debt + preferred claims) ÷ BTC value, Strive's definition and Strategy's before July 23, 2026 "
-        "(strategy.com's debtPrefByBN). Strategy's current \"amplification\" KPI is BTC reserve ÷ net reserve (about 1.25×). "
-        "NAV, price/NAV, amplification, coverage and growth are estimates from dated balances and reconstructed preferred "
+        f"BTC = the week's bitcoin purchase cost, fees included ({costs}). DIVs = the rest of the week's funding: preferred "
+        f"dividends and interest, plus fees and other uses. {stated}".strip(),
+        "Amplification, each issuer's own definition. Strategy: BTC reserve ÷ net BTC reserve, its strategy.com KPI since "
+        "July 23, 2026 (\"amplification\"); the weekly change comes from the 8-K balances. Strive: (notional preferred + debt) "
+        "÷ BTC value, its stated ratio (Strive has no debt).",
+        "NAV, price/NAV, coverage and growth are estimates from dated balances and reconstructed preferred "
         "claims at the displayed prices; growth holds prices constant.",
         "USD cover = months of dividend (and, for Strategy, interest) obligations held in USD, read against Strategy's 12-month "
         "floor and Strive's 18-month goal. Coverage = (BTC + cash) ÷ annual obligations; break-even = obligations ÷ BTC value. "
         f"{sources}.",
         f"Multi-week growth window: {windows}." if windows else "",
+        ("Test copy: avg cost = aggregate bitcoin purchase price ÷ BTC held, fees included; vs cost = BTC price ÷ avg cost − 1; "
+         "cost basis = the aggregate purchase price. "
+         + " · ".join(f"{e.ticker}: {e.cost_source}" for e in preview.extras.values() if e.cost_source) + ".") if extra else "",
         *preview.notes,
     ) if line]
 
@@ -557,11 +701,18 @@ def audit_rows(preview: MondayPreview) -> list[dict]:
             {"metric": f"{company.ticker} net common capital", "value": company.common.value, "source": "SEC 8-K ATM table" if company.ticker == "MSTR" else "share change × VWAP (est.)"},
             {"metric": f"{company.ticker} preferred capital", "value": company.preferred.value, "source": "SEC 8-K"},
             {"metric": f"{company.ticker} cash balance / change", "value": f"{_money(extra.liquid_balance, False)} / {_money(extra.liquid_change)} ({extra.liquid_detail})", "source": "SEC 8-K"},
-            {"metric": f"{company.ticker} deployed (raised + cash drawn)", "value": _money(extra.net_funding, False), "source": "derived"},
+            {"metric": f"{company.ticker} funding (raised + cash drawn)", "value": _money(extra.net_funding, False), "source": "derived"},
+            {"metric": f"{company.ticker} BTC (bitcoin cost)", "value": _money(extra.btc_cost, False), "source": extra.btc_cost_source or "—"},
+            {"metric": f"{company.ticker} DIVs (funding − BTC)", "value": _money(extra.dividends, False),
+             "source": "derived" + (f"; 8-K dividends + interest {_money(extra.stated_dividends, False)}" if extra.stated_dividends is not None else "")},
             {"metric": f"{company.ticker} NAV / share (est.)", "value": _clean(company.nav_per_share), "source": "derived"},
+            {"metric": f"Test copy · {company.ticker} BTC cost basis / average", "value":
+             f"{_money(extra.cost_basis, False)} / ${extra.average_cost:,.0f}" if extra.average_cost else "—",
+             "source": extra.cost_source or "—"},
             {"metric": f"{company.ticker} price / basic NAV", "value": _clean(company.price_to_nav), "source": "derived"},
             {"metric": f"{company.ticker} sats per share", "value": company.bitcoin.value, "source": "derived"},
-            {"metric": f"{company.ticker} amplification (debt + preferred ÷ BTC)", "value": _pct(extra.amplification_pct), "source": "derived"},
+            {"metric": f"{company.ticker} amplification ({'BTC reserve ÷ net BTC reserve' if extra.amplification_x is not None else '(notional preferred + debt) ÷ BTC'})",
+             "value": " / ".join(_amplification(extra)), "source": extra.amplification_source},
             {"metric": f"{company.ticker} USD cover (months)", "value": f"{extra.reserve_months:.1f} ({_cover_note(extra)})" if extra.reserve_months else "—", "source": extra.coverage_source},
             {"metric": f"{company.ticker} {extra.window.get('weeks', '?')}-week BTC/share", "value": _pct(extra.window.get("btc"), 2, True), "source": f"since {extra.window.get('start', '—')}"},
             {"metric": f"{company.ticker} QTD BTC/share", "value": next((_clean(p.btc_growth) for p in company.periods if p.period == "QTD"), "—"), "source": "derived"},

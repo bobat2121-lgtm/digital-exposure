@@ -57,17 +57,46 @@ class MondayPreviewTests(unittest.TestCase):
         self.report = resolve_complete_report(self.prices, FEED).report
         self.preview = monday_preview.build_preview(self.report, self.prices, FEED, offline_extras())
 
-    def test_amplification_and_funding_follow_reported_balances(self):
-        for company in self.report.companies:
-            extra = self.preview.extras[company.ticker]
-            bitcoin = company.current.btc_holdings * self.report.current_btc_price
-            expected = (company.current.debt_principal + company.current.preferred_claims) / bitcoin * 100
-            self.assertAlmostEqual(extra.amplification_pct, expected)
-            self.assertIsNotNone(extra.net_funding)
+    def test_amplification_uses_each_issuers_definition(self):
+        strive = next(c for c in self.report.companies if c.ticker == "ASST")
+        bitcoin = strive.current.btc_holdings * self.report.current_btc_price
+        # Strive: (notional preferred + debt) ÷ BTC value, in %.
+        expected = (strive.current.debt_principal + strive.current.preferred_claims) / bitcoin * 100
+        self.assertAlmostEqual(self.preview.extras["ASST"].amplification_pct, expected)
+        # Strategy: its own KPI, BTC reserve ÷ net BTC reserve, in ×.
+        strategy = self.preview.extras["MSTR"]
+        kpi = offline_extras()["strategy"]["btc"]["amplification"]
+        self.assertAlmostEqual(strategy.amplification_x, kpi)
+        self.assertIsNone(strategy.amplification_pct)
+        self.assertEqual(monday_preview._amplification(strategy)[0], f"{kpi:.2f}×")
+
+    def test_funding_splits_into_bitcoin_and_dividends(self):
         strategy = self.preview.extras["MSTR"]
         # Sep 14–20: $0 common, −$174.0m STRC, cash and reserve fell $310m.
         self.assertEqual(strategy.liquid_change, -310_000_000)
         self.assertAlmostEqual(strategy.net_funding, 0 - 174_000_000 + 310_000_000)
+        # The 8-K: 950 BTC for $75.7m; $57.4m of dividends and interest (the rest is balance rounding).
+        self.assertEqual(strategy.btc_cost, 75_700_000)
+        self.assertEqual(strategy.stated_dividends, 57_400_000)
+        self.assertAlmostEqual(strategy.dividends, 136_000_000 - 75_700_000)
+        for extra in self.preview.extras.values():
+            self.assertAlmostEqual(extra.btc_cost + extra.dividends, extra.net_funding)
+            self.assertFalse(extra.btc_cost_source.startswith("estimate"), extra.ticker)
+
+    def test_filed_bitcoin_cost_wins_over_the_transcribed_history(self):
+        company = next(c for c in self.report.companies if c.ticker == "MSTR")
+        cost, source = monday_preview._btc_cost("MSTR", company, {"weekly_btc_cost_usd": 1.0, "weekly_btc_purchases": 950},
+                                                offline_extras(), self.report.current_btc_price)
+        self.assertEqual((cost, source), (1.0, "SEC 8-K aggregate purchase price"))
+
+    def test_unfiled_bitcoin_cost_is_estimated_from_the_weeks_closes(self):
+        from dataclasses import replace
+        company = next(c for c in self.report.companies if c.ticker == "MSTR")
+        later = replace(company, balance_date="2099-01-04", prior_balance_date="2098-12-28")
+        extras = {"yahoo": {"BTC-USD": {"rows": [{"date": "2098-12-30", "close": 100.0}, {"date": "2099-01-02", "close": 200.0}]}}}
+        cost, source = monday_preview._btc_cost("MSTR", later, {"weekly_btc_purchases": 10}, extras, 1.0)
+        self.assertEqual(cost, 10 * 150.0)
+        self.assertTrue(source.startswith("estimate"))
 
     def test_warrant_flag_disappears_after_the_deadline(self):
         from datetime import datetime
@@ -87,6 +116,18 @@ class MondayPreviewTests(unittest.TestCase):
                     self.assertEqual(overflows, [])
                     assert_phone_ready(self, png)
 
+    def test_extra_data_test_copy_stays_phone_ready(self):
+        from panels import themes
+        for theme in themes.THEMES.values():
+            with self.subTest(theme=theme.key):
+                png, overflows = monday_preview.render_png(self.preview, theme, extra=True)
+                self.assertEqual(overflows, [])
+                assert_phone_ready(self, png)
+        strategy, strive = self.preview.extras["MSTR"], self.preview.extras["ASST"]
+        # Sep 20 8-K: 846,000 BTC for $63.80B, $75,416 each; Strive's dashboard cost basis.
+        self.assertEqual((strategy.cost_basis, strategy.average_cost), (63_800_000_000, 75_416))
+        self.assertAlmostEqual(strive.average_cost, strive.cost_basis / 26_355.180562789996, places=6)
+
     def test_waterfall_labels_cash_by_direction(self):
         # Strategy drew $310m of cash; Strive kept $25.3m of its raise as cash.
         self.assertEqual(monday_preview.cash_step_label(self.preview.extras["MSTR"]), "FROM CASH")
@@ -100,7 +141,9 @@ class MondayPreviewTests(unittest.TestCase):
 
     def test_footnotes_live_on_the_page(self):
         lines = monday_preview.notes(self.preview)
-        self.assertTrue(any("Amplification = (debt + preferred claims) ÷ BTC value" in line for line in lines))
+        self.assertTrue(any("BTC reserve ÷ net BTC reserve" in line and "(notional preferred + debt) ÷ BTC value" in line
+                            for line in lines))
+        self.assertTrue(any(line.startswith("BTC = the week's bitcoin purchase cost") for line in lines))
 
 
 class WednesdayTests(unittest.TestCase):
@@ -115,14 +158,21 @@ class WednesdayTests(unittest.TestCase):
         self.assertAlmostEqual(sata.effective, sata.rate * 100 / sata.price)
         self.assertEqual(len(data["ledger"]), 4)
         self.assertEqual(data["headline"], "3M bill")
+        # Strategy's USD cover reaches back through the transcribed 8-K balances (12 weeks).
+        self.assertEqual(len(data["cover"]["MSTR"]["weeks"]), 12)
+        self.assertEqual(data["cover"]["MSTR"]["weeks"][0][0], "2026-07-05")
         strc = data["heroes"]["STRC"]
         self.assertAlmostEqual(strc["spreads"]["3M bill"], (strc["item"].effective - data["bill"]) * 100)
         from panels import themes
         for theme in themes.THEMES.values():
-            with self.subTest(theme=theme.key):
-                png, overflows = wednesday.render_png(data, theme)
-                self.assertEqual(overflows, [])
-                assert_phone_ready(self, png)
+            for extra in (False, True):
+                with self.subTest(theme=theme.key, extra=extra):
+                    png, overflows = wednesday.render_png(data, theme, extra=extra)
+                    self.assertEqual(overflows, [])
+                    assert_phone_ready(self, png)
+        # strategy.com's STRC floor matches (debt + STRF + STRC notional − USD) ÷ BTC held; SATA uses the same formula.
+        self.assertGreater(data["backing"]["STRC"]["floor"], 0)
+        self.assertGreater(data["backing"]["SATA"]["floor"], 0)
 
 
 class FridayPreviewTests(unittest.TestCase):
@@ -146,11 +196,17 @@ class FridayPreviewTests(unittest.TestCase):
         self.assertEqual(set(derived["thresholds"]), {label for label, *_ in derived["checklist"]})
         from panels import themes
         for theme in themes.THEMES.values():
-            with self.subTest(theme=theme.key):
-                png, overflows = friday_preview.render_png(panel, derived, theme=theme)
-                self.assertEqual(overflows, [])
-                assert_phone_ready(self, png)
+            for extra in (False, True):
+                with self.subTest(theme=theme.key, extra=extra):
+                    png, overflows = friday_preview.render_png(panel, derived, theme=theme, extra=extra)
+                    self.assertEqual(overflows, [])
+                    assert_phone_ready(self, png)
         self.assertTrue(friday_preview.notes(panel, derived))
+        markets = derived["markets"]
+        self.assertIsNotNone(markets["dvol"])
+        self.assertIsNotNone(markets["basis"])
+        self.assertIsNotNone(markets["stablecoins"])
+        self.assertTrue(any(line.startswith("Test copy: DVOL") for line in friday_preview.notes(panel, derived, extra=True)))
 
 
 if __name__ == "__main__":

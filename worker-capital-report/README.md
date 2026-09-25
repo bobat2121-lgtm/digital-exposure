@@ -22,6 +22,14 @@ The Strive parser extracts both balance dates, BTC, cash, STRC holdings, Class A
 
 Parser `sec-weekly-v4` keeps `facts.weekly_btc_purchases` and optional `facts.weekly_btc_sales` as separate, nonnegative **gross BTC quantities**. Missing activity is unknown; an explicit zero remains zero. Supported inputs include labelled weekly quantity tables, period-scoped issuer prose, approximate trade/holdings quantities, and explicit statements of no BTC purchases/sales or ATM issuance. Dollar proceeds, equity/preferred sales, cumulative trades and decreases in holdings are not BTC sale quantities. Unknown layouts or malformed/conflicting quantities require review. Feed schema remains version 1; no price inputs change.
 
+The same parser also records dollar facts where Strategy's 8-K states them: `weekly_btc_cost_usd` (the BTC table's
+"Aggregate Purchase Price" for the period, fees included), `btc_cost_basis_usd` and `btc_average_cost_usd` (the
+aggregate and average purchase price of the ending holdings, from the table or the "acquired at an aggregate purchase
+price of" sentence), and `usd_reserve_dividends_interest_usd` (the USD Reserve used for dividends and interest, when the
+8-K says so). These are additive; the parser version is unchanged, so they appear on filings parsed after the next
+deploy. Until then the panels read them from `data/strategy-weekly-8k.json` for the weeks it covers (through
+Sep 20, 2026) and otherwise estimate the week's BTC cost, which the panel audit flags as a WARN.
+
 `extractionValidated: true` means the supported table shape and arithmetic checks passed. The filing status is `ready_for_review`; it is **not** a claim that debt, preferred claims, prices and all other report inputs were independently refreshed. Consumers should retain the last complete report until all necessary inputs have been reconciled. Unknown layouts remain `partial` or `not_weekly`; missing fields are omitted, never zero-filled. Primary documents containing only a link to a press-release exhibit require an additional parser before automatic extraction; the filing is still discovered immediately.
 
 ## API

@@ -17,6 +17,35 @@ The weekly ChatGPT task (`CHATGPT_AUDIT_TASK.md`) reads those files.
 runners. The two WARNs are the MSTR and ASST earnings dates, which are still
 Nasdaq estimates; the weekly task replaces them with confirmed dates.
 
+### Second round (Sep 25, 2026): 92 PASS, 2 WARN, 0 FAIL
+
+- **DEPLOYED is now BTC + DIVs.** Monday's waterfall reads down, one row per step,
+  and ends in the week's bitcoin cost (BTC) and the rest (DIVs). Strategy's cost is
+  the 8-K's aggregate purchase price; Strive's is its dashboard's purchase cost. For
+  Sep 14–20, Strategy's $136.0m = $75.7m BTC + $60.3m DIVs. Its 8-K put dividends and
+  interest at $57.4m; the gap is rounding in its $0.01B balances. New checks:
+  `btc_cost`, `btc_divs` and `MSTR.divs_8k`.
+- **Each issuer's own amplification.** MSTR shows strategy.com's `amplification`
+  (BTC reserve ÷ net BTC reserve, 1.25×); ASST shows Strive's (notional preferred +
+  debt) ÷ BTC value (50.6%). `MSTR.amp_model` checks that the 8-K model used for the
+  weekly change stays within 0.05× of strategy.com (1.27× vs 1.25×).
+- **Strategy's USD cover now has 12 weeks.** The filing feed started with the Aug 24
+  8-K, so it held only four weeks of USD Reserve and USD Cash balances. The earlier
+  weeks were transcribed from the 8-Ks into `data/strategy-weekly-8k.json`, each linked
+  to its SEC filing: USD Reserve $2.55B on Jul 5, $5.10B plus $1.59B of USD Cash on
+  Aug 23. New weeks arrive through the feed.
+- **The spread charts cover 26 weeks** (`STRC.history`, `SATA.history`).
+- **SATA's cut test reads "RATE CUT: Allowed/Blocked"**; the footnote gives the month's
+  average and the cap and floor.
+- **Calendar dates** sit centered in fixed-width chips.
+- **The 8 failing export tests on main** were fixed: right-aligned text now measures
+  its inked width, so a trailing glyph such as "y" no longer trips the clip check.
+- **Filing worker.** The parser now also records `weekly_btc_cost_usd`,
+  `btc_cost_basis_usd`, `btc_average_cost_usd` and `usd_reserve_dividends_interest_usd`.
+  It needs a `wrangler deploy`; until then the history file covers weeks through
+  Sep 20, and later weeks' BTC cost is estimated and flagged as a WARN.
+- **Test copies** (`?extra=1`) add the top items from section 3; see PANELS.md.
+
 ## 1. Does everything update automatically?
 
 Yes, except the items in the last table below. Every source is fetched when a page
@@ -89,7 +118,8 @@ Each figure below was recomputed independently from raw inputs. All passed.
   - Sats/share = BTC held ÷ effective common shares.
   - NAV/share = (BTC × price + cash − debt − preferred claims) ÷ shares.
   - Price/NAV.
-  - Amplification = (debt + preferred claims) ÷ BTC value.
+  - Amplification = (debt + preferred claims) ÷ BTC value (ASST). MSTR shows
+    strategy.com's KPI (second round).
   - Raised = common + preferred.
   - Cash change, and deployed = raised − cash change.
 - **Monday cross-checks against strategy.com:**
@@ -159,14 +189,14 @@ Each figure below was recomputed independently from raw inputs. All passed.
 ### Definitions to know
 
 - **"Amplification" means different things now.**
-  - The panel uses (debt + preferred claims) ÷ BTC value. That is Strive's
-    current definition (its dashboard's "Amplification Ratio") and Strategy's
-    definition before July 23, 2026 (strategy.com field `debtPrefByBN`, 29.3%).
+  - Strive: (notional preferred + debt) ÷ BTC value, its "Bitcoin amplification
+    ratio" ([Strive FWP, May 14, 2026](https://www.sec.gov/Archives/edgar/data/1920406/000095010326007179/dp246652_fwp.htm)).
+    Strategy used the same ratio before July 23, 2026 (strategy.com `debtPrefByBN`).
   - On July 23, 2026 Strategy redefined its own "amplification" KPI as BTC
     Reserve ÷ Net Reserve, about 1.25×
     ([Strategy FWP, Aug 24, 2026](https://www.sec.gov/Archives/edgar/data/1050446/000119312526363557/d431748dfwp.htm)).
-  - The panel keeps one formula for both companies and states it in the page
-    footnote. Readers who know Strategy's new KPI may expect 1.25× for MSTR.
+  - Since the second round, each card shows its issuer's own definition: MSTR in ×,
+    ASST in %.
 - **Strategy's USD cover and coverage include interest.** Its "dividends" in
   `usdMonthsOfDividends`, `totalYearsOfCoverage` and `btcBreakevenArr` are all
   annual interest + dividends ($1.62B). The footnotes now say so.
@@ -183,30 +213,29 @@ Ranked by importance to each sheet's theme. All sources are keyless.
 
 ### Monday — The Accretion Ledger (buying bitcoin and raising capital)
 
-1. **Weekly BTC purchase cost and average price.** This splits DEPLOYED into
-   bitcoin vs. dividends and fees. For example, Strategy bought 950 BTC for
-   $75.7m, so the other $60m of its $136m was dividends and fees.
-   - Strive: `strive.com/api/treasury` `latestPurchase` (available now).
-   - Strategy: the 8-K's aggregate purchase price. This needs the capital-report
-     Worker to extract it, because SEC rejects anonymous requests from this app.
+1. **Weekly BTC purchase cost and average price.** *Done in the second round*
+   (BTC + DIVs). Strive: its dashboard's purchase cost. Strategy: the 8-K's aggregate
+   purchase price, now extracted by the filing Worker (after its next deploy) and
+   transcribed for Mar 1–Sep 20, 2026 in `data/strategy-weekly-8k.json`.
 2. **Remaining ATM capacity (dry powder).** From the 8-K "Available for Issuance
    and Sale" table. As of Aug 30: MSTR $19.09B, STRC $17.51B. Worker extraction.
 3. **Strategy's own KPIs.** mNAV (1.20×), BTC Gain YTD (`btcGainYTD`) and its new
-   amplification (1.25×), all from `api.strategy.com/btc/bitcoinKpis`, updated
-   intraday.
+   amplification (1.25×, *shown since the second round*), all from
+   `api.strategy.com/btc/bitcoinKpis`, updated intraday.
 4. **Average cost basis and unrealized gain.** Strategy: 846,000 BTC at $75,416
-   average. Strive: dashboard `total_cost_basis`.
+   average. Strive: dashboard `total_cost_basis`. *In the Monday test copy.*
 5. **Remaining buyback authorization.** STRC: $875.1m left, from the 8-K.
 
 ### Wednesday — The Coupon Sheet (digital credit yields and spreads)
 
 1. **Strategy's credit metrics**, which show what stands behind each coupon:
-   BTC Rating 6.3×, BTC Credit 50 bp and BTC Floor $13,265 per series, from
-   `api.strategy.com/btc/credit`.
+   BTC Floor $13,265 per series, from `api.strategy.com/btc/credit` (*BTC floor in
+   the Wednesday test copy*). On Sep 25 the same endpoint returned 0 for BTC Rating
+   and null for BTC Credit, so those two are not shown.
 2. **Tax-equivalent yield** (return-of-capital treatment). STRC: 19.4%, from
    `taxEqvEffYield` in each series' KPI feed. Prominent in the issuers'
-   marketing.
-3. **Strategy's "market credit" spread.** STRC's yield minus a
+   marketing. *In the Wednesday test copy.*
+3. **Strategy's "market credit" spread** (*in the Wednesday test copy*). STRC's yield minus a
    duration-matched Treasury (5.07%): 7.13%, from `marketCredit`. This is the
    credit-spread framing, next to the panel's carry-over-cash headline.
 4. **Next announced rate.** STRC's rate is posted on the month's last business
@@ -217,16 +246,20 @@ Ranked by importance to each sheet's theme. All sources are keyless.
 
 ### Friday — The Closing Mark (market regime at the Friday close)
 
-1. **Spot BTC ETF net flows over 7 days:** `etfNetFlows7d` in `bitcoinKpis`.
+1. **Spot BTC ETF net flows over 7 days:** `etfNetFlows7d` in `bitcoinKpis`. Not in
+   the test copy: the API does not state its unit (BTC or $m), and strategy.com's
+   page, which would, blocks automated reads.
 2. **Futures basis and perpetual funding:**
-   - 3-month basis: `futuresBasis3m`, 4.9%.
+   - 3-month basis: `futuresBasis3m`, 4.9% (*in the Friday test copy, computed from
+     Deribit's quarterly future: 5.0% on Sep 25, matching strategy.com's rounded 5*).
    - Perpetual funding rates: OKX public API, every 8 hours.
 3. **MSTR 30-day implied volatility:** Cboe delayed-quote JSON.
-4. **BTC DVOL and options skew:** Deribit public API, real time.
-5. **Stablecoin supply:** DefiLlama, daily.
+4. **BTC DVOL and options skew:** Deribit public API, real time. *DVOL is in the
+   Friday test copy.*
+5. **Stablecoin supply:** DefiLlama, daily. *In the Friday test copy.*
 
-Items 1–2 fit the macro strip. Adding them means trading space with the phone
-layout, so each is a design choice for you to make, not a fix.
+The test copies (`?extra=1`) show these next to the regular panels so you can judge
+them before anything changes on X.
 
 ## 4. Design pass
 

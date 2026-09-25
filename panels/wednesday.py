@@ -3,7 +3,7 @@ Strategy and Strive.
 
 STRC (Strategy) and SATA (Strive) carry the treasuries, so each gets a hero
 card: the spread over the 3-month bill, the spread stack over cash, Treasuries
-and corporate credit, twelve weeks of spread history, par and liquidity.
+and corporate credit, 26 weeks of spread history, par and liquidity.
 STRF, STRK, STRD and STRE follow in a compact ladder. USD cover is read
 against each issuer's own target on a weekly timeline, then the flow ledger
 and the dated calendar.
@@ -18,8 +18,8 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from . import themes
-from .draw import T_BIG, T_BODY, T_HERO, T_LABEL, T_MIN, T_VALUE, Canvas, fontset, mix, width
-from .extras import fred_latest, number
+from .draw import T_BIG, T_BODY, T_HERO, T_LABEL, T_MIN, T_VALUE, Canvas, font, fontset, mix, width
+from .extras import fred_latest, number, strategy_weeks
 
 ET = ZoneInfo("America/New_York")
 WIDTH, HEIGHT = 1440, 1920
@@ -40,7 +40,27 @@ BENCHMARKS = (("SOFR", "SOFR"), ("3M bill", "DGS3MO"), ("10Y", "DGS10"), ("IG co
               ("HY corp", "BAMLH0A0HYM2EY"))
 SERIES = dict(BENCHMARKS)
 DEFAULT_HEADLINE = "3M bill"
-HISTORY_DAYS = 84
+HISTORY_DAYS = 182  # 26 weeks
+
+
+@dataclass(frozen=True)
+class Layout:
+    """Vertical rhythm. The extra-data test copy adds a backing row to each hero
+    card and tightens rows elsewhere, so it stays 1440 × 1920 (3:4)."""
+    hero_h: int = 966
+    stack_row: int = 44
+    plot_h: int = 92
+    backing: bool = False
+    table_h: int = 330
+    ladder_row: int = 48
+    calendar_row: int = 37
+    flow_h: int = 328
+    flow_row: int = 40
+
+
+STANDARD = Layout()
+EXTRA = Layout(hero_h=1018, stack_row=40, plot_h=62, backing=True, table_h=300, ladder_row=42, calendar_row=33,
+               flow_h=302, flow_row=35)
 
 
 @dataclass(frozen=True)
@@ -216,6 +236,11 @@ def _cover_history(rows, extras, config, monday):
     strategy_kpis = (extras.get("strategy") or {}).get("btc") or {}
     annual = number(strategy_kpis.get("totalAnnualDividends"))
     weekly = {}
+    # Earlier weeks from the transcribed 8-Ks (USD Cash began Aug 23, 2026); the feed wins.
+    for day, week in strategy_weeks().items():
+        reserve, cash = number(week.get("usd_reserve_usd")), number(week.get("usd_cash_usd"))
+        if annual and reserve is not None and cash is not None:
+            weekly[day] = (reserve + cash) / (annual / 12)
     for row in rows:
         facts = row["extracted"]["facts"]
         reserve, cash = number(facts.get("usd_reserve_usd")), number(facts.get("usd_cash_usd"))
@@ -235,7 +260,7 @@ def _cover_history(rows, extras, config, monday):
     return {
         "MSTR": {"name": "Strategy", "weeks": strategy, "current": number(strategy_kpis.get("usdMonthsOfDividends")),
                  "target": target("MSTR", "strategy_reserve_floor_months"), "kind": "floor",
-                 "basis": "(USD Reserve + USD Cash) ÷ current monthly dividends"},
+                 "basis": "(USD Reserve + USD Cash) ÷ current monthly dividends; weekly 8-K balances"},
         "ASST": {"name": "Strive", "weeks": strive, "current": strive[-1][1] if strive else None,
                  "target": target("ASST", "strive_reserve_goal_months"), "kind": "goal",
                  "basis": "Strive dashboard dividend reserve"},
@@ -358,11 +383,44 @@ def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None)
     calendar += _scheduled_events(extras, today)
     calendar = _pick(calendar, today)
     coverage = dict(monday.extras) if monday is not None else {}
+    backing = _backing(strategy, (extras.get("strategy") or {}).get("credit") or {}, monday, sata_rate, heroes)
     stamp = max((row["date"] for row in _rows(extras, "STRC")), default=None)
     return {"ladder": ladder, "references": references, "bill": bill, "headline": headline, "heroes": heroes, "rest": rest,
             "liquidity": liquidity, "btc_adv": btc_adv, "credit_adv": credit_adv, "ledger": ledger,
             "calendar": calendar[:CALENDAR_ROWS], "coverage": coverage, "cover": _cover_history(rows, extras, config, monday),
-            "sata_rate": sata_rate, "stamp": stamp, "now": now, "stale": tuple(extras.get("stale") or ())}
+            "sata_rate": sata_rate, "stamp": stamp, "now": now,
+            "stale": tuple(section for section in extras.get("stale") or () if section != "markets"),
+            "backing": backing}
+
+
+def _backing(strategy, credit, monday, sata_rate, heroes):
+    """Test copy: what stands behind each hero's coupon.
+
+    BTC floor = (debt + preferred notional senior to and including the series − USD
+    cash) ÷ BTC held: the BTC price at which the claims through that series would
+    exceed the bitcoin. strategy.com publishes STRC's; SATA's uses the same formula.
+    """
+    strc = strategy.get("STRC") or {}
+    strc_floor = number((credit.get("STRC") or {}).get("btcFloor"))
+    sata_floor = None
+    strive = next((c for c in monday.report.companies if c.ticker == "ASST"), None) if monday is not None else None
+    if strive is not None and strive.current.btc_holdings:
+        from report.calculations import liquid_assets
+        current = strive.current
+        claims = (current.debt_principal or 0) + (current.preferred_claims or 0) - (liquid_assets(current) or 0)
+        sata_floor = max(claims, 0) / current.btc_holdings
+    par = (heroes.get("SATA") or {}).get("par") or {}
+    return {
+        "STRC": {"cells": (("BTC FLOOR", f"${strc_floor:,.0f}" if strc_floor else "—"),
+                           ("TAX-EQ YIELD", _pct(number(strc.get("taxEqvEffYield")))),
+                           ("MKT CREDIT", _pct(number(strc.get("marketCredit"))))),
+                 "floor": strc_floor, "floor_source": "strategy.com /btc/credit btcFloor"},
+        "SATA": {"cells": (("BTC FLOOR", f"${sata_floor:,.0f}" if sata_floor else "—"),
+                           ("STATED RATE", _pct(sata_rate)),
+                           (f"{par['prior_month']:%b} AVG".upper() if par.get("prior_month") else "PRIOR AVG",
+                            f"${par['prior_avg']:.2f}" if par.get("prior_avg") else "—")),
+                 "floor": sata_floor, "floor_source": "(SATA notional + debt − cash and STRC held) ÷ BTC held"},
+    }
 
 
 # ── rendering ───────────────────────────────────────────────────────────────
@@ -406,7 +464,7 @@ def _heading(canvas, x, y, text, p, right=None, right_x=None):
         canvas.text(right_x, y + 2, right, T_MIN, p.muted, align="right", max_width=(right_x - x) * .32)
 
 
-def _hero(canvas, box, ticker, hero, scale, p, theme, stripe, data):
+def _hero(canvas, box, ticker, hero, scale, p, theme, stripe, data, lay=STANDARD):
     x0, y0, x1, y1 = box
     L, R = x0 + 28, x1 - 28
     item = hero["item"]
@@ -438,16 +496,16 @@ def _hero(canvas, box, ticker, hero, scale, p, theme, stripe, data):
             canvas.draw.rounded_rectangle((bar_left, y + 8, bar_left + min(1, spread / scale) * (bar_right - bar_left), y + 32),
                                           radius=min(5, p.radius), fill=stripe if key else mix(stripe, p.card, .42))
         canvas.text(R, y + 2, _bp(spread).replace(" bp", ""), T_LABEL, p.ink, key, align="right")
-        y += 44
+        y += lay.stack_row
 
-    # Twelve weeks of spread over the headline benchmark.
+    # 26 weeks of spread over the headline benchmark.
     top = y + 14
     history = hero["history"]
-    canvas.text(L, top, "12 WEEKS", T_MIN, p.muted, True)
+    canvas.text(L, top, "26 WEEKS", T_MIN, p.muted, True)
     if len(history) > 2:
         values = [value for _, value in history]
         canvas.text(R, top, f"{min(values):,.0f}–{max(values):,.0f} bp", T_MIN, p.muted, align="right")
-        plot = (L + 78, top + 44, R - 8, top + 136)
+        plot = (L + 78, top + 44, R - 8, top + 44 + lay.plot_h)
         low, high = min(values), max(values)
         pad = max(10.0, (high - low) * .12)
         lo, hi = low - pad, high + pad
@@ -466,15 +524,15 @@ def _hero(canvas, box, ticker, hero, scale, p, theme, stripe, data):
         canvas.text(L, top + 70, "History unavailable", T_BODY, p.muted)
 
     # Par (or SATA's rate-cut test), liquidity and size.
-    strip = top + 180
+    strip = top + 88 + lay.plot_h
     canvas.draw.rounded_rectangle((L - 10, strip, R + 10, strip + 104), radius=min(10, p.radius + 4), fill=p.tint)
     par, liquidity = hero["par"], hero["liquidity"]
     at = par.get("at_par_20")
     first = ("≥ $100", f"{at}/{par.get('sessions')} days" if at is not None else "—", p.ink)
     if ticker == "SATA" and par.get("prior_avg"):
-        # The prospectus allows a rate cut only if the prior month averaged ≥ $99.
+        # Strive may cut SATA's rate only if the prior month's closes averaged ≥ $99.
         allowed = par["prior_avg"] >= 99
-        first = ("CUT TEST", f"${par['prior_avg']:.2f}", p.accent if allowed else p.positive)
+        first = ("RATE CUT", "Allowed" if allowed else "Blocked", p.accent if allowed else p.positive)
     cells = (first, ("30D VOLUME", _money(liquidity.get("adv"), 0) + "/d" if liquidity.get("adv") else "—", p.ink),
              ("SIZE", _money(liquidity.get("notional")), p.ink))
     cell = (R - L) / 3
@@ -483,9 +541,18 @@ def _hero(canvas, box, ticker, hero, scale, p, theme, stripe, data):
         canvas.text(cx, strip + 12, label, T_MIN, p.muted, True, max_width=cell - 12)
         canvas.text(cx, strip + 48, value, T_VALUE - 6, color, True, max_width=cell - 12)
 
+    y = strip + 116
+    if lay.backing:
+        # Test copy: the backing row (BTC floor and the issuer's own credit figures).
+        canvas.draw.rounded_rectangle((L - 10, y, R + 10, y + 104), radius=min(10, p.radius + 4), fill=p.tint)
+        for n, (label, value) in enumerate(data["backing"][ticker]["cells"]):
+            cx = L + 4 + n * cell
+            canvas.text(cx, y + 12, label, T_MIN, p.muted, True, max_width=cell - 12)
+            canvas.text(cx, y + 48, value, T_VALUE - 6, p.ink, True, max_width=cell - 12)
+        y += 116
+
     # The issuer's USD cover against its own target: what stands behind the coupon.
     cover = data["cover"]["MSTR" if ticker == "STRC" else "ASST"]
-    y = strip + 116
     weeks, target, current = cover["weeks"], cover["target"], cover["current"]
     canvas.text(L, y, "USD COVER", T_MIN, p.muted, True)
     canvas.text(L, y + 34, f"{current:.0f} mo" if current else "—", T_VALUE - 4, p.ink, True)
@@ -507,7 +574,7 @@ def _hero(canvas, box, ticker, hero, scale, p, theme, stripe, data):
         canvas.draw.line((plot[0], plot[3], plot[2], plot[3]), fill=p.line, width=2)
 
 
-def _rest(canvas, box, rest, p, theme, headline):
+def _rest(canvas, box, rest, p, theme, headline, lay=STANDARD):
     x0, y0, x1, y1 = box
     L, R = x0 + 28, x1 - 28
     _card(canvas, box, p, theme)
@@ -518,7 +585,7 @@ def _rest(canvas, box, rest, p, theme, headline):
     canvas.draw.line((L, y0 + 102, R, y0 + 102), fill=p.line, width=2)
     for index, row in enumerate(rest):
         item = row["item"]
-        y = y0 + 116 + index * 48
+        y = y0 + 116 + index * lay.ladder_row
         currency = "€" if item.currency == "EUR" else "$"
         canvas.text(L, y, item.ticker, T_BODY, p.ink, True)
         values = (f"{currency}{item.price:,.2f}" if item.price else "—", _pct(item.effective),
@@ -527,23 +594,29 @@ def _rest(canvas, box, rest, p, theme, headline):
             canvas.text(x, y, value, T_BODY, p.ink, n in (1, 2), align="right")
 
 
-def _calendar(canvas, box, data, p, theme):
+def _calendar(canvas, box, data, p, theme, lay=STANDARD):
     x0, y0, x1, y1 = box
     L, R = x0 + 28, x1 - 28
     _card(canvas, box, p, theme)
     _heading(canvas, L, y0 + 18, "Calendar", p, "days", R)
     today = data["now"].date()
-    for index, (day, label, note) in enumerate(data["calendar"][:CALENDAR_ROWS]):
-        y = y0 + 60 + index * 37
+    rows = data["calendar"][:CALENDAR_ROWS]
+    stamps = [f"{date.fromisoformat(day):%b} {date.fromisoformat(day).day}".upper() for day, _, _ in rows]
+    chip = max((width(stamp, T_MIN, True) for stamp in stamps), default=0) + 24  # one width for every date
+    cap = font(T_MIN, True).getbbox("H", anchor="lt")
+    for index, ((day, label, note), stamp) in enumerate(zip(rows, stamps)):
+        y = y0 + 60 + index * lay.calendar_row
         parsed = date.fromisoformat(day)
-        canvas.pill(L, y - 1, f"{parsed:%b} {parsed.day}".upper(), T_MIN, p.card, p.deep, pad=(10, 1))
+        middle = y + (cap[1] + cap[3]) / 2  # the labels' cap-height center
+        half = min(16, (lay.calendar_row - 3) / 2)
+        canvas.chip((L, middle - half, L + chip, middle + half), stamp, T_MIN, p.card, p.deep)
         short = label.replace(" dividend ", " ").replace("STRF · STRK · STRD · STRE", "STRF/K/D/E").replace(
             "ASST warrant exercise deadline", "ASST warrants due")
-        canvas.text(L + 128, y, short, T_MIN, p.ink, True, max_width=R - L - 180)
+        canvas.text(L + chip + 16, y, short, T_MIN, p.ink, True, max_width=R - L - chip - 68)
         canvas.text(R, y, f"{(parsed - today).days}", T_MIN, p.muted, align="right")
 
 
-def _flow(canvas, box, ledger, p, theme):
+def _flow(canvas, box, ledger, p, theme, lay=STANDARD):
     x0, y0, x1, y1 = box
     L, R = x0 + 28, x1 - 28
     _card(canvas, box, p, theme)
@@ -556,7 +629,7 @@ def _flow(canvas, box, ledger, p, theme):
     canvas.draw.line((L, y0 + 100, R, y0 + 100), fill=p.line, width=2)
     totals = {"strc": 0, "other": 0, "mstr": 0, "sata": 0}
     for index, entry in enumerate(ledger):
-        y = y0 + 110 + index * 40
+        y = y0 + 110 + index * lay.flow_row
         values = (_short(entry["week"]), _money(entry.get("strc"), signed=True), _money(entry.get("other"), signed=True),
                   _money(entry.get("mstr"), signed=True), _money(entry.get("sata"), signed=True),
                   f"{(entry.get('mstr_btc') or 0):,.0f} · {(entry.get('asst_btc') or 0):,.0f}")
@@ -566,7 +639,7 @@ def _flow(canvas, box, ledger, p, theme):
             canvas.text(x, y, value, T_BODY - 2, color, money, align="center", max_width=span - 8)
         for key in totals:
             totals[key] += entry.get(key) or 0
-    y = y0 + 116 + len(ledger) * 40
+    y = y0 + 116 + len(ledger) * lay.flow_row
     canvas.draw.line((L, y - 8, R, y - 8), fill=p.line, width=2)
     canvas.text(centers[0], y + 2, f"{len(ledger)} WK", T_BODY - 2, p.ink, True, align="center")
     for key, x in zip(("strc", "other", "mstr", "sata"), centers[1:5]):
@@ -591,8 +664,10 @@ def _header(canvas, data, p, theme):
     canvas.text(M, 176, refs, T_MIN, muted, max_width=WIDTH - 2 * M)
 
 
-def render_png(data: dict, theme: themes.Theme = themes.DEFAULT) -> tuple[bytes, list[str]]:
+def render_png(data: dict, theme: themes.Theme = themes.DEFAULT, extra: bool = False) -> tuple[bytes, list[str]]:
+    """``extra`` renders the test copy with each hero's backing row."""
     p = theme.wednesday
+    lay = EXTRA if extra else STANDARD
     with fontset(theme.fontset):
         canvas = Canvas((WIDTH, HEIGHT), p.bg, floor=T_MIN)
         if theme.key == "classic":
@@ -606,18 +681,29 @@ def render_png(data: dict, theme: themes.Theme = themes.DEFAULT) -> tuple[bytes,
         top = 226
         for index, ticker in enumerate(HEROES):
             x0 = M + index * (HALF + GAP)
-            _hero(canvas, (x0, top, x0 + HALF, top + 966), ticker, heroes[ticker], scale, p, theme, p.company(ticker), data)
-        y = top + 984
+            _hero(canvas, (x0, top, x0 + HALF, top + lay.hero_h), ticker, heroes[ticker], scale, p, theme, p.company(ticker),
+                  data, lay)
+        y = top + lay.hero_h + 18
         split = M + 820
-        _rest(canvas, (M, y, split, y + 330), data["rest"], p, theme, data["headline"])
-        _calendar(canvas, (split + GAP, y, WIDTH - M, y + 330), data, p, theme)
-        y += 348
-        _flow(canvas, (M, y, WIDTH - M, y + 328), data["ledger"], p, theme)
-        png = canvas.save(metadata={"Title": "The Coupon Sheet", "Theme": theme.key})
+        _rest(canvas, (M, y, split, y + lay.table_h), data["rest"], p, theme, data["headline"], lay)
+        _calendar(canvas, (split + GAP, y, WIDTH - M, y + lay.table_h), data, p, theme, lay)
+        y += lay.table_h + 18
+        _flow(canvas, (M, y, WIDTH - M, y + lay.flow_h), data["ledger"], p, theme, lay)
+        png = canvas.save(metadata={"Title": "The Coupon Sheet", "Theme": theme.key, "Extra": "yes" if extra else "no"})
     return png, canvas.overflows
 
 
-def notes(data: dict) -> list[str]:
+def _cut_note(data: dict) -> str:
+    par = (data["heroes"].get("SATA") or {}).get("par") or {}
+    if not par.get("prior_avg"):
+        return ""
+    verdict = "allowed" if par["prior_avg"] >= 99 else "blocked"
+    return (f"SATA rate cut: Strive may lower SATA's rate only if its closes over the prior month averaged at least $99 "
+            f"({par['prior_month']:%B} average ${par['prior_avg']:.2f}, so a cut is {verdict}). A cut is capped at 0.25 pp "
+            "plus any fall in SOFR, and the rate cannot go below 1-month term SOFR.")
+
+
+def notes(data: dict, extra: bool = False) -> list[str]:
     """Footnotes for the web page; the X image carries none."""
     headline = data["headline"]
     stale = data.get("stale") or ()
@@ -628,11 +714,17 @@ def notes(data: dict) -> list[str]:
         "risk-free rate and the bill Jeff Walton compares digital credit to; both preferreds reset monthly around $100 par.",
         "Benchmarks from FRED: SOFR, DGS3MO (3M bill), DGS10 (10Y), ICE BofA US Corporate (IG) and "
         f"High Yield effective yields, as of {_short(data['references'][0][1][0])}.",
-        "12-week history uses each day's close, the stated rate in effect that day and the benchmark that day.",
-        "USD cover: Strategy (USD Reserve + USD Cash) ÷ current monthly dividends against its 12-month floor; "
-        "Strive's dashboard reserve against its 18-month goal.",
-        "Flow ledger: Strategy 8-K cash; SATA = net share change × $100. SATA may cut its rate only if the prior month "
-        "averaged at least $99.",
+        "26-week history uses each day's close, the stated rate in effect that day and the benchmark that day.",
+        _cut_note(data),
+        "USD cover: Strategy (USD Reserve + USD Cash) ÷ current monthly dividends against its 12-month floor, each week's "
+        "balances from its 8-K (USD Cash began Aug 23, 2026; earlier weeks are the USD Reserve alone); Strive's dashboard "
+        "reserve against its 18-month goal.",
+        "Flow ledger: Strategy 8-K cash; SATA = net share change × $100.",
+        ("Test copy: BTC floor = (debt + preferred notional senior to and including the series − USD cash) ÷ BTC held, "
+         "the BTC price below which those claims would exceed the bitcoin. strategy.com publishes STRC's; SATA's uses "
+         "the same formula with Strive's cash and the STRC it holds. Tax-equivalent yield and market credit (effective "
+         "yield − the duration-matched Treasury) are strategy.com's STRC figures. The prior-month average is the close "
+         "average behind SATA's rate-cut test.") if extra else "",
         "Saved snapshot used for: " + ", ".join(stale) + "." if stale else "",
     ) if line]
 
@@ -649,6 +741,12 @@ def audit_rows(data: dict) -> list[dict]:
         for label, spread in hero["spreads"].items():
             rows.append({"metric": f"{ticker} spread over {label}", "value": _bp(spread), "source": "effective − benchmark"})
         rows.append({"metric": f"{ticker} closes ≥ $100, last 20", "value": str(hero["par"].get("at_par_20")), "source": "Yahoo Finance"})
+        if ticker == "SATA" and hero["par"].get("prior_avg"):
+            rows.append({"metric": f"SATA {hero['par']['prior_month']:%b} average close (rate cut allowed at ≥ $99)",
+                         "value": f"${hero['par']['prior_avg']:.2f}", "source": "Yahoo Finance"})
+    for ticker, item in (data.get("backing") or {}).items():
+        rows.append({"metric": f"Test copy · {ticker} BTC floor", "value": f"${item['floor']:,.0f}" if item.get("floor") else "—",
+                     "source": item["floor_source"]})
     for ticker, item in data["cover"].items():
         rows.append({"metric": f"{item['name']} USD cover (months) vs {item['kind']}",
                      "value": f"{item['current']:.1f} vs {item['target']:.0f}" if item["current"] and item["target"] else "—",

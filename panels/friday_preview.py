@@ -244,7 +244,28 @@ def derive(panel: dict, data: dict, extras: dict, feed: dict) -> dict:
             "sma20w_series": _rolling(weekly, lambda v: _sma(v, 20)), "ema21w_series": _rolling(weekly, lambda v: _ema(v, 21)),
             "realized": onchain.get("realized_weekly") or [], "realized_price": onchain.get("realized_price"),
             "checklist": checklist, "tally": tally, "thresholds": thresholds, "turnover": turnover, "shares": shares, "buyback": buyback,
-            "regime": (label, color, days), "macro": macro}
+            "regime": (label, color, days), "macro": macro, "markets": _markets(extras)}
+
+
+def _markets(extras):
+    """Test copy: BTC implied volatility, 3-month futures basis and stablecoin supply, with weekly changes."""
+    markets = extras.get("markets") or {}
+
+    def latest_and_week(rows):
+        rows = [(day, value) for day, value in rows or [] if value is not None]
+        if not rows:
+            return None, None, None
+        last_day = date.fromisoformat(rows[-1][0])
+        prior = next((value for day, value in reversed(rows) if date.fromisoformat(day) <= last_day - timedelta(days=7)), None)
+        return rows[-1][1], rows[-1][1] - prior if prior is not None else None, rows[-1][0]
+
+    dvol, dvol_change, dvol_day = latest_and_week(markets.get("dvol"))
+    supply, supply_change, supply_day = latest_and_week(markets.get("stablecoins_usd"))
+    basis = markets.get("basis") or {}
+    return {"dvol": dvol, "dvol_change": dvol_change, "dvol_day": dvol_day,
+            "basis": basis.get("annualized_pct"), "basis_instrument": basis.get("instrument"), "basis_days": basis.get("days"),
+            "stablecoins": supply, "stablecoins_change": supply_change, "stablecoins_day": supply_day,
+            "as_of": markets.get("as_of")}
 
 
 def _macro(extras):
@@ -425,16 +446,18 @@ def _equity_chart(canvas, box, panel, ticker, derived):
 
 
 # ── render ──────────────────────────────────────────────────────────────────
-def render_png(panel: dict, derived: dict, *, stale: tuple = (), theme: themes.Theme = themes.DEFAULT) -> tuple[bytes, list[str]]:
+def render_png(panel: dict, derived: dict, *, stale: tuple = (), theme: themes.Theme = themes.DEFAULT,
+               extra: bool = False) -> tuple[bytes, list[str]]:
+    """``extra`` renders the test copy with a markets band (DVOL, basis, stablecoins)."""
     with _LOCK, fontset(theme.fontset):
         _use(theme)
         try:
-            return _render(panel, derived, stale)
+            return _render(panel, derived, stale, extra)
         finally:
             _use(themes.CLASSIC)
 
 
-def _render(panel: dict, derived: dict, stale: tuple) -> tuple[bytes, list[str]]:
+def _render(panel: dict, derived: dict, stale: tuple, extra: bool = False) -> tuple[bytes, list[str]]:
     """Portrait, phone-first (see draw.T_*). Tiles, macro, checklist, BTC zones, liquidity."""
     canvas = Canvas((WIDTH, HEIGHT), BG, floor=T_MIN)
     draw = canvas.draw
@@ -515,10 +538,11 @@ def _render(panel: dict, derived: dict, stale: tuple) -> tuple[bytes, list[str]]
     x = WIDTH - M
     for state in ("BEAR", "NEUTRAL", "BULL"):
         x = canvas.pill(x, top - 4, f"{state} {tally[state]}", T_MIN, BG, colors[state], align="right", pad=(12, 4)) - 12
-    box = (M, top + 48, WIDTH - M, top + 48 + 7 * 54 + 22)
+    row = 48 if extra else 54  # the test copy tightens rows to make room for its markets band
+    box = (M, top + 48, WIDTH - M, top + 48 + 7 * row + 22)
     _card(canvas, box)
     for index, (label, value, note, state) in enumerate(derived["checklist"]):
-        y = top + 62 + index * 54
+        y = top + 62 + index * row
         if index:
             draw.line((M + 24, y - 8, WIDTH - M - 24, y - 8), fill=LINE, width=1)
         canvas.text(M + 28, y + 4, CHECK_LABELS.get(label, label), T_BODY, TEXT, True, max_width=360)
@@ -528,7 +552,7 @@ def _render(panel: dict, derived: dict, stale: tuple) -> tuple[bytes, list[str]]
 
     # Row 4: BTC against the 200-week SMA zones.
     top = box[3] + 20
-    chart_box = (M, top, WIDTH - M, top + 440)
+    chart_box = (M, top, WIDTH - M, top + (360 if extra else 440))
     _card(canvas, chart_box)
     canvas.text(M + 28, top + 20, "BTC · 200W SMA ZONES", T_LABEL, TEXT, True)
     canvas.text(WIDTH - M - 28, top + 20, f"{_pct(derived['extension'], 1, True)} vs 200W", T_LABEL, TEXT, True, align="right")
@@ -538,7 +562,11 @@ def _render(panel: dict, derived: dict, stale: tuple) -> tuple[bytes, list[str]]
     for name, color, dashed in legend:
         canvas.line([(lx, top + 82), (lx + 34, top + 82)], color, 4, dashed=dashed, dash=(7, 5))
         lx = canvas.text(lx + 42, top + 66, name, T_MIN, color, True) + 26
-    _btc_chart(canvas, (M + 116, top + 118, WIDTH - M - 230, top + 386), panel, derived)
+    _btc_chart(canvas, (M + 116, top + 118, WIDTH - M - 230, chart_box[3] - 54), panel, derived)
+    if extra:
+        top = chart_box[3] + 16
+        _markets_band(canvas, (M, top, WIDTH - M, top + 104), derived["markets"])
+        chart_box = (M, top, WIDTH - M, top + 104)
 
     # Row 5: weekly turnover and sentiment.
     top = chart_box[3] + 16
@@ -585,6 +613,24 @@ def _render(panel: dict, derived: dict, stale: tuple) -> tuple[bytes, list[str]]
     return png, canvas.overflows
 
 
+def _markets_band(canvas, box, markets):
+    """Test copy: one row of market-structure readings with their weekly change."""
+    x0, y0, x1, _ = box
+    _card(canvas, box)
+    cells = (("BTC IMPLIED VOL · DVOL", f"{markets['dvol']:.1f}" if markets.get("dvol") is not None else "—",
+              _minus(f"{markets['dvol_change']:+.1f} wk") if markets.get("dvol_change") is not None else ""),
+             ("3M FUTURES BASIS", _pct(markets.get("basis"), 1), "annualized"),
+             ("STABLECOIN SUPPLY", f"${markets['stablecoins'] / 1e9:,.1f}B" if markets.get("stablecoins") else "—",
+              _minus(f"{markets['stablecoins_change'] / 1e9:+.1f}B wk") if markets.get("stablecoins_change") is not None else ""))
+    cell = (x1 - x0 - 48) / 3
+    for n, (label, value, note) in enumerate(cells):
+        cx = x0 + 24 + n * cell
+        canvas.text(cx, y0 + 14, label, T_MIN, MUTED, True, max_width=cell - 16)
+        end = canvas.text(cx, y0 + 50, value, T_VALUE, TEXT, True, max_width=cell * .55)
+        if note:
+            canvas.text(end + 14, y0 + 62, note, T_MIN, MUTED, True, max_width=cx + cell - end - 30)
+
+
 def _minus(text: str) -> str:
     return text.replace("-", "−")
 
@@ -624,9 +670,11 @@ def _marked_chart(canvas, box, rows, fmt, reference=None, ref_label=None):
     canvas.text(plot[2], plot[3] + 6, _short(rows[-1][0]), T_MIN, MUTED, align="right")
 
 
-def notes(panel: dict, derived: dict, stale: tuple = ()) -> list[str]:
+def notes(panel: dict, derived: dict, stale: tuple = (), extra: bool = False) -> list[str]:
     """Footnotes for the web page; the X image carries none."""
     b = derived.get("buyback")
+    m = derived.get("markets") or {}
+    stale = tuple(section for section in stale if extra or section != "markets")  # markets feeds the test copy only
     rules = "; ".join(f"{label}: {rule}" for label, rule in RULES.items())
     return [line for line in (
         "Every weekly reading is taken at the Friday 4:00 pm ET mark. Price/NAV uses estimated basic treasury NAV with "
@@ -639,6 +687,11 @@ def notes(panel: dict, derived: dict, stale: tuple = ()) -> list[str]:
            f"{_short(b['start'])}–{_short(b['end'])} filing week." if b else ""),
         "Fear & Greed: CoinMarketCap 3-day average; the regime is its current band.",
         "Sources: Yahoo Finance · CoinMarketCap · Checkonchain · FRED (DFF, DGS2) · strategy.com.",
+        (f"Test copy: DVOL = Deribit's 30-day BTC implied volatility index (daily close {_short(m.get('dvol_day'))}). "
+         f"3M futures basis = the {m.get('basis_instrument') or 'nearest-quarter'} future's premium over the BTC index, "
+         f"annualized ({m.get('basis_days') or '—'} days to expiry; Deribit). Stablecoin supply = USD-pegged stablecoins "
+         f"in circulation (DefiLlama, {_short(m.get('stablecoins_day'))}). Changes are over 7 days. These are live "
+         "readings, not Friday 4:00 pm marks.") if extra else "",
         "Saved snapshot used for: " + ", ".join(stale) + "." if stale else "",
     ) if line]
 
@@ -664,4 +717,13 @@ def audit_rows(panel: dict, derived: dict) -> list[dict]:
     for company in ("MSTR", "ASST"):
         item = ((panel.get("header") or {}).get("companies") or {}).get(company) or {}
         rows.append({"metric": f"{company} price / NAV", "value": f"{item.get('nav_multiple'):.2f}x" if item.get("nav_multiple") else "—", "source": "derived"})
+    m = derived.get("markets") or {}
+    rows += [
+        {"metric": "Test copy · BTC DVOL", "value": f"{m['dvol']:.2f} ({m.get('dvol_day')})" if m.get("dvol") is not None else "—",
+         "source": "Deribit get_volatility_index_data"},
+        {"metric": "Test copy · 3M futures basis (annualized)", "value": _pct(m.get("basis"), 2),
+         "source": f"Deribit {m.get('basis_instrument') or '—'} mark ÷ index"},
+        {"metric": "Test copy · stablecoin supply", "value": f"${m['stablecoins'] / 1e9:,.2f}B ({m.get('stablecoins_day')})" if m.get("stablecoins") else "—",
+         "source": "DefiLlama stablecoincharts/all (peggedUSD)"},
+    ]
     return rows

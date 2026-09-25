@@ -42,7 +42,7 @@ FRED_SERIES = {
     "BAMLC0A0CMEY": "ICE BofA US Corporate (IG) effective yield",
 }
 YAHOO_SYMBOLS = ("STRC", "SATA", "STRF", "STRK", "STRD", "PFF", "HYG", "DX-Y.NYB", "^TNX", "BTC-USD")
-SECTIONS = ("strategy", "strive", "fred", "yahoo", "onchain", "calendar")
+SECTIONS = ("strategy", "strive", "fred", "yahoo", "onchain", "calendar", "markets")
 
 
 def number(value):
@@ -77,7 +77,7 @@ BTC_FIELDS = ("latestPrice", "btcHoldings", "mNav", "amplification", "debtByBN",
               "totalAnnualDividends", "btcYearsOfDividends", "usdMonthsOfDividends", "totalYearsOfCoverage",
               "btcBreakevenArr", "bitcoinHurdleArr", "realizedPrice", "ma200w", "fearGreedIndex",
               "etfNetFlows7d", "futuresBasis3m", "btcDominanceExStables", "netBtcReserve", "totalReserve")
-PREFERRED_FIELDS = ("ufPrice", "timeStamp", "effYield", "taxEqvEffYield", "currentDividend", "notional",
+PREFERRED_FIELDS = ("ufPrice", "timeStamp", "effYield", "taxEqvEffYield", "marketCredit", "currentDividend", "notional",
                     "vwap1mo", "impliedVolatility", "averageVolume", "dailyVolume", "sharesVolume",
                     "nextRecordDate", "nextPayoutDate", "riskFreeRate", "marketCap")
 
@@ -100,6 +100,11 @@ def fetch_strategy() -> dict:
             for entry in row.get("dividendHistory") or [] if isinstance(entry, dict)][-24:]
         preferreds[series] = item
     result["preferreds"] = preferreds
+    try:  # BTC floor per instrument, used by the extra-data test copy only
+        result["credit"] = {row["title"]: {key: row.get(key) for key in ("btcFloor", "notional", "isPreferred", "duration")}
+                            for row in _json(STRATEGY + "credit") if row.get("title")}
+    except Exception:  # optional: the panels never depend on it
+        result["credit"] = {}
     return result
 
 
@@ -371,8 +376,50 @@ def fetch_onchain() -> dict:
     }
 
 
+# ── Markets (the extra-data test copies) ────────────────────────────────────
+DERIBIT = "https://www.deribit.com/api/v2/public/"
+
+
+def _deribit_basis() -> dict:
+    """Annualized basis of the BTC future expiring closest to three months out."""
+    now = datetime.now(UTC)
+    best = None
+    for row in _json(DERIBIT + "get_book_summary_by_currency?" + urlencode({"currency": "BTC", "kind": "future"}))["result"]:
+        name = row.get("instrument_name", "")
+        try:
+            expiry = datetime.strptime(name.split("-")[1], "%d%b%y").replace(hour=8, tzinfo=UTC)
+        except (IndexError, ValueError):
+            continue  # the perpetual
+        days = (expiry - now).total_seconds() / 86400
+        mark, index = number(row.get("mark_price")), number(row.get("estimated_delivery_price"))
+        if days >= 30 and mark and index and (best is None or abs(days - 91) < abs(best["days"] - 91)):
+            best = {"instrument": name, "days": round(days, 1), "mark": mark, "index": index,
+                    "annualized_pct": (mark / index - 1) * 365 / days * 100}
+    if best is None:
+        raise ValueError("Deribit returned no dated BTC future")
+    return best
+
+
+def fetch_markets() -> dict:
+    """BTC implied volatility (Deribit DVOL), 3-month futures basis and stablecoin supply (DefiLlama)."""
+    now = datetime.now(UTC)
+    start = int((now - timedelta(days=45)).timestamp() * 1000)
+    dvol = _json(DERIBIT + "get_volatility_index_data?" + urlencode(
+        {"currency": "BTC", "start_timestamp": start, "end_timestamp": int(now.timestamp() * 1000), "resolution": "1D"}))
+    dvol_rows = [[datetime.fromtimestamp(row[0] / 1000, UTC).date().isoformat(), number(row[4])]
+                 for row in dvol["result"]["data"] if number(row[4]) is not None]
+    stable = _json("https://stablecoins.llama.fi/stablecoincharts/all")
+    supply = [[datetime.fromtimestamp(int(row["date"]), UTC).date().isoformat(),
+               number((row.get("totalCirculatingUSD") or {}).get("peggedUSD"))] for row in stable[-45:]]
+    supply = [row for row in supply if row[1]]
+    if not dvol_rows or not supply:
+        raise ValueError("Deribit or DefiLlama returned no data")
+    return {"as_of": now.isoformat(), "dvol": dvol_rows, "basis": _deribit_basis(), "stablecoins_usd": supply,
+            "source": "Deribit public API (DVOL, futures); DefiLlama stablecoins (USD-pegged supply)"}
+
+
 FETCHERS = {"strategy": fetch_strategy, "strive": fetch_strive, "fred": fetch_fred, "calendar": lambda: fetch_calendar(),
-            "yahoo": fetch_yahoo, "onchain": fetch_onchain}
+            "yahoo": fetch_yahoo, "onchain": fetch_onchain, "markets": fetch_markets}
 
 
 def load_snapshot() -> dict:
@@ -413,3 +460,15 @@ def save_snapshot(extras: dict) -> Path:
 def fred_latest(extras: dict, series: str):
     rows = ((extras.get("fred") or {}).get(series)) or []
     return (rows[-1][0], rows[-1][1]) if rows else (None, None)
+
+
+STRATEGY_WEEKS = ROOT / "data" / "strategy-weekly-8k.json"
+
+
+def strategy_weeks() -> dict[str, dict]:
+    """Strategy's transcribed weekly 8-K figures by balance date (history before the feed)."""
+    try:
+        weeks = json.loads(STRATEGY_WEEKS.read_text(encoding="utf-8")).get("weeks") or []
+    except (OSError, ValueError):
+        return {}
+    return {week["balance_date"]: week for week in weeks if week.get("balance_date")}

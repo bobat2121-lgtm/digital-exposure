@@ -172,6 +172,18 @@ class Canvas:
         self.text(x0 + pad[0], y + pad[1], text, size, fg, bold)
         return x0
 
+    def chip(self, box, text, size, fg, bg, bold=True, radius=None) -> None:
+        """A fixed-size rounded cell with its text centered on the ink, not the font box."""
+        x0, y0, x1, y1 = box
+        self.draw.rounded_rectangle(box, radius=(y1 - y0) // 2 if radius is None else radius, fill=bg)
+        text, size = self.fit(text, size, x1 - x0 - 8, bold)
+        if text:
+            self.smallest = size if self.smallest is None else min(self.smallest, size)
+        left, top, right, bottom = font(size, bold).getbbox(text, anchor="lt")
+        x = (x0 + x1) / 2 - (left + right) / 2
+        y = (y0 + y1) / 2 - (top + bottom) / 2
+        self.draw.text((x, y), text, font=font(size, bold), fill=fg, anchor="lt")
+
     def save(self, *, metadata: dict | None = None) -> bytes:
         from io import BytesIO
         from PIL.PngImagePlugin import PngInfo

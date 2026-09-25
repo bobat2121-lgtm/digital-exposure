@@ -34,7 +34,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - name: Render panels and audit values
-        run: python scripts/render_previews.py --out published
+        run: python scripts/render_previews.py --out published --extra
       - name: Independent checks
         run: python scripts/audit_panels.py --out published
       - name: Publish to the audit branch

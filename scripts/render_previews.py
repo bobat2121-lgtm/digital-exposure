@@ -33,6 +33,7 @@ def main():
     parser.add_argument("--save-extras", action="store_true", help="Save the fetched extras as the offline snapshot")
     parser.add_argument("--themes", default=themes.DEFAULT.key, help="Comma-separated: " + ", ".join(themes.THEMES))
     parser.add_argument("--layouts", default="c", help="Monday funding layouts: c (waterfall, default), b (ledger), a (headline)")
+    parser.add_argument("--extra", action="store_true", help="Also write the extra-data test copies (*-extra.png)")
     args = parser.parse_args()
     chosen = [themes.get(key.strip()) for key in args.themes.split(",") if key.strip()]
     layouts = {"a": "headline", "b": "ledger", "c": "waterfall"}
@@ -67,6 +68,10 @@ def main():
             png, missed = monday_preview.render_png(monday, theme, layouts[layout])
             (args.out / name("monday", theme, layout)).write_bytes(png)
             overflows += missed
+        if args.extra:
+            png, missed = monday_preview.render_png(monday, theme, layouts[chosen_layouts[0]], extra=True)
+            (args.out / name("monday", theme).replace(".png", "-extra.png")).write_bytes(png)
+            overflows += missed
     audit["panels"]["monday"] = {"overflows": overflows, "values": monday_preview.audit_rows(monday),
                                  "notes": monday_preview.notes(monday)}
 
@@ -76,6 +81,10 @@ def main():
         png, missed = wednesday.render_png(data, theme)
         (args.out / name("wednesday", theme)).write_bytes(png)
         overflows += missed
+        if args.extra:
+            png, missed = wednesday.render_png(data, theme, extra=True)
+            (args.out / name("wednesday", theme).replace(".png", "-extra.png")).write_bytes(png)
+            overflows += missed
     audit["panels"]["wednesday"] = {"overflows": overflows, "values": wednesday.audit_rows(data), "notes": wednesday.notes(data)}
 
     from friday import data as friday_data, metrics
@@ -96,6 +105,10 @@ def main():
         png, missed = friday_preview.render_png(panel, derived, stale=tuple(extras["stale"]), theme=theme)
         (args.out / name("friday", theme)).write_bytes(png)
         overflows += missed
+        if args.extra:
+            png, missed = friday_preview.render_png(panel, derived, stale=tuple(extras["stale"]), theme=theme, extra=True)
+            (args.out / name("friday", theme).replace(".png", "-extra.png")).write_bytes(png)
+            overflows += missed
     audit["panels"]["friday"] = {"overflows": overflows, "values": friday_preview.audit_rows(panel, derived),
                                  "notes": friday_preview.notes(panel, derived, tuple(extras["stale"])), "demo_data": args.offline}
 

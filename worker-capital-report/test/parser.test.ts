@@ -4,13 +4,15 @@ import strategy from "./fixtures/strategy-20260831.html?raw";
 import strive from "./fixtures/strive-20260831.html?raw";
 import strategyHoliday from "./fixtures/strategy-20260908.html?raw";
 import striveHoliday from "./fixtures/strive-20260908.html?raw";
+import strategyUsdCash from "./fixtures/strategy-20260921.html?raw";
 describe("actual SEC weekly HTML fixtures", () => {
   it("extracts Strategy's holiday zero-ATM and zero-BTC disclosure with approximate ending holdings", () => {
     const result = extractWeekly(strategyHoliday, "MSTR");
     expect(result.issues).toEqual([]); expect(result.missing).toEqual([]); expect(result.extractionValidated).toBe(true);
     expect(result.periodStart).toBe("2026-08-31"); expect(result.balanceDate).toBe("2026-09-07");
     expect(result.facts).toMatchObject({ btc_holdings: 845050, weekly_btc_purchases: 0, weekly_btc_sales: 0,
-      common_issued_shares: 0, common_issuance_proceeds_usd: 0, usd_reserve_usd: 5100000000, usd_cash_usd: 1440000000 });
+      common_issued_shares: 0, common_issuance_proceeds_usd: 0, usd_reserve_usd: 5100000000, usd_cash_usd: 1440000000,
+      btc_cost_basis_usd: 63730000000, btc_average_cost_usd: 75412 });
     for (const ticker of ["MSTR", "STRC", "STRF", "STRK", "STRD"]) expect(result.securities[ticker]).toMatchObject({ issuedShares: 0, netIssuanceProceedsUsd: 0 });
     expect(result.securities.STRC).toMatchObject({ repurchasedShares: 1810885, repurchaseCashUsd: 176300000 });
     expect(result.facts).not.toHaveProperty("effective_common_shares");
@@ -32,8 +34,19 @@ describe("actual SEC weekly HTML fixtures", () => {
       common_issued_shares: 4531421, common_issuance_proceeds_usd: 602800000,
       common_repurchased_shares: 0, common_repurchases_cash_usd: 0, usd_reserve_usd: 5100000000, usd_cash_usd: 1610000000 });
     expect(result.securities.STRC).toEqual({ issuedShares: 0, netIssuanceProceedsUsd: 0, repurchasedShares: 1557177, repurchaseCashUsd: 151800000 });
+    expect(result.facts).toMatchObject({ weekly_btc_cost_usd: 369700000, btc_cost_basis_usd: 63730000000, btc_average_cost_usd: 75412 });
+    expect(result.facts).not.toHaveProperty("usd_reserve_dividends_interest_usd");
     expect(result.facts).not.toHaveProperty("effective_common_shares");
     expect(result.facts).not.toHaveProperty("debt");
+  });
+  it("extracts the bitcoin cost and the USD Reserve's dividend and interest use", () => {
+    const result = extractWeekly(strategyUsdCash, "MSTR");
+    expect(result.issues).toEqual([]); expect(result.missing).toEqual([]); expect(result.extractionValidated).toBe(true);
+    expect(result.periodStart).toBe("2026-09-14"); expect(result.balanceDate).toBe("2026-09-20");
+    expect(result.facts).toMatchObject({ btc_holdings: 846000, weekly_btc_purchases: 950, weekly_btc_cost_usd: 75700000,
+      usd_reserve_usd: 5040000000, usd_cash_usd: 1050000000, usd_reserve_dividends_interest_usd: 57400000,
+      btc_cost_basis_usd: 63800000000, btc_average_cost_usd: 75416 });
+    expect(result.securities.STRC).toMatchObject({ repurchasedShares: 1771238, repurchaseCashUsd: 174000000 });
   });
   it("extracts Strive balance endpoints and reconciles A+B and diluted shares", () => {
     const result = extractWeekly(strive, "ASST");

@@ -97,14 +97,36 @@ def audit_monday(report, monday, extras, rows, now):
                 source="(BTC × price + cash − debt − preferred claims) ÷ shares")
         compare("monday", f"{t}.price_nav", f"{t} price / NAV", parse_number(view.price_to_nav), price / nav_ps, .006,
                 source="price ÷ NAV per share")
-        compare("monday", f"{t}.amplification", f"{t} amplification %", e.amplification_pct,
-                (cur.debt_principal + cur.preferred_claims) / bitcoin * 100, .01, source="(debt + preferred) ÷ BTC value")
+        if t == "MSTR":
+            compare("monday", "MSTR.amplification", "MSTR amplification (×) vs strategy.com", e.amplification_x,
+                    number(strategy_btc.get("amplification")), .005, source="bitcoinKpis.amplification (BTC reserve ÷ net BTC reserve)")
+            compare("monday", "MSTR.amp_model", "MSTR amplification: 8-K balances vs strategy.com", bitcoin / nav,
+                    number(strategy_btc.get("amplification")), .05, warn_only=True,
+                    source="BTC value ÷ (BTC + cash − debt − preferred claims)",
+                    detail="the weekly change uses this model; claims include accrued dividends, strategy.com uses notional")
+        else:
+            compare("monday", f"{t}.amplification", f"{t} amplification %", e.amplification_pct,
+                    (cur.debt_principal + cur.preferred_claims) / bitcoin * 100, .01, source="(SATA notional + debt) ÷ BTC value")
         raised = (e.common_capital or 0) + (e.preferred_capital or 0)
         compare("monday", f"{t}.raised", f"{t} raised = common + preferred", e.raised, raised, 1, source="ATM common + preferred")
         compare("monday", f"{t}.cash_change", f"{t} cash change", e.liquid_change, liquid - liquid_assets(prior), 1,
                 source="liquid assets this week − last week")
-        compare("monday", f"{t}.deployed", f"{t} deployed = raised − cash change", e.net_funding, raised - e.liquid_change, 1,
+        compare("monday", f"{t}.funding", f"{t} funding = raised − cash change", e.net_funding, raised - e.liquid_change, 1,
                 source="waterfall arithmetic")
+        if e.btc_cost is None:
+            check("monday", f"{t}.btc_cost", f"{t} BTC (bitcoin cost)", "FAIL", None, None, "no cost and no estimate", "—")
+        else:
+            estimated = e.btc_cost_source.startswith("estimate")
+            check("monday", f"{t}.btc_cost", f"{t} BTC (bitcoin cost)", "WARN" if estimated else "PASS", round(e.btc_cost), None,
+                  ("estimated: add the week's 8-K 'Aggregate Purchase Price' to data/strategy-weekly-8k.json or redeploy "
+                   "the filing worker" if t == "MSTR" else "estimated: Strive's dashboard has no purchase for the week")
+                  if estimated else e.btc_cost_source, e.btc_cost_source)
+            compare("monday", f"{t}.btc_divs", f"{t} BTC + DIVs = funding", e.btc_cost + e.dividends, e.net_funding, 1,
+                    source="waterfall arithmetic")
+        if t == "MSTR" and e.stated_dividends is not None and e.dividends is not None:
+            compare("monday", "MSTR.divs_8k", "MSTR DIVs vs 8-K dividends + interest", e.dividends, e.stated_dividends, 20e6,
+                    warn_only=True, source="8-K: USD Reserve used for dividends and interest",
+                    detail="the 8-K rounds balances to $0.01B, so up to ~$20m of rounding lands in DIVs")
         if t == "MSTR":
             annual = number(strategy_btc.get("totalAnnualDividends"))
             compare("monday", "MSTR.btc_kpi", "MSTR BTC held vs strategy.com", cur.btc_holdings, number(strategy_btc.get("btcHoldings")),
@@ -133,9 +155,6 @@ def audit_monday(report, monday, extras, rows, now):
             compare("monday", "MSTR.breakeven", "MSTR BTC break-even vs strategy.com", e.breakeven_pct,
                     number(strategy_btc.get("btcBreakevenArr")), .15, warn_only=True,
                     source="bitcoinKpis.btcBreakevenArr", detail="BTC price timing differs")
-            compare("monday", "MSTR.amp_kpi", "MSTR amplification vs strategy.com debt+pref ÷ BTC NAV", e.amplification_pct,
-                    number(strategy_btc.get("debtPrefByBN")), 1.5, warn_only=True, source="bitcoinKpis.debtPrefByBN",
-                    detail="panel uses liquidation claims incl. accrued dividends; strategy.com uses notional")
             if annual and months:
                 reserve_months = liquid / (annual / 12)
                 compare("monday", "MSTR.cover_formula", "MSTR (reserve + USD cash) ÷ monthly dividends", reserve_months, months, 1.0,
@@ -248,9 +267,15 @@ def audit_wednesday(data, extras, now):
     cover = data["cover"]
     for ticker, item in cover.items():
         weeks = item["weeks"]
-        status = "PASS" if len(weeks) >= 4 else "WARN"
-        check("wednesday", f"{ticker}.cover_weeks", f"{item['name']} USD cover weekly history", status, len(weeks), "≥ 4",
-              f"latest {weeks[-1][0] if weeks else '—'}", item["basis"])
+        status = "PASS" if len(weeks) >= 12 else "WARN" if len(weeks) >= 4 else "FAIL"
+        check("wednesday", f"{ticker}.cover_weeks", f"{item['name']} USD cover weekly history", status, len(weeks), "12",
+              f"{weeks[0][0] if weeks else '—'} to {weeks[-1][0] if weeks else '—'}", item["basis"])
+    for ticker, hero in heroes.items():
+        history = hero["history"]
+        span = (date.fromisoformat(history[-1][0]) - date.fromisoformat(history[0][0])).days if len(history) > 1 else 0
+        check("wednesday", f"{ticker}.history", f"{ticker} spread chart covers 26 weeks", "PASS" if span >= 175 else "WARN",
+              f"{span} days", "≥ 175 days", f"{len(history)} closes from {history[0][0] if history else '—'}",
+              "Yahoo closes, stated rate history, FRED 3M bill")
 
 
 # ── Friday ──────────────────────────────────────────────────────────────────
@@ -317,8 +342,10 @@ def audit_sources(extras, now):
               "Nasdaq estimate; add the confirmed date to data/calendar-events.json" if item and item.get("estimated") else "",
               "api.nasdaq.com")
     stale = extras.get("stale") or []
-    check("sources", "snapshot", "No section fell back to the saved snapshot", "FAIL" if stale else "PASS",
-          ", ".join(stale) or "none", "none", "", "panels.extras")
+    # "markets" feeds only the extra-data test copies, so it can warn but never fail the run.
+    status = "FAIL" if set(stale) - {"markets"} else "WARN" if stale else "PASS"
+    check("sources", "snapshot", "No section fell back to the saved snapshot", status,
+          ", ".join(stale) or "none", "none", "markets feeds the test copies only" if status == "WARN" else "", "panels.extras")
 
 
 def main():

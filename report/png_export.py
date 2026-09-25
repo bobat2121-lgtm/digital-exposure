@@ -41,7 +41,11 @@ def _font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
 
 
 def _width(text: str, size: int, bold: bool = False) -> float:
-    return _font(size, bold).getlength(text)
+    """Advance width, or the inked extent when a glyph overhangs it (e.g. a final
+    "y"), so right-aligned text never lands past its edge."""
+    font = _font(size, bold)
+    advance = font.getlength(text)
+    return max(advance, font.getbbox(text, anchor="lt")[2]) if text else advance
 
 
 def _fit(text: str, size: int, width: float, bold: bool = False, minimum: int = 17) -> int:

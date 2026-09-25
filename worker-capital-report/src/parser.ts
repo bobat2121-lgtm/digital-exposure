@@ -97,10 +97,30 @@ function bitcoinTables(e: Extraction, tables: Table[]): void {
       }
       if (cells.length !== headers.length) { e.issues.push("BTC activity: quantity columns changed"); continue; }
       keys.forEach((key, column) => { if (key) putBitcoin(e, key, cells[column]); });
+      // The period's cost is the "Aggregate Purchase Price" column right after the purchased quantity.
+      const bought = keys.indexOf("weekly_btc_purchases");
+      const cost = bought >= 0 ? compact(headers[bought + 1] ?? "").replace(/\s+\(\d+\)$/, "")
+        .match(/^Aggregate\s*Purchase\s*Price\s*\(in (millions|billions)\)$/i) : null;
+      if (cost) {
+        const amount = numeric(cells[bought + 1]);
+        if (amount === null) e.issues.push("Invalid weekly_btc_cost_usd");
+        else put(e.facts, "weekly_btc_cost_usd", Math.round(amount * (cost[1].toLowerCase() === "billions" ? 1e9 : 1e6)), e.issues);
+      }
+      // Holdings are followed by their total and average cost ("Aggregate Purchase Price", "Average Purchase Price").
+      const held = keys.indexOf("btc_holdings");
+      const label = (column: number): string => compact(headers[column] ?? "").replace(/\s+\(\d+\)$/, "");
+      const basis = held >= 0 ? label(held + 1).match(/^Aggregate\s*Purchase\s*Price\s*\(in (millions|billions)\)$/i) : null;
+      if (basis && /^Average\s*Purchase\s*Price$/i.test(label(held + 2))) putCostBasis(e, cells[held + 1], basis[1], cells[held + 2]);
     }
     // A row table may also disclose ending holdings, without implying that its change was a trade.
     for (const row of rows) if (row.length === 2 && bitcoinHeader(row[0]) === "btc_holdings") putBitcoin(e, "btc_holdings", row[1]);
   }
+}
+function putCostBasis(e: Extraction, total: string, unit: string, average: string): void {
+  const amount = numeric(total), each = numeric(average);
+  if (amount === null || each === null) { e.issues.push("Invalid BTC cost basis"); return; }
+  put(e.facts, "btc_cost_basis_usd", Math.round(amount * (/^billions?$/i.test(unit) ? 1e9 : 1e6)), e.issues);
+  put(e.facts, "btc_average_cost_usd", each, e.issues);
 }
 function bitcoinProse(e: Extraction, paragraphs: string[], ticker: Ticker): void {
   if (!e.periodStart || !e.periodEnd) return;
@@ -108,6 +128,8 @@ function bitcoinProse(e: Extraction, paragraphs: string[], ticker: Ticker): void
   for (const paragraph of paragraphs) {
     const holding = paragraph.match(new RegExp(`As of\\s+(${DATE}),?\\s+${issuer}\\s+(?:held|holds)\\s+(?:approximately\\s+)?([^\\s]+)\\s+(?:bitcoins?|BTC)\\b`, "i"));
     if (holding && isoDate(holding[1]) === e.balanceDate) putBitcoin(e, "btc_holdings", holding[2]);
+    const basis = paragraph.match(new RegExp(`As of\\s+(${DATE}),?\\s+${issuer}\\s+(?:held|holds)\\s+(?:approximately\\s+)?[^\\s]+\\s+(?:bitcoins?|BTC)\\s+that were acquired at an aggregate purchase price of \\$([\\d,.]+)\\s+(billion|million) and an average purchase price of (?:approximately\\s+)?\\$([\\d,.]+)`, "i"));
+    if (basis && isoDate(basis[1]) === e.balanceDate) putCostBasis(e, basis[2], basis[3], basis[4]);
     const weekly = /\bduring (?:the )?(?:reporting )?(?:period|week)\b|\bfor the week ended\b/i.test(paragraph);
     // Historical/cumulative and prospective statements are not this week's gross trades.
     if (!weekly || /since inception|year.to.date|quarter.to.date|cumulative|historically|intends? to|plans? to|expects? to/i.test(paragraph)) continue;
@@ -209,6 +231,8 @@ export function extractWeekly(html: string, ticker: Ticker): Extraction {
   }
   const cash = text.match(/balances of the USD Reserve and USD Cash were \$([\d,.]+) billion and \$([\d,.]+) billion, respectively/i);
   if (cash) { e.facts.usd_reserve_usd = Number(cash[1].replaceAll(",", "")) * 1e9; e.facts.usd_cash_usd = Number(cash[2].replaceAll(",", "")) * 1e9; }
+  const obligations = text.match(/Strategy used \$([\d,.]+) (million|billion) of the USD Reserve to fund the payment of dividends/i);
+  if (obligations) e.facts.usd_reserve_dividends_interest_usd = Math.round(Number(obligations[1].replaceAll(",", "")) * (obligations[2].toLowerCase() === "billion" ? 1e9 : 1e6));
   const noAtm = e.periodStart && e.periodEnd && paragraphs.some(paragraph =>
     /\bduring (?:the )?(?:reporting )?period\b/i.test(paragraph)
     && !/since inception|year.to.date|quarter.to.date|cumulative|historically|intends? to|plans? to|expects? to/i.test(paragraph)
