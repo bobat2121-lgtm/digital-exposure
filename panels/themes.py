@@ -36,6 +36,13 @@ class Palette:
     outline_width: int = 1
     radius: int = 12
     cash: str = "#EAF1F6"   # fill that marks cash as a balance, not capital raised
+    strategy: str | None = None   # company colors, kept the same on every sheet
+    strive: str | None = None
+
+    def company(self, ticker: str) -> str:
+        if ticker in ("MSTR", "STRC", "STRF", "STRK", "STRD", "STRE"):
+            return self.strategy or self.accent
+        return self.strive or self.accent2
 
 
 @dataclass(frozen=True)
@@ -64,11 +71,14 @@ CLASSIC = Theme(
 NEON = Theme(
     "neon", "Neon Ledger (cyberpunk)", "cyber",
     monday=Palette("#060A14", "#0C1324", "#E8F1FF", "#8FA2CC", "#5D6E96", "#1B2842", "#101B31", "#22E3FF",
-                   "#3DFFA2", "#FF4D7A", "#FFE14D", "#FF3DCB", "#FFE14D", outline="#1F3358", radius=4, cash="#0F2338"),
+                   "#3DFFA2", "#FF4D7A", "#FFE14D", "#FF3DCB", "#FFE14D", outline="#1F3358", radius=4, cash="#0F2338",
+                   strategy="#22E3FF", strive="#FF3DCB"),
     wednesday=Palette("#0A0714", "#120D22", "#F2E9FF", "#A796C9", "#6C5E8E", "#271C40", "#181129", "#FF3DCB",
-                      "#3DFFA2", "#FF4D7A", "#FFE14D", "#22E3FF", "#FFE14D", deep="#FF3DCB", outline="#34245A", radius=4),
+                      "#3DFFA2", "#FF4D7A", "#FFE14D", "#22E3FF", "#FFE14D", deep="#FF3DCB", outline="#34245A", radius=4,
+                      strategy="#22E3FF", strive="#FF3DCB"),
     friday=Palette("#04090A", "#0A1416", "#E6FFFB", "#88AEB0", "#557577", "#16292C", "#0E1C1F", "#FFC23D",
-                   "#3DFFA2", "#FF4D7A", "#FFE14D", "#22E3FF", "#FF3DCB", band="#3DFFA2", outline="#1B3A3E", radius=4),
+                   "#3DFFA2", "#FF4D7A", "#FFE14D", "#22E3FF", "#FF3DCB", band="#3DFFA2", outline="#1B3A3E", radius=4,
+                   strategy="#22E3FF", strive="#FF3DCB"),
     title_style="neon", decor="grid", uppercase_titles=True,
 )
 
@@ -89,8 +99,11 @@ ORBIT = Theme(
 THEMES = {theme.key: theme for theme in (CLASSIC, NEON, ORBIT)}
 
 
+DEFAULT = NEON
+
+
 def get(key: str | None) -> Theme:
-    return THEMES.get(key or "classic", CLASSIC)
+    return THEMES.get(key or DEFAULT.key, DEFAULT)
 
 
 # ── shared themed drawing ───────────────────────────────────────────────────
@@ -106,10 +119,10 @@ def card(canvas: Canvas, box, p: Palette, accent: str | None = None, theme: Them
         canvas.draw.rectangle((x0 + inset, y0, x1 - inset, y0 + accent_height), fill=accent)
     if theme.decor == "grid":
         # HUD corner brackets.
-        color, arm = accent or p.accent, 16
+        color, arm = accent or p.accent, 22
         for cx, cy, dx, dy in ((x0, y0, 1, 1), (x1, y0, -1, 1), (x0, y1, 1, -1), (x1, y1, -1, -1)):
-            canvas.draw.line((cx, cy, cx + dx * arm, cy), fill=color, width=2)
-            canvas.draw.line((cx, cy, cx, cy + dy * arm), fill=color, width=2)
+            canvas.draw.line((cx, cy, cx + dx * arm, cy), fill=color, width=3)
+            canvas.draw.line((cx, cy, cx, cy + dy * arm), fill=color, width=3)
 
 
 def background(canvas: Canvas, p: Palette, theme: Theme, header_height=150, orbit_at=(1190, 76, .8)):

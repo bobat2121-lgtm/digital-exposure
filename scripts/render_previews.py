@@ -4,11 +4,12 @@ Examples:
   python scripts/render_previews.py --out previews
   python scripts/render_previews.py --out previews --save-extras   # refresh data/preview-extras.json
   python scripts/render_previews.py --out previews --offline       # saved inputs, demo Friday week
-  python scripts/render_previews.py --out previews --themes classic,neon,orbit
+  python scripts/render_previews.py --out previews --themes neon,classic,orbit --layouts a,b,c
 
 Writes monday.png, wednesday.png, friday.png and audit.json (every displayed
-key value with its source) so a scheduled auditor can check them as text.
-Non-classic themes are written as monday-<theme>.png and so on.
+key value with its source, plus the page footnotes) so a scheduled auditor can
+check them as text. Other styles are written as monday-<theme>.png, other
+Monday layouts as monday-<layout>.png.
 """
 from argparse import ArgumentParser
 from datetime import datetime
@@ -30,12 +31,16 @@ def main():
     parser.add_argument("--out", type=Path, default=ROOT / "previews")
     parser.add_argument("--offline", action="store_true", help="Use saved prices, committed filings and demo Friday data")
     parser.add_argument("--save-extras", action="store_true", help="Save the fetched extras as the offline snapshot")
-    parser.add_argument("--themes", default="classic", help="Comma-separated: " + ", ".join(themes.THEMES))
+    parser.add_argument("--themes", default=themes.DEFAULT.key, help="Comma-separated: " + ", ".join(themes.THEMES))
+    parser.add_argument("--layouts", default="b", help="Monday funding layouts: a (headline), b (ledger), c (waterfall)")
     args = parser.parse_args()
     chosen = [themes.get(key.strip()) for key in args.themes.split(",") if key.strip()]
+    layouts = {"a": "headline", "b": "ledger", "c": "waterfall"}
+    chosen_layouts = [key.strip() for key in args.layouts.split(",") if key.strip() in layouts] or ["b"]
 
-    def name(day, theme):
-        return f"{day}.png" if theme.key == "classic" else f"{day}-{theme.key}.png"
+    def name(day, theme, layout="b"):
+        suffix = ("" if theme.key == themes.DEFAULT.key else f"-{theme.key}") + ("" if layout == "b" else f"-{layout}")
+        return f"{day}{suffix}.png"
     args.out.mkdir(parents=True, exist_ok=True)
 
     extras = extras_module.load_extras(offline=args.offline)
@@ -52,10 +57,12 @@ def main():
     monday = monday_preview.build_preview(report, prices, feed, extras)
     overflows = []
     for theme in chosen:
-        png, missed = monday_preview.render_png(monday, theme)
-        (args.out / name("monday", theme)).write_bytes(png)
-        overflows += missed
-    audit["panels"]["monday"] = {"overflows": overflows, "values": monday_preview.audit_rows(monday)}
+        for layout in chosen_layouts:
+            png, missed = monday_preview.render_png(monday, theme, layouts[layout])
+            (args.out / name("monday", theme, layout)).write_bytes(png)
+            overflows += missed
+    audit["panels"]["monday"] = {"overflows": overflows, "values": monday_preview.audit_rows(monday),
+                                 "notes": monday_preview.notes(monday)}
 
     data = wednesday.build(extras, feed, monday)
     overflows = []
@@ -63,7 +70,7 @@ def main():
         png, missed = wednesday.render_png(data, theme)
         (args.out / name("wednesday", theme)).write_bytes(png)
         overflows += missed
-    audit["panels"]["wednesday"] = {"overflows": overflows, "values": wednesday.audit_rows(data)}
+    audit["panels"]["wednesday"] = {"overflows": overflows, "values": wednesday.audit_rows(data), "notes": wednesday.notes(data)}
 
     from friday import data as friday_data, metrics
     if args.offline:
@@ -79,10 +86,10 @@ def main():
         (args.out / name("friday", theme)).write_bytes(png)
         overflows += missed
     audit["panels"]["friday"] = {"overflows": overflows, "values": friday_preview.audit_rows(panel, derived),
-                                 "demo_data": args.offline}
+                                 "notes": friday_preview.notes(panel, derived, tuple(extras["stale"])), "demo_data": args.offline}
 
     (args.out / "audit.json").write_text(json.dumps(audit, indent=1), encoding="utf-8")
-    print(f"Wrote {len(chosen) * 3} panels and audit.json to {args.out}")
+    print(f"Wrote {len(chosen) * (2 + len(chosen_layouts))} panels and audit.json to {args.out}")
     for name, item in audit["panels"].items():
         if item["overflows"]:
             print(f"{name}: shortened text {item['overflows']}")

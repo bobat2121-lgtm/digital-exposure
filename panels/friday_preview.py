@@ -17,11 +17,11 @@ from friday.export import display_rows, sma_segments
 from friday.series import SENTIMENT_BANDS, smooth_sentiment, year_start
 
 from . import themes
-from .draw import Canvas, fontset, imprint, mix, sparkline, width
+from .draw import T_BIG, T_BODY, T_LABEL, T_MIN, T_VALUE, Canvas, fontset, imprint, mix, sparkline, width
 from .extras import fred_latest, number
 
 ET = ZoneInfo("America/New_York")
-WIDTH, HEIGHT = 1800, 1800
+WIDTH, HEIGHT = 1440, 1920
 BG, CARD, TEXT, MUTED, SOFT = "#0b0d0f", "#15191d", "#f5f3ed", "#9aa4ad", "#6f7a83"
 LINE, ORANGE, POSITIVE, NEGATIVE, NEUTRAL = "#30363c", "#e88029", "#8cdbb5", "#f5a09b", "#d9c86a"
 BLUE, VIOLET, BAND = "#7fb2ff", "#c39bff", "#56c4a0"
@@ -31,6 +31,9 @@ THEME = themes.CLASSIC
 # concurrent Streamlit sessions from drawing with each other's colors.
 _LOCK = threading.RLock()
 # How each checklist reading maps to a state (anything else is NEUTRAL).
+CHECK_LABELS = {"50W SMA": "50W SMA", "20W / 21W BAND": "20W / 21W band", "50D / 200D": "50D / 200D",
+                "WEEKLY RSI": "Weekly RSI", "MVRV": "MVRV", "PUELL MULTIPLE": "Puell Multiple",
+                "SUPPLY IN PROFIT": "Supply in profit"}
 RULES = {"50W SMA": "bull above · bear at/below", "20W / 21W BAND": "bull above · bear below",
          "50D / 200D": "bull golden · bear death", "WEEKLY RSI": "bull ≥ 50 · bear < 50",
          "MVRV": "bull < 1 · bear > avg + 1 sd", "PUELL MULTIPLE": "bull < low · bear > high band",
@@ -49,7 +52,7 @@ def _use(theme):
     BLUE, VIOLET, BAND, THEME = p.accent2, p.accent3, p.band, theme
 
 
-def _card(canvas, box, accent=None, accent_height=3):
+def _card(canvas, box, accent=None, accent_height=4):
     if THEME.key == "classic":
         canvas.card(box, CARD, 10, accent, accent_height)
     else:
@@ -137,19 +140,6 @@ def _regime(series):
     return current["label"], current["color"], days
 
 
-def _cross(series):
-    """50D vs 200D state and the date it last flipped."""
-    state, since = None, None
-    for row in series:
-        fast, slow = number(row.get("sma_50d")), number(row.get("sma_200d"))
-        if fast is None or slow is None:
-            continue
-        current = fast > slow
-        if current != state:
-            state, since = current, row["date"]
-    return state, since
-
-
 def derive(panel: dict, data: dict, extras: dict, feed: dict) -> dict:
     """``feed`` is the Monday filing feed; only validated filings are used."""
     from friday.metrics import _sessions, _calendar
@@ -211,6 +201,16 @@ def derive(panel: dict, data: dict, extras: dict, feed: dict) -> dict:
          status(profit is not None and profit < 50, profit is not None and profit > 95)),
     ]
     tally = {key: sum(1 for *_, value in checklist if value == key) for key in ("BULL", "NEUTRAL", "BEAR")}
+    # The level that decides each state, shown beside the reading.
+    thresholds = {
+        "50W SMA": f"50W ${sma50w / 1e3:,.1f}k" if sma50w else "",
+        "20W / 21W BAND": f"${band_low / 1e3:,.1f}k–${band_high / 1e3:,.1f}k" if band_low else "",
+        "50D / 200D": f"since {_short(btc_cross_since)}" if btc_cross_since else "",
+        "WEEKLY RSI": "bull ≥ 50",
+        "MVRV": f"bull < 1 · bear > {plus1:.2f}" if plus1 else "bull < 1",
+        "PUELL MULTIPLE": f"bull < {low:.2f} · bear > {high:.2f}" if low and high else "",
+        "SUPPLY IN PROFIT": "bull < 50% · bear > 95%",
+    }
 
     # Turnover: basic common shares; preferred shares = notional / $100.
     treasury = {row["ticker"]: row for row in panel.get("treasury", [])}
@@ -243,9 +243,8 @@ def derive(panel: dict, data: dict, extras: dict, feed: dict) -> dict:
             "weekly": weekly, "sma50w_series": _rolling(weekly, lambda v: _sma(v, 50)),
             "sma20w_series": _rolling(weekly, lambda v: _sma(v, 20)), "ema21w_series": _rolling(weekly, lambda v: _ema(v, 21)),
             "realized": onchain.get("realized_weekly") or [], "realized_price": onchain.get("realized_price"),
-            "checklist": checklist, "tally": tally, "turnover": turnover, "shares": shares, "buyback": buyback,
-            "regime": (label, color, days), "macro": macro,
-            "crosses": {ticker: _cross((panel.get("trends") or {}).get(ticker, {}).get("series") or []) for ticker in ("MSTR", "ASST")}}
+            "checklist": checklist, "tally": tally, "thresholds": thresholds, "turnover": turnover, "shares": shares, "buyback": buyback,
+            "regime": (label, color, days), "macro": macro}
 
 
 def _macro(extras):
@@ -336,10 +335,10 @@ def _axis(canvas, box, low, high, start, end, fmt):
     for fraction in (0, .5, 1):
         y = y1 - fraction * (y1 - y0)
         canvas.draw.line((x0, y, x1, y), fill=LINE)
-        canvas.text(x0 - 8, y - 9, fmt(low + (high - low) * fraction), 14, MUTED, align="right")
+        canvas.text(x0 - 12, y - 15, fmt(low + (high - low) * fraction), T_MIN, MUTED, align="right")
     first, last = date.fromordinal(start), date.fromordinal(end)
-    canvas.text(x0, y1 + 8, f"{first:%b %Y}", 15, MUTED)
-    canvas.text(x1, y1 + 8, f"{last:%b %Y}", 15, MUTED, align="right")
+    canvas.text(x0, y1 + 10, f"{first:%b %Y}", T_MIN, MUTED)
+    canvas.text(x1, y1 + 10, f"{last:%b %Y}", T_MIN, MUTED, align="right")
 
 
 def _price(value):
@@ -382,15 +381,15 @@ def _btc_chart(canvas, box, panel, derived):
             lower, upper = multiples[index], min(multiples[index + 1], high / last_sma)
             mid = last_sma * (lower + upper) / 2 if index else (low + last_sma) / 2
             y = xy(rows[-1]["date"], mid)[1]
-            if y0 + 8 < y < y1 - 8:
-                canvas.text(x1 + 8, y - 8, name.title(), 14, mix(color, TEXT, .55), True)
+            if y0 + 14 < y < y1 - 14:
+                canvas.text(x1 + 14, y - 15, name.title(), T_MIN, mix(color, TEXT, .55), True, max_width=210)
     series = [
-        {"points": [(row["date"], row.get("sma_200w")) for row in rows], "color": ORANGE, "width": 3, "dashed": True},
-        {"points": [(day, value) for day, value in derived["realized"]], "color": VIOLET, "width": 2, "dashed": True, "dash": (4, 5)},
-        {"points": derived["sma50w_series"], "color": BLUE, "width": 2},
-        {"points": derived["sma20w_series"], "color": BAND, "width": 2},
-        {"points": derived["ema21w_series"], "color": BAND, "width": 2, "dashed": True, "dash": (5, 4)},
-        {"points": [(row["date"], row["close"]) for row in rows], "color": TEXT, "width": 3},
+        {"points": [(row["date"], row.get("sma_200w")) for row in rows], "color": ORANGE, "width": 4, "dashed": True},
+        {"points": [(day, value) for day, value in derived["realized"]], "color": VIOLET, "width": 3, "dashed": True, "dash": (5, 5)},
+        {"points": derived["sma50w_series"], "color": BLUE, "width": 3},
+        {"points": derived["sma20w_series"], "color": BAND, "width": 3},
+        {"points": derived["ema21w_series"], "color": BAND, "width": 3, "dashed": True, "dash": (6, 4)},
+        {"points": [(row["date"], row["close"]) for row in rows], "color": TEXT, "width": 4},
     ]
     _plot(canvas, box, series, low, high, start, end)
     mark = panel["header"]["btc"].get("price")
@@ -426,7 +425,7 @@ def _equity_chart(canvas, box, panel, ticker, derived):
 
 
 # ── render ──────────────────────────────────────────────────────────────────
-def render_png(panel: dict, derived: dict, *, stale: tuple = (), theme: themes.Theme = themes.CLASSIC) -> tuple[bytes, list[str]]:
+def render_png(panel: dict, derived: dict, *, stale: tuple = (), theme: themes.Theme = themes.DEFAULT) -> tuple[bytes, list[str]]:
     with _LOCK, fontset(theme.fontset):
         _use(theme)
         try:
@@ -436,249 +435,212 @@ def render_png(panel: dict, derived: dict, *, stale: tuple = (), theme: themes.T
 
 
 def _render(panel: dict, derived: dict, stale: tuple) -> tuple[bytes, list[str]]:
-    canvas = Canvas((WIDTH, HEIGHT), BG)
+    """Portrait, phone-first (see draw.T_*). Tiles, macro, checklist, BTC zones, liquidity."""
+    canvas = Canvas((WIDTH, HEIGHT), BG, floor=T_MIN)
     draw = canvas.draw
+    M = 40
     period, header = panel.get("period") or {}, panel.get("header") or {}
     week_end = period.get("week_ending", period.get("end"))
     if THEME.key == "classic":
-        draw.rectangle((0, 0, WIDTH, 5), fill=ORANGE)
+        draw.rectangle((0, 0, WIDTH, 8), fill=ORANGE)
     else:
-        themes.background(canvas, THEME.friday, THEME, header_height=142, orbit_at=(1040, 62, .62))
-    canvas.text(54, 26, f"THE DIGITAL CREDIT REPORT  ·  FRIDAY  ·  WEEK ENDED {_short(week_end).upper()}", 18, ORANGE, True)
+        themes.background(canvas, THEME.friday, THEME, header_height=226, orbit_at=(1120, 104, .55))
+    canvas.text(M, 34, "DIGITAL CREDIT REPORT · FRIDAY", T_MIN, ORANGE, True)
+    canvas.text(WIDTH - M, 34, "MARKED FRI 4:00 PM ET", T_MIN, ORANGE, True, align="right")
     if THEME.key == "classic":
-        imprint(canvas, 54, 104, TITLE, 54, ink=TEXT, muted="#aab3ba", dot=ORANGE)
+        imprint(canvas, M, 146, TITLE, 76, ink=TEXT, muted="#aab3ba", dot=ORANGE)
     else:
-        themes.title(canvas, 54, 104, TITLE, 54, THEME.friday, THEME, on_space=THEME.decor == "orbit")
-    canvas.text(54, 120, "Bitcoin, treasury premiums, liquidity & cycle — every reading marked at the Friday 4:00 pm ET close",
-                19, MUTED, max_width=1180)
-    canvas.text(1746, 30, "MARKED FRI 4:00 PM ET", 19, ORANGE, True, align="right")
-    canvas.text(1746, 60, f"Week of {_short(period.get('start'))}–{_short(week_end)}, {date.fromisoformat(str(week_end)[:10]).year}"
-                if week_end else "", 24, TEXT, align="right")
-    canvas.text(1746, 96, "Balances: " + " · ".join(f"{row['ticker']} {_short(row.get('baseline_at'))}"
-                                                     for row in panel.get("treasury", []) if row.get("baseline_at")),
-                17, MUTED, align="right")
+        themes.title(canvas, M, 146, TITLE, 76, THEME.friday, THEME, on_space=THEME.decor == "orbit")
+    if week_end:
+        canvas.text(M, 170, f"Week of {_short(period.get('start'))}–{_short(week_end)}, "
+                    f"{date.fromisoformat(str(week_end)[:10]).year}", T_BODY, TEXT, True)
 
-    # Row A: BTC + treasury tiles.
+    # Row 1: bitcoin and the two treasuries' premiums.
+    third = (WIDTH - 2 * M - 2 * 24) / 3
+    top = 226
+    boxes = [(M + n * (third + 24), top, M + n * (third + 24) + third, top + 232) for n in range(3)]
     btc = header.get("btc") or {}
-    tiles = [(54, 150, 606, 340), (624, 150, 1176, 340), (1194, 150, 1746, 340)]
-    _card(canvas, tiles[0], ORANGE)
-    canvas.text(78, 166, "BITCOIN", 20, TEXT, True)
-    canvas.text(582, 168, "FRI 4 PM MARK", 16, MUTED, True, align="right")
-    canvas.text(78, 196, _money(btc.get("price")), 50, TEXT, True)
+    x0, _, x1, _ = boxes[0]
+    _card(canvas, boxes[0], ORANGE, 5)
+    canvas.text(x0 + 24, top + 22, "BITCOIN", T_MIN, MUTED, True)
+    canvas.text(x0 + 24, top + 58, _money(btc.get("price")), T_BIG, TEXT, True, max_width=third - 48)
     change = btc.get("weekly_return_pct")
-    canvas.text(78, 256, _pct(change, 2, True) + " this week", 24, _tone(change), True)
-    zone_name, zone_color = derived["zone"], derived["zone_color"]
-    if zone_name:
-        canvas.pill(582, 252, f"{zone_name} · {_pct(derived['extension'], 1, True)} vs 200W", 15, TEXT, mix(zone_color, CARD, .75), align="right")
-    sma50 = derived["sma50w"]
-    vs = _change(btc.get("price"), sma50)
-    status = (f"Above the 50W SMA (${sma50 / 1e3:,.1f}k) by {_pct(vs, 1)} · {derived['weeks_above_50w']} straight Friday"
-              f"{'s' if derived['weeks_above_50w'] != 1 else ''}" if vs is not None and vs > 0
-              else f"Below the 50W SMA (${sma50 / 1e3:,.1f}k) by {_pct(abs(vs), 1)}" if vs is not None else "50W SMA unavailable")
-    canvas.text(78, 302, status, 18, POSITIVE if vs and vs > 0 else NEGATIVE if vs else MUTED, max_width=504)
+    canvas.text(x0 + 24, top + 134, _pct(change, 2, True) + " week", T_BODY, _tone(change), True)
+    if derived["zone"]:
+        canvas.pill(x0 + 24, top + 178, f"{derived['zone']} · {_pct(derived['extension'], 0, True)} vs 200W", T_MIN,
+                    TEXT, mix(derived["zone_color"], CARD, .8), pad=(12, 4))
     companies = header.get("companies") or {}
     treasury = {row.get("ticker"): row for row in panel.get("treasury", [])}
-    for ticker, box in zip(("MSTR", "ASST"), tiles[1:]):
+    for ticker, box in zip(("MSTR", "ASST"), boxes[1:]):
         x0, _, x1, _ = box
         company, base = companies.get(ticker) or {}, treasury.get(ticker) or {}
-        _card(canvas, box, TEXT)
-        canvas.text(x0 + 24, 166, ticker, 20, TEXT, True)
-        canvas.text(x1 - 24, 168, "PRICE / NAV", 16, MUTED, True, align="right")
+        color = THEME.friday.company(ticker)
+        _card(canvas, box, color, 5)
+        canvas.text(x0 + 24, top + 22, f"{ticker} · PRICE / NAV", T_MIN, MUTED, True)
         multiple = company.get("nav_multiple")
-        canvas.text(x0 + 24, 196, f"{multiple:.2f}x" if multiple else "—", 50, TEXT, True)
+        canvas.text(x0 + 24, top + 58, f"{multiple:.2f}×" if multiple else "—", T_BIG, TEXT, True)
         delta = company.get("nav_multiple_change")
-        canvas.text(x1 - 24, 214, f"WoW {delta:+.2f}x" if delta is not None else "WoW —", 22, _tone(delta), align="right")
-        canvas.text(x0 + 24, 256, f"NAV/share {_money(company.get('nav_per_share'), 2)}   ·   price {_money(company.get('price'), 2)}", 20, MUTED, max_width=500)
-        impact, impact_pct = base.get("btc_effect_per_share"), base.get("nav_change_pct")
-        amount = f"{'+' if impact >= 0 else '−'}${abs(impact):,.2f}" if impact is not None else "—"
-        state, since = derived["crosses"].get(ticker, (None, None))
-        cross = ("golden cross" if state else "death cross" if state is False else "") + (f" since {_short(since)}" if since else "")
-        canvas.text(x0 + 24, 290, f"NAV/share WoW {amount} ({_pct(impact_pct, 2, True)})", 19, _tone(impact), max_width=300)
-        canvas.text(x1 - 24, 290, f"50D/200D {cross}", 17, MUTED, align="right", max_width=210)
-
-    # Macro strip.
-    macro = derived["macro"]
-    strip = [
-        ("US DOLLAR INDEX", macro["dxy"], f"{macro['dxy'][-1][1]:.2f}" if macro["dxy"] else "—",
-         f"{macro['dxy_change']:+.2f} WoW · 101 resistance" if macro["dxy_change"] is not None else "101 resistance", 101.0),
-        ("US 10-YEAR YIELD", macro["tnx"], f"{macro['tnx'][-1][1]:.2f}%" if macro["tnx"] else "—",
-         f"{macro['tnx_change'] * 100:+.0f} bp WoW" if macro["tnx_change"] is not None else "", None),
-        ("FED FUNDS − 2-YEAR", macro["gap"], f"{macro['gap'][-1][1] * 100:+.0f} bp" if macro["gap"] else "—",
-         (f"FF {macro['ff'][1]:.2f}% vs 2Y {macro['two'][1]:.2f}% · {_short(macro['two'][0])}" if macro["two"][1] else ""), 0.0),
-    ]
-    for index, (label, rows, value, note, reference) in enumerate(strip):
-        x0 = 54 + index * 570
-        box = (x0, 352, x0 + 552, 440)
-        _card(canvas, box)
-        canvas.text(x0 + 20, 364, label, 15, MUTED, True)
-        canvas.text(x0 + 20, 386, value, 30, TEXT, True)
-        canvas.text(x0 + 20, 420, note, 14, MUTED, max_width=300)
-        if len(rows) > 2:
-            sparkline(canvas, (x0 + 330, 372, x0 + 532, 424), [v for _, v in rows], ORANGE, width_px=2,
-                      baseline=reference, baseline_color=SOFT)
-
-    # Turnover.
-    canvas.text(54, 458, "WEEKLY TURNOVER · % OF SHARES OUTSTANDING TRADED", 21, TEXT, True)
-    canvas.text(1746, 461, "12 completed weeks · Friday close · same scale within each pair", 17, MUTED, align="right")
-    liquidity = {row.get("ticker"): row for row in panel.get("liquidity", [])}
-    for box, title, tickers in (((54, 490, 891, 760), "Common stock", ("MSTR", "ASST")),
-                                ((909, 490, 1746, 760), "Preferred stock", ("STRC", "SATA"))):
-        x0, y0, x1, y1 = box
-        _card(canvas, box)
-        canvas.text(x0 + 22, y0 + 14, title, 19, MUTED)
-        for i, ticker in enumerate(tickers):
-            weeks = derived["turnover"][ticker]
-            latest = weeks[-1]["pct"] if weeks else None
-            color = ORANGE if i == 0 else TEXT
-            x = x0 + 22 + i * 400
-            canvas.draw.rectangle((x, y0 + 50, x + 12, y0 + 62), fill=color)
-            canvas.text(x + 22, y0 + 42, f"{ticker}  {_pct(latest, 2)}/wk", 24, color, True, max_width=360)
-            dollars = liquidity.get(ticker, {}).get("dollars")
-            shares = derived["shares"].get(ticker)
-            canvas.text(x, y0 + 76, f"≈{_volume(dollars)} traded · {shares / 1e6:,.1f}m shares out" if shares else "shares outstanding n/a",
-                        15, MUTED, max_width=370)
-        plot = (x0 + 70, y0 + 106, x1 - 22, y0 + 208)
-        values = [week["pct"] for ticker in tickers for week in derived["turnover"][ticker] if week["pct"] is not None]
-        top = max(values or [1]) * 1.1
-        for fraction in (0, .5, 1):
-            y = plot[3] - fraction * (plot[3] - plot[1])
-            canvas.draw.line((plot[0], y, plot[2], y), fill=LINE)
-            canvas.text(plot[0] - 8, y - 9, f"{top * fraction:.1f}%", 14, MUTED, align="right")
-        weeks = derived["turnover"][tickers[0]]
-        group = (plot[2] - plot[0]) / max(1, len(weeks))
-        bar = min(16, group * .3)
-        for j in range(len(weeks)):
-            center = plot[0] + group * (j + .5)
-            for i, ticker in enumerate(tickers):
-                value = derived["turnover"][ticker][j]["pct"]
-                left = center + (i - 1) * bar + i * 3
-                if value is not None:
-                    canvas.draw.rectangle((left, plot[3] - value / top * (plot[3] - plot[1]), left + bar, plot[3]),
-                                          fill=ORANGE if i == 0 else TEXT)
-            if j in (0, 4, 8, len(weeks) - 1):
-                canvas.text(center, plot[3] + 8, _short(weeks[j]["week"]), 14, MUTED, align="center")
-        if tickers[0] == "STRC" and derived["buyback"]:
-            b = derived["buyback"]
-            canvas.text(x0 + 22, y1 - 26, f"Strategy repurchased {b['shares'] / 1e6:.2f}m STRC = {b['pct']:.0f}% of STRC volume "
-                        f"({_short(b['start'])}–{_short(b['end'])} filing week)", 15, MUTED, max_width=x1 - x0 - 44)
-        else:
-            canvas.text(x0 + 22, y1 - 26, "Turnover = weekly shares traded ÷ basic shares (preferred: notional ÷ $100)",
-                        15, MUTED, max_width=x1 - x0 - 44)
-
-    # Cycle checklist.
-    tally = derived["tally"]
-    canvas.text(54, 780, "CYCLE CHECKLIST", 21, TEXT, True)
-    canvas.text(1746, 783, f"Bull {tally['BULL']}  ·  Neutral {tally['NEUTRAL']}  ·  Bear {tally['BEAR']}", 19, TEXT, True, align="right")
-    cell = (1692 - 6 * 12) / 7
-    colors = {"BULL": POSITIVE, "BEAR": NEGATIVE, "NEUTRAL": NEUTRAL}
-    for index, (label, value, note, state) in enumerate(derived["checklist"]):
-        x0 = 54 + index * (cell + 12)
-        _card(canvas, (x0, 812, x0 + cell, 932))
-        canvas.draw.rectangle((x0 + 6, 812, x0 + cell - 6, 815), fill=colors[state])
-        canvas.text(x0 + 14, 826, label, 14, MUTED, True, max_width=cell - 28)
-        canvas.text(x0 + 14, 846, value, 26, TEXT, True, max_width=cell - 28)
-        canvas.text(x0 + 14, 880, note, 13, MUTED, max_width=cell - 28, minimum=11)
-        canvas.text(x0 + 14, 899, state, 14, colors[state], True)
-        canvas.text(x0 + 14, 917, RULES.get(label, ""), 11, SOFT, max_width=cell - 28, minimum=10)
-
-    # Supply & sentiment.
-    canvas.text(54, 952, "BITCOIN SUPPLY & SENTIMENT", 21, TEXT, True)
-    canvas.text(1746, 955, "Latest readings · daily observations", 17, MUTED, align="right")
-    supply = panel.get("supply_loss") or {}
-    sentiment = panel.get("sentiment") or {}
-    box = (54, 984, 891, 1240)
-    _card(canvas, box)
-    canvas.text(76, 998, "SUPPLY IN PROFIT / LOSS", 18, MUTED, True)
-    canvas.text(871, 1000, "4 YEARS", 15, MUTED, True, align="right")
-    canvas.text(76, 1024, _pct(supply.get("profit_pct"), 1) + " in profit", 30, ORANGE, True)
-    canvas.text(460, 1024, _pct(supply.get("value"), 1) + " in loss", 30, NEGATIVE, True)
-    rows = display_rows(supply.get("series"), panel.get("chart_cutoff") or period.get("end"), 4)
-    plot = (110, 1072, 866, 1186)
-    if len(rows) > 2:
-        start, end = _ordinal(rows[0]["date"]), _ordinal(rows[-1]["date"])
-        x0, y0, x1, y1 = plot
-        y40, y50 = y1 - .40 * (y1 - y0), y1 - .50 * (y1 - y0)
-        canvas.draw.rectangle((x0, y50, x1, y40), fill=mix(POSITIVE, CARD, .10))
-        _axis(canvas, plot, 0, 100, start, end, lambda v: f"{v:.0f}")
-        canvas.line([(x0, y50), (x1, y50)], SOFT, 1, dashed=True, dash=(4, 4))
-        _plot(canvas, plot, [{"points": [(r["date"], r.get("profit_pct")) for r in rows], "color": ORANGE, "width": 2},
-                             {"points": [(r["date"], r.get("value")) for r in rows], "color": NEGATIVE, "width": 2}], 0, 100, start, end)
-        cross = None
-        for previous, current in zip(rows, rows[1:]):
-            if (number(previous.get("profit_pct")) or 0) <= (number(previous.get("value")) or 0) and \
-               (number(current.get("profit_pct")) or 0) > (number(current.get("value")) or 0):
-                cross = current["date"]
-        if cross:
-            x = x0 + (_ordinal(cross) - start) / max(1, end - start) * (x1 - x0)
-            canvas.line([(x, y0), (x, y1)], TEXT, 1, dashed=True, dash=(3, 4))
-            label = f"profit > loss since {_short(cross)}"
-            canvas.text(x - 6 if x > x1 - 190 else x + 6, y0 + 2, label, 13, TEXT, align="right" if x > x1 - 190 else "left")
-    canvas.text(76, 1216, "% of circulating BTC · shaded 40–50% = past bottom zone · Checkonchain · last-moved price as cost basis", 14, MUTED, max_width=790)
-
-    box = (909, 984, 1746, 1240)
-    _card(canvas, box)
-    canvas.text(931, 998, "FEAR & GREED", 18, MUTED, True)
-    canvas.text(1726, 1000, "FROM JUL 2023", 15, MUTED, True, align="right")
-    value = number(sentiment.get("value"))
-    canvas.text(931, 1024, f"{value:.0f} / 100" if value is not None else "—", 30, TEXT, True)
-    label, color, days = derived["regime"]
-    if label:
-        weeks = days // 7
-        held = f"{label} · {weeks} wk" if weeks else f"{label} · {days} d"
-        canvas.pill(1110, 1026, held, 17, color, mix(color, CARD, .18))
-    delta = sentiment.get("change")
-    canvas.text(1726, 1030, f"{delta:+.1f} pts WoW" if delta is not None else "", 19, MUTED, align="right")
-    smooth = display_rows(smooth_sentiment(sentiment.get("series") or [], window=3), panel.get("chart_cutoff") or period.get("end"),
-                          start="2023-07-01")
-    plot = (966, 1072, 1721, 1186)
-    if len(smooth) > 2:
-        start, end = _ordinal(smooth[0]["date"]), _ordinal(smooth[-1]["date"])
-        x0, y0, x1, y1 = plot
-        for band in SENTIMENT_BANDS:
-            canvas.draw.rectangle((x0, y1 - band["upper"] / 100 * (y1 - y0), x1, y1 - band["lower"] / 100 * (y1 - y0)),
-                                  fill=mix(band["color"], CARD, .08))
-        _axis(canvas, plot, 0, 100, start, end, lambda v: f"{v:.0f}")
-        span = max(1, end - start)
-        points = [(x0 + (_ordinal(r["date"]) - start) / span * (x1 - x0), y1 - r["smoothed_value"] / 100 * (y1 - y0), r["smoothed_value"]) for r in smooth]
-        for (ax, ay, av), (bx, by, _) in zip(points, points[1:]):
-            band = next((b for b in SENTIMENT_BANDS if av < b["upper"]), SENTIMENT_BANDS[-1])
-            canvas.draw.line((ax, ay, bx, by), fill=band["color"], width=2)
-    canvas.text(931, 1216, "3-day average · CoinMarketCap · regime = current band of the 3-day average", 14, MUTED, max_width=790)
-
-    # Price vs moving averages.
-    canvas.text(54, 1260, "PRICE VS MOVING AVERAGES", 21, TEXT, True)
-    canvas.text(1746, 1263, "BTC zones = distance above the 200W SMA · equities 200D with +50% / +100% guides", 17, MUTED, align="right")
-    box = (54, 1292, 1150, 1730)
-    _card(canvas, box)
-    canvas.text(76, 1306, "BTC · 200W SMA ZONES", 20, TEXT, True)
-    canvas.text(1128, 1306, f"{_pct(derived['extension'], 1, True)} vs 200W", 22, TEXT, True, align="right")
-    legend = [("BTC Fri close", TEXT, False), ("200W SMA", ORANGE, True), ("50W SMA", BLUE, False),
-              ("20W SMA", BAND, False), ("21W EMA", BAND, True), ("Realized price", VIOLET, True)]
-    lx = 76
-    for name, color, dashed in legend:
-        canvas.line([(lx, 1348), (lx + 26, 1348)], color, 3, dashed=dashed, dash=(6, 4))
-        lx = canvas.text(lx + 32, 1339, name, 15, color) + 20
-    _btc_chart(canvas, (136, 1376, 1040, 1686), panel, derived)
-    canvas.text(76, 1706, "Weekly = Friday closes · zone names after Crypto Currently; thresholds 0 / +50 / +100 / +150%", 14, MUTED, max_width=1050)
-    for index, ticker in enumerate(("MSTR", "ASST")):
-        y0 = 1292 + index * 225
-        box = (1168, y0, 1746, y0 + 213)
-        _card(canvas, box)
+        canvas.text(x1 - 24, top + 80, f"{delta:+.2f}× wk" if delta is not None else "—", T_BODY, _tone(delta), True, align="right")
+        canvas.text(x0 + 24, top + 136, f"NAV/sh {_money(company.get('nav_per_share'), 2)}", T_LABEL, TEXT, max_width=third - 48)
         trend = (panel.get("trends") or {}).get(ticker) or {}
-        metric = ((trend.get("averages") or {}).get("200D") or {})
-        canvas.text(1188, y0 + 12, f"{ticker} · 200D SMA", 19, TEXT, True)
-        canvas.text(1726, y0 + 12, _pct(metric.get("extension_pct"), 1, True), 21, TEXT, True, align="right")
-        canvas.text(1726, y0 + 38, "From Jan 1" if ticker == "ASST" else "1 year", 14, MUTED, align="right")
-        _equity_chart(canvas, (1236, y0 + 58, 1716, y0 + 180), panel, ticker, derived)
+        ext = (((trend.get("averages") or {}).get("200D") or {}).get("extension_pct"))
+        canvas.text(x0 + 24, top + 180, f"{_pct(ext, 1, True)} vs 200D", T_LABEL, _tone(ext), True, max_width=third - 48)
 
-    canvas.text(54, 1748, "Estimated basic treasury NAV · Monday balances held fixed · checklist BULL/BEAR are rule-based states, "
-                "not forecasts · — = unavailable", 16, MUTED, max_width=1692)
-    sources = "Yahoo Finance · CoinMarketCap · Checkonchain · FRED (DFF, DGS2) · strategy.com"
-    if stale:
-        sources += " · saved snapshot used for: " + ", ".join(stale)
-    canvas.text(54, 1772, sources, 15, SOFT, max_width=1692)
-    png = canvas.save(metadata={"Title": "The Closing Mark", "financial_week_end": period.get("end", "")})
+    # Row 2: the macro strip, each chart marked with its range, dates and reference.
+    macro = derived["macro"]
+    top = 476
+    strip = (
+        ("US DOLLAR INDEX", macro["dxy"], lambda v: f"{v:.1f}", f"{macro['dxy'][-1][1]:.2f}" if macro["dxy"] else "—",
+         macro["dxy_change"], lambda v: _minus(f"{v:+.2f}"), 101.0, "101"),
+        ("US 10-YEAR", macro["tnx"], lambda v: f"{v:.2f}%", f"{macro['tnx'][-1][1]:.2f}%" if macro["tnx"] else "—",
+         macro["tnx_change"], lambda v: _minus(f"{v * 100:+.0f} bp"), None, None),
+        ("FED FUNDS − 2Y", macro["gap"], lambda v: _minus(f"{v * 100:+.0f}"), _minus(f"{macro['gap'][-1][1] * 100:+.0f} bp") if macro["gap"] else "—",
+         macro["gap_change"], lambda v: _minus(f"{v * 100:+.0f} bp"), 0.0, "0"),
+    )
+    for n, (label, rows, fmt, value, change, change_fmt, reference, ref_label) in enumerate(strip):
+        x0 = M + n * (third + 24)
+        box = (x0, top, x0 + third, top + 244)
+        _card(canvas, box)
+        canvas.text(x0 + 24, top + 20, label, T_MIN, MUTED, True, max_width=third - 48)
+        canvas.text(x0 + 24, top + 56, value, T_VALUE, TEXT, True)
+        if change is not None:
+            canvas.text(x0 + third - 24, top + 64, f"{change_fmt(change)} wk", T_MIN, MUTED, True, align="right")
+        _marked_chart(canvas, (x0 + 24, top + 114, x0 + third - 24, top + 230), rows, fmt, reference, ref_label)
+
+    # Row 3: the cycle checklist, one reading per line.
+    top = 740
+    tally = derived["tally"]
+    canvas.text(M, top, "CYCLE CHECKLIST", T_LABEL, TEXT, True)
+    colors = {"BULL": POSITIVE, "BEAR": NEGATIVE, "NEUTRAL": NEUTRAL}
+    x = WIDTH - M
+    for state in ("BEAR", "NEUTRAL", "BULL"):
+        x = canvas.pill(x, top - 4, f"{state} {tally[state]}", T_MIN, BG, colors[state], align="right", pad=(12, 4)) - 12
+    box = (M, top + 48, WIDTH - M, top + 48 + 7 * 54 + 22)
+    _card(canvas, box)
+    for index, (label, value, note, state) in enumerate(derived["checklist"]):
+        y = top + 62 + index * 54
+        if index:
+            draw.line((M + 24, y - 8, WIDTH - M - 24, y - 8), fill=LINE, width=1)
+        canvas.text(M + 28, y + 4, CHECK_LABELS.get(label, label), T_BODY, TEXT, True, max_width=360)
+        canvas.text(M + 400, y + 4, value, T_BODY, TEXT, True, max_width=280)
+        canvas.text(M + 700, y + 8, derived.get("thresholds", {}).get(label, ""), T_MIN, MUTED, max_width=390)
+        canvas.pill(WIDTH - M - 28, y, state, T_MIN, BG, colors[state], align="right", pad=(14, 4))
+
+    # Row 4: BTC against the 200-week SMA zones.
+    top = box[3] + 20
+    chart_box = (M, top, WIDTH - M, top + 440)
+    _card(canvas, chart_box)
+    canvas.text(M + 28, top + 20, "BTC · 200W SMA ZONES", T_LABEL, TEXT, True)
+    canvas.text(WIDTH - M - 28, top + 20, f"{_pct(derived['extension'], 1, True)} vs 200W", T_LABEL, TEXT, True, align="right")
+    legend = [("BTC", TEXT, False), ("200W", ORANGE, True), ("50W", BLUE, False), ("20W", BAND, False),
+              ("21W EMA", BAND, True), ("Realized", VIOLET, True)]
+    lx = M + 28
+    for name, color, dashed in legend:
+        canvas.line([(lx, top + 82), (lx + 34, top + 82)], color, 4, dashed=dashed, dash=(7, 5))
+        lx = canvas.text(lx + 42, top + 66, name, T_MIN, color, True) + 26
+    _btc_chart(canvas, (M + 116, top + 118, WIDTH - M - 230, top + 386), panel, derived)
+
+    # Row 5: weekly turnover and sentiment.
+    top = chart_box[3] + 16
+    canvas.text(M, top, "WEEKLY TURNOVER · SHARES TRADED ÷ OUTSTANDING", T_MIN, MUTED, True)
+    top += 42
+    fifth = (WIDTH - 2 * M - 4 * 18) / 5
+    for n, ticker in enumerate(("MSTR", "ASST", "STRC", "SATA")):
+        x0 = M + n * (fifth + 18)
+        weeks = derived["turnover"].get(ticker) or []
+        latest = weeks[-1]["pct"] if weeks else None
+        _card(canvas, (x0, top, x0 + fifth, top + 196), THEME.friday.company(ticker), 5)
+        canvas.text(x0 + 20, top + 18, ticker, T_MIN, MUTED, True, max_width=fifth - 40)
+        canvas.text(x0 + 20, top + 52, f"{latest:.1f}%" if latest is not None else "—", T_VALUE, TEXT, True)
+        values = [week["pct"] for week in weeks[-12:]]
+        top_value = max([v for v in values if v is not None] or [1])
+        bar = (fifth - 40) / 12
+        base = top + 172
+        draw.line((x0 + 20, base, x0 + fifth - 20, base), fill=LINE, width=2)
+        for j, value in enumerate(values):
+            if value is None:
+                continue
+            h = value / top_value * 56
+            bx = x0 + 20 + j * bar
+            draw.rectangle((bx + 2, base - h, bx + bar - 2, base), fill=THEME.friday.company(ticker) if j == len(values) - 1
+                           else mix(THEME.friday.company(ticker), CARD, .45))
+        canvas.text(x0 + fifth - 20, top + 64, "/wk", T_MIN, MUTED, align="right")
+    x0 = M + 4 * (fifth + 18)
+    sentiment = panel.get("sentiment") or {}
+    label, color, days = derived["regime"]
+    _card(canvas, (x0, top, x0 + fifth, top + 196), color or MUTED, 5)
+    canvas.text(x0 + 20, top + 18, "FEAR & GREED", T_MIN, MUTED, True, max_width=fifth - 40)
+    value = sentiment.get("value")
+    canvas.text(x0 + 20, top + 52, f"{value:.0f}" if isinstance(value, (int, float)) else "—", T_VALUE, TEXT, True)
+    if label:
+        weeks_held = max(1, round((days or 0) / 7))
+        canvas.text(x0 + 20, top + 106, f"{label} · {weeks_held} wk", T_MIN, color or MUTED, True, max_width=fifth - 40)
+    if isinstance(value, (int, float)):
+        gx0, gx1, gy = x0 + 20, x0 + fifth - 20, top + 160
+        draw.rounded_rectangle((gx0, gy, gx1, gy + 10), radius=5, fill=LINE)
+        gx = gx0 + value / 100 * (gx1 - gx0)
+        canvas.dot(gx, gy + 5, 10, TEXT)
+
+    png = canvas.save(metadata={"Title": "The Closing Mark", "Theme": THEME.key, "financial_week_end": period.get("end", "")})
     return png, canvas.overflows
+
+
+def _minus(text: str) -> str:
+    return text.replace("-", "−")
+
+
+def _marked_chart(canvas, box, rows, fmt, reference=None, ref_label=None):
+    """A small line chart with its range labeled, start/end dates and a reference line."""
+    x0, y0, x1, y1 = box
+    rows = [(day, value) for day, value in rows if value is not None]
+    if len(rows) < 3:
+        canvas.text(x0, y0 + 20, "History unavailable", T_MIN, MUTED)
+        return
+    values = [value for _, value in rows]
+    low, high = min(values), max(values)
+    if reference is not None and low - (high - low) * .6 <= reference <= high + (high - low) * .6:
+        low, high = min(low, reference), max(high, reference)
+    pad = (high - low) * .08 or .5
+    low, high = low - pad, high + pad
+    plot = (x0, y0, x1 - 96, y1 - 38)
+    px = lambda i: plot[0] + i / (len(rows) - 1) * (plot[2] - plot[0])
+    py = lambda v: plot[3] - (v - low) / (high - low) * (plot[3] - plot[1])
+    # Frame: range labels on the right edge, dates below.
+    top_value, bottom_value = max(values), min(values)
+    for value in (top_value, bottom_value):
+        canvas.line([(plot[0], py(value)), (plot[2], py(value))], LINE, 1, dashed=True, dash=(3, 5))
+        canvas.text(plot[2] + 8, py(value) - 15, fmt(value), T_MIN, MUTED)
+    if reference is not None and low <= reference <= high:
+        canvas.line([(plot[0], py(reference)), (plot[2], py(reference))], ORANGE, 2, dashed=True, dash=(8, 5))
+        ry = py(reference)
+        # Label the reference at the left, above or below the line, clear of the data's start.
+        above = rows[0][1] < reference
+        canvas.text(plot[0], ry - 34 if above else ry + 4, ref_label, T_MIN, ORANGE, True)
+    canvas.draw.line((plot[0], plot[3], plot[2], plot[3]), fill=LINE, width=2)
+    points = [(px(i), py(v)) for i, (_, v) in enumerate(rows)]
+    canvas.line(points, ORANGE if THEME.key == "classic" else TEXT, 3)
+    canvas.dot(*points[-1], 6, ORANGE)
+    canvas.text(plot[0], plot[3] + 6, _short(rows[0][0]), T_MIN, MUTED)
+    canvas.text(plot[2], plot[3] + 6, _short(rows[-1][0]), T_MIN, MUTED, align="right")
+
+
+def notes(panel: dict, derived: dict, stale: tuple = ()) -> list[str]:
+    """Footnotes for the web page; the X image carries none."""
+    b = derived.get("buyback")
+    rules = "; ".join(f"{label}: {rule}" for label, rule in RULES.items())
+    return [line for line in (
+        "Every weekly reading is taken at the Friday 4:00 pm ET mark. Price/NAV uses estimated basic treasury NAV with "
+        "Monday balances held fixed.",
+        f"Cycle checklist rules (rule-based states, not forecasts): {rules}.",
+        "Zones = BTC's distance above its 200-week SMA: below 0 Very Cheap, 0–50% Cheap, 50–100% Fair Value, "
+        "100–150% Expensive, 150%+ Very Expensive (names after Crypto Currently).",
+        "Turnover = weekly shares traded ÷ basic shares (preferreds: notional ÷ $100)."
+        + (f" Strategy repurchased {b['shares'] / 1e6:.2f}m STRC = {b['pct']:.0f}% of STRC volume in the "
+           f"{_short(b['start'])}–{_short(b['end'])} filing week." if b else ""),
+        "Fear & Greed: CoinMarketCap 3-day average; the regime is its current band.",
+        "Sources: Yahoo Finance · CoinMarketCap · Checkonchain · FRED (DFF, DGS2) · strategy.com.",
+        "Saved snapshot used for: " + ", ".join(stale) + "." if stale else "",
+    ) if line]
 
 
 def audit_rows(panel: dict, derived: dict) -> list[dict]:

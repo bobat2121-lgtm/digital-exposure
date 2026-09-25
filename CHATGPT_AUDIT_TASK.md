@@ -65,7 +65,9 @@ Wednesday checks:
 - Benchmarks from FRED (latest observation): SOFR, DGS3MO, DGS10,
   BAMLC0A0CMEY, BAMLH0A0HYM2EY (https://fred.stlouisfed.org/series/<ID>).
 - Spreads (the panel's headline for STRC and SATA) = (effective yield − benchmark)
-  × 100 bp; recompute each and allow ±5 bp.
+  × 100 bp; the headline benchmark is the 3-month bill (DGS3MO). Recompute each and
+  allow ±5 bp.
+- Footnotes and definitions are under the image on the page, not in it.
 
 Friday checks:
 - BTC 4:00 pm ET mark vs a reputable BTC price at 4:00 pm ET (within 0.5%);

@@ -2,19 +2,33 @@
 
 The public app opens on three tabs, one panel per posting day. Each tab fetches
 fresh data when a browser session opens it, and offers **Refresh data**, a PNG
-download and an **Audit values** list. Only the open tab builds.
+download, the footnotes and an **Audit values** list. Only the open tab builds.
 
-| Day | Title | Classic paper | Size | Posting time |
-| --- | --- | --- | --- | --- |
-| Monday | The **Accretion** Ledger. | cream | 1800 × 1400 | after both 8-Ks |
-| Wednesday | The **Coupon** Sheet. | certificate celadon, double-rule frame | 1800 × 1400 | after the 4:00 pm ET close |
-| Friday | The **Closing** Mark. | black | 1800 × 1800 | Friday 4:00 pm ET mark |
+| Day | Title | Size | Posting time |
+| --- | --- | --- | --- |
+| Monday | The **Accretion** Ledger | 1440 × 1800 (4:5) | after both 8-Ks |
+| Wednesday | The **Coupon** Sheet | 1440 × 1920 (3:4) | after the 4:00 pm ET close |
+| Friday | The **Closing** Mark | 1440 × 1920 (3:4) | Friday 4:00 pm ET mark |
 
 Links:
 
 - `?report=monday|wednesday|friday` opens a tab.
-- `?theme=classic|neon|orbit` picks a style.
+- `?theme=neon|classic|orbit` picks a style. Neon Ledger is the default.
+- `?layout=a|b|c` picks Monday's funding block.
 - `?classic=1` opens the detailed Monday and Friday reports, which are unchanged.
+
+## Built for phones
+
+X shows single images up to 3:4 uncropped in the mobile timeline. Taller images
+are center-cropped. Tapping an image shows it at the phone's width, about 390 CSS
+px, which is 0.27× of a 1440-px panel. So every panel follows these rules:
+
+- **Size.** The panel is 1440 px wide and no taller than 3:4.
+- **Type.** No text is smaller than 28 px (about 7.6 CSS px on a phone). Key
+  figures are 44–92 px (`panels/draw.py`, `T_*`). The canvas flags any smaller text
+  as an overflow, and the tests require zero overflows in every style and layout.
+- **No footnotes in the image.** Methods, sources and definitions appear under the
+  image on the web page and in `audit.json`, never in the downloaded PNG.
 
 ## Styles
 
@@ -22,8 +36,8 @@ All three styles draw the same numbers. Only the palette, type and decoration ch
 
 | Style | Look | Type (SIL OFL, in `assets/`) |
 | --- | --- | --- |
-| **Classic** (default) | The house style: Lato, a Gelasio serif key word, orange dot | Lato, Gelasio |
-| **Neon Ledger** (`neon`) | Cyberpunk trading terminal kept professional. Deep navy, faint grid, HUD corner brackets, glowing key word. One neon per day: cyan Monday, magenta Wednesday, amber Friday | Chakra Petch, Orbitron |
+| **Neon Ledger** (`neon`, default) | Cyberpunk trading terminal kept professional. Deep navy, faint grid, HUD corner brackets, glowing key word. One neon per day: cyan Monday, magenta Wednesday, amber Friday. Company colors hold on every sheet: Strategy cyan, Strive magenta | Chakra Petch, Orbitron |
+| **Classic** (`classic`) | The house style: Lato, a Gelasio serif key word, orange dot | Lato, Gelasio |
 | **Brutal Orbit** (`orbit`) | Brutalism meets deep space. Concrete paper, 4 px black rules, square corners, hard offset shadows, a starfield header with an orbiting planet. The key word sits knocked out of a safety-orange slab | Space Grotesk, Space Mono |
 
 Themes live in `panels/themes.py`. Fonts are switched per render through a context
@@ -51,19 +65,26 @@ Non-classic styles are written as `monday-neon.png` and so on.
 
 ### Monday — The Accretion Ledger
 
-- **Capital raised** through the two ATMs, common and preferred, each with its
-  share and price detail.
-- **Cash on hand**, in a separate tinted box labeled "a balance, not new capital":
-  Strategy's USD Reserve + USD Cash, and Strive's cash + held STRC. It shows the
-  weekly draw or addition.
-- **The funding bridge** in chips: `RAISED (ATM) + FROM CASH = DEPLOYED`, deployed
-  into the week's BTC and other uses. Cash is never counted as a raise.
-- Shares, and Strive's PIPE warrant flag (25.8m @ $27, deadline 5:00 pm ET Oct 13).
-  The flag disappears after the deadline.
-- BTC/share, NAV/share and debt + preferred ÷ BTC, with weekly change.
-- **Coverage against each issuer's own target**:
+Each company card follows the business: bitcoin bought, then how it was funded,
+then what it did per share.
+
+- **Header:** price, price/NAV and the balance date.
+- **Bitcoin bought and held.**
+- **The funding block, in three layouts** (page selector, `?layout=`):
+  - **A · Headline:** common ATM and preferred ATM as two large tiles, then one
+    cash line.
+  - **B · Ledger** (default): common ATM + preferred ATM = raised, as a short
+    statement, with cash below.
+  - **C · Waterfall:** a waterfall of common + preferred + cash = into BTC.
+
+  In every layout, cash is a balance ("drew $310.0m · $6.09B on hand") and is never
+  counted as a raise.
+- **Per share:** BTC/share, NAV/share, amplification ((debt + preferred) ÷ BTC
+  value) and shares, each with its weekly change. Strive's PIPE warrant tag (25.8M @
+  $27, due Oct 13) disappears after the deadline.
+- **Coverage against each issuer's own target:**
   - Strategy's USD cover as a multiple of its 12-month floor.
-  - Strive's as "at its 18-month goal".
+  - Strive's as "at 18-mo goal".
   - Total coverage in years and BTC break-even.
 - **Growth on one shared window.** The "N WK" column uses the same number of weekly
   filings for both companies. QTD and YTD restart automatically at each quarter.
@@ -76,32 +97,60 @@ STRC and SATA carry the two treasuries, so they are the heroes. Each gets a card
 - effective yield;
 - a spread stack over SOFR, the 3-month bill, the 10-year, ICE BofA IG and HY;
 - 12 weeks of spread history, using each day's close, stated rate and 3-month bill;
-- par, 30-day ADV, turnover, amount outstanding and the rate rule. SATA may cut its
-  rate only if the prior month averaged at least $99.
+- closes at or above $100, 30-day volume and size. For SATA the first cell is instead
+  its rate-cut test: the prospectus allows a cut only if the prior month averaged at
+  least $99.
+- the issuer's USD cover against its own target, as a 12-week bar timeline with the
+  target line. Strive sits on its 18-month goal every week; Strategy stays far above
+  its 12-month floor.
+
+**Why the 3-month bill.** Jeff Walton, Strive's Chief Risk Officer, calls digital
+credit a "moderate duration" instrument. Some examples:
+
+- [tnorth.com, Mar 25, 2026](https://tnorth.com/digital-credit/thesis/): "a
+  moderate-duration capital instrument".
+- [X, Mar 11, 2026](https://x.com/PunterJeff/status/2031706638759932054):
+  "+$3.9 Million per year vs T-Bills".
+- [Strive update, May 14, 2026](https://www.sec.gov/Archives/edgar/data/1920406/000095010326007179/dp246652_fwp.htm):
+  "A three-month T-Bill".
+
+Strategy's own sources point the same way:
+
+- It defines its risk-free rate as the 3-month Treasury yield.
+- Its STRC briefing compares STRC against 0–3 month bills (SGOV).
+- Saylor benchmarks STRC to the one-month Treasury.
+
+Both securities reset their rate monthly around $100 par, so their rate duration is
+about a month. The 2-year note would add term premium a holder is not exposed to.
+The "moderate duration" is credit exposure, and the IG and HY spreads cover that.
+Switch the headline in `data/preview-config.json` (`spread_benchmark`) if needed.
 
 The rest of the panel:
 
-- **The rest of the ladder** (STRF, STRK, STRD, STRE) as a compact table: price,
-  stated and effective yield, spread over the bill and over HY, outstanding.
-- **USD cover vs each issuer's own target**, as a 12-week timeline with the target
-  line. Strive sits on its 18-month goal every week. Strategy stays far above its
-  12-month floor.
-- The four-week flow ledger and the dated calendar.
+- **The rest of the ladder** (STRF, STRK, STRD, STRE): price, effective yield, and
+  spread over the bill and over HY.
+- **The calendar:** record and pay dates, the warrant deadline and quarter end.
+- **The four-week flow ledger**, with centered columns.
 
 ### Friday — The Closing Mark
 
 Every reading is taken at the Friday 4:00 pm ET mark; none needs a Sunday close.
 
-- Named 200W zones:
-  - Very Cheap
-  - Cheap
-  - Fair Value
-  - Expensive
-  - Very Expensive
-- 50W SMA, 20W SMA / 21W EMA band and realized price.
-- The seven-cell cycle checklist, each cell printing its rule (below).
-- Turnover, the STRC buyback share of volume, Fear & Greed regime and the macro
-  strip (DXY, the 10-year, Fed funds − 2-year).
+- **Tiles:**
+  - BTC with its weekly change and 200W zone.
+  - MSTR and ASST price/NAV with the weekly change, NAV/share and distance from
+    the 200-day SMA.
+- **The macro strip:** DXY, the 10-year, and Fed funds − 2-year. Each chart is
+  marked with its high/low values, start and end dates, and a labeled reference
+  line (DXY 101).
+- **The cycle checklist:** one reading per line, each with the level that decides its
+  state, and a Bull/Neutral/Bear tally.
+- **BTC chart:** the 200W SMA zones with the 50W, 20W, 21W EMA and realized price.
+  The zones are named Very Cheap, Cheap, Fair Value, Expensive and Very Expensive.
+- **Weekly turnover** for MSTR, ASST, STRC and SATA (12-week bars), and Fear & Greed.
+
+The supply-in-profit, Fear & Greed and 200-day charts appear as their headline
+numbers; full history stays in the detailed Friday report (`?classic=1`).
 
 #### Cycle checklist rules
 

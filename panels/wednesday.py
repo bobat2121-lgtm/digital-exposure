@@ -18,11 +18,11 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from . import themes
-from .draw import Canvas, fontset, mix, width
+from .draw import T_BIG, T_BODY, T_HERO, T_LABEL, T_MIN, T_VALUE, Canvas, fontset, mix, width
 from .extras import fred_latest, number
 
 ET = ZoneInfo("America/New_York")
-WIDTH, HEIGHT = 1800, 1400
+WIDTH, HEIGHT = 1440, 1920
 TITLE = ("The ", "Coupon", " Sheet")
 CONFIG = Path(__file__).resolve().parents[1] / "data" / "preview-config.json"
 HEROES = ("STRC", "SATA")
@@ -31,8 +31,13 @@ ISSUER = {"STRC": "Strategy", "STRF": "Strategy", "STRK": "Strategy", "STRD": "S
 HERO_NOTE = {"STRC": "variable rate · paid semi-monthly", "SATA": "variable rate · paid every business day"}
 KIND = {"STRC": "variable · semi-monthly", "SATA": "variable · daily", "STRF": "10% fixed · senior",
         "STRK": "8% · convertible", "STRD": "10% · non-cumulative", "STRE": "10% · euro"}
+# The 3-month bill is the headline: it is Strategy's stated risk-free rate, the
+# bill Jeff Walton benchmarks digital credit against, and it matches STRC/SATA's
+# roughly one-month rate reset. The 10Y, IG and HY show the credit comparison.
 BENCHMARKS = (("SOFR", "SOFR"), ("3M bill", "DGS3MO"), ("10Y", "DGS10"), ("IG corp", "BAMLC0A0CMEY"),
               ("HY corp", "BAMLH0A0HYM2EY"))
+SERIES = dict(BENCHMARKS)
+DEFAULT_HEADLINE = "3M bill"
 HISTORY_DAYS = 84
 
 
@@ -252,7 +257,9 @@ def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None)
     by_ticker = {item.ticker: item for item in ladder}
     references = [(label, fred_latest(extras, code)) for label, code in BENCHMARKS]
     levels = {label: value for label, (_, value) in references}
-    bill = levels.get("3M bill")
+    headline = (config.get("spread_benchmark") or {}).get("label") or DEFAULT_HEADLINE
+    headline = headline if headline in SERIES else DEFAULT_HEADLINE
+    bill = levels.get(headline)
 
     def spreads(effective):
         return {label: (effective - value) * 100 if effective is not None and value is not None else None
@@ -281,7 +288,7 @@ def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None)
         if price_rows:
             start = (date.fromisoformat(price_rows[-1]["date"]) - timedelta(days=HISTORY_DAYS)).isoformat()
             for row in price_rows:
-                bill_then = _asof(fred.get("DGS3MO"), row["date"])
+                bill_then = _asof(fred.get(SERIES[headline]), row["date"])
                 rate = rate_at[ticker](row["date"])
                 if row["date"] >= start and row.get("close") and rate and bill_then is not None:
                     history.append((row["date"], (rate * 100 / row["close"] - bill_then) * 100))
@@ -315,13 +322,20 @@ def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None)
     calendar.sort()
     coverage = dict(monday.extras) if monday is not None else {}
     stamp = max((row["date"] for row in _rows(extras, "STRC")), default=None)
-    return {"ladder": ladder, "references": references, "bill": bill, "heroes": heroes, "rest": rest,
+    return {"ladder": ladder, "references": references, "bill": bill, "headline": headline, "heroes": heroes, "rest": rest,
             "liquidity": liquidity, "btc_adv": btc_adv, "credit_adv": credit_adv, "ledger": ledger,
             "calendar": calendar[:5], "coverage": coverage, "cover": _cover_history(rows, extras, config, monday),
             "sata_rate": sata_rate, "stamp": stamp, "now": now, "stale": tuple(extras.get("stale") or ())}
 
 
 # ── rendering ───────────────────────────────────────────────────────────────
+# Portrait, phone-first (see draw.T_*): heroes, the rest of the ladder, USD
+# cover beside the calendar, then the flow ledger.
+M, GAP = 40, 24
+HALF = (WIDTH - 2 * M - GAP) // 2
+SHORT = {"SOFR": "SOFR", "3M bill": "3M bill", "10Y": "10Y", "IG corp": "IG corp", "HY corp": "HY corp"}
+
+
 def _guilloche(canvas: Canvas, box, color):
     """Fine interlaced waves, as on a printed bond certificate."""
     x0, y0, x1, y1 = box
@@ -336,287 +350,253 @@ def _guilloche(canvas: Canvas, box, color):
 
 def _frame(canvas: Canvas, p):
     draw = canvas.draw
-    draw.rectangle((16, 16, WIDTH - 17, HEIGHT - 17), outline=p.deep, width=3)
-    draw.rectangle((24, 24, WIDTH - 25, HEIGHT - 25), outline=mix(p.deep, p.bg, .45), width=1)
-    for x, y in ((16, 16), (WIDTH - 17, 16), (16, HEIGHT - 17), (WIDTH - 17, HEIGHT - 17)):
-        draw.rectangle((x - 5, y - 5, x + 5, y + 5), fill=p.accent)
+    draw.rectangle((14, 14, WIDTH - 15, HEIGHT - 15), outline=p.deep, width=3)
+    draw.rectangle((22, 22, WIDTH - 23, HEIGHT - 23), outline=mix(p.deep, p.bg, .45), width=1)
+    for x, y in ((14, 14), (WIDTH - 15, 14), (14, HEIGHT - 15), (WIDTH - 15, HEIGHT - 15)):
+        draw.rectangle((x - 6, y - 6, x + 6, y + 6), fill=p.accent)
 
 
 def _card(canvas, box, p, theme, accent=None):
     if theme.key == "classic":
-        canvas.card(box, p.card, p.radius, accent=accent, accent_height=5, outline=p.line)
+        canvas.card(box, p.card, p.radius, accent=accent, accent_height=6, outline=p.line)
     else:
-        themes.card(canvas, box, p, accent, theme, 5)
+        themes.card(canvas, box, p, accent, theme, 6)
 
 
-def _heading(canvas, x, y, text, p, theme, right=None, right_x=None):
-    canvas.text(x, y, text.upper(), 19, p.deep, True, max_width=(right_x - x) * .66 if right_x else None)
+def _heading(canvas, x, y, text, p, right=None, right_x=None):
+    canvas.text(x, y, text.upper(), T_LABEL, p.deep, True, max_width=(right_x - x) * .68 if right_x else None)
     if right and right_x:
-        canvas.text(right_x, y + 2, right, 15, p.muted, align="right", max_width=(right_x - x) * .34)
+        canvas.text(right_x, y + 2, right, T_MIN, p.muted, align="right", max_width=(right_x - x) * .32)
 
 
 def _hero(canvas, box, ticker, hero, scale, p, theme, stripe, data):
     x0, y0, x1, y1 = box
-    L, R = x0 + 26, x1 - 26
+    L, R = x0 + 28, x1 - 28
     item = hero["item"]
     _card(canvas, box, p, theme, stripe)
-    end = canvas.text(L, y0 + 20, ticker, 48, p.ink, True, serif=True)
-    canvas.text(end + 16, y0 + 28, ISSUER[ticker], 20, p.ink, True)
-    canvas.text(end + 16, y0 + 54, HERO_NOTE[ticker], 16, p.muted)
+    end = canvas.text(L, y0 + 22, ticker, 60, p.ink, True, serif=True)
+    canvas.text(end + 16, y0 + 40, ISSUER[ticker], T_LABEL, p.muted, True)
     if item.price is not None:
-        canvas.text(R, y0 + 20, f"${item.price:,.2f}", 32, p.ink, True, align="right")
+        canvas.text(R, y0 + 22, f"${item.price:,.2f}", T_VALUE, p.ink, True, align="right")
         diff = item.price - 100
-        canvas.text(R, y0 + 60, f"{'+' if diff >= 0 else '−'}${abs(diff):.2f} vs $100 par", 17,
+        canvas.text(R, y0 + 76, f"{'+' if diff >= 0 else '−'}${abs(diff):.2f} vs par", T_MIN,
                     p.positive if diff >= 0 else p.negative, True, align="right")
-    canvas.draw.line((L, y0 + 96, R, y0 + 96), fill=p.line)
+    canvas.draw.line((L, y0 + 122, R, y0 + 122), fill=p.line, width=2)
 
-    # Headline spread and yield.
-    bill_spread = hero["spreads"].get("3M bill")
-    canvas.text(L, y0 + 112, "SPREAD OVER 3M BILL", 15, p.muted, True)
-    canvas.text(L, y0 + 132, _bp(bill_spread), 58, stripe if theme.key != "classic" else p.ink, True)
-    canvas.text(L, y0 + 200, f"{_pct(item.effective)} effective − {_pct(data['bill'])} bill", 15, p.soft, max_width=250)
-    canvas.text(L, y0 + 236, "EFFECTIVE YIELD", 15, p.muted, True)
-    canvas.text(L, y0 + 256, _pct(item.effective), 34, p.ink, True)
-    canvas.text(L, y0 + 298, f"stated {_pct(item.rate)} × $100 ÷ price", 15, p.soft, max_width=250)
+    headline = data["headline"]
+    canvas.text(L, y0 + 138, f"SPREAD OVER {SHORT[headline].upper()}", T_MIN, p.muted, True)
+    canvas.text(R, y0 + 138, "YIELD", T_MIN, p.muted, True, align="right")
+    canvas.text(L, y0 + 170, _bp(hero["spreads"].get(headline)), T_HERO, stripe if theme.key != "classic" else p.ink, True)
+    canvas.text(R, y0 + 184, _pct(item.effective), T_VALUE + 8, p.ink, True, align="right")
 
-    # Spread stack.
-    sx = L + 290
-    canvas.text(sx, y0 + 112, "SPREAD STACK · OVER", 15, p.muted, True)
-    canvas.text(R, y0 + 112, "bp", 15, p.muted, True, align="right")
-    bar_left, bar_right = sx + 150, R - 92
-    levels = {label: value for label, (_, value) in data["references"]}
-    for n, (label, _) in enumerate(BENCHMARKS):
-        y = y0 + 142 + n * 36
-        spread, level = hero["spreads"].get(label), levels.get(label)
-        key = label == "3M bill"
-        canvas.text(sx, y + 2, label, 18, p.ink, key)
-        canvas.text(sx + 76, y + 5, _pct(level) if level is not None else "—", 14, p.soft)
-        canvas.draw.rounded_rectangle((bar_left, y + 5, bar_right, y + 23), radius=min(4, p.radius), fill=p.tint)
+    # Spread stack over each benchmark.
+    y = y0 + 286
+    bar_left, bar_right = L + 150, R - 118
+    for label, _ in BENCHMARKS:
+        spread = hero["spreads"].get(label)
+        key = label == headline
+        canvas.text(L, y + 4, SHORT[label], T_MIN, p.ink if key else p.muted, key)
+        canvas.draw.rounded_rectangle((bar_left, y + 8, bar_right, y + 32), radius=min(5, p.radius), fill=p.tint)
         if spread is not None and spread > 0:
-            canvas.draw.rounded_rectangle((bar_left, y + 5, bar_left + min(1, spread / scale) * (bar_right - bar_left), y + 23),
-                                          radius=min(4, p.radius), fill=stripe if key else mix(stripe, p.card, .45))
-        canvas.text(R, y + 1, _bp(spread).replace(" bp", ""), 20, p.ink, key, align="right")
+            canvas.draw.rounded_rectangle((bar_left, y + 8, bar_left + min(1, spread / scale) * (bar_right - bar_left), y + 32),
+                                          radius=min(5, p.radius), fill=stripe if key else mix(stripe, p.card, .42))
+        canvas.text(R, y + 2, _bp(spread).replace(" bp", ""), T_LABEL, p.ink, key, align="right")
+        y += 44
 
-    # Twelve weeks of spread over the bill.
-    top = y0 + 336
+    # Twelve weeks of spread over the headline benchmark.
+    top = y + 14
     history = hero["history"]
-    canvas.text(L, top, "SPREAD OVER 3M BILL · 12 WEEKS", 15, p.muted, True)
+    canvas.text(L, top, "12 WEEKS", T_MIN, p.muted, True)
     if len(history) > 2:
         values = [value for _, value in history]
-        canvas.text(R, top, f"range {min(values):,.0f}–{max(values):,.0f} bp · now {values[-1]:,.0f}", 15, p.muted, align="right")
-        plot = (L + 64, top + 30, R - 8, top + 118)
+        canvas.text(R, top, f"{min(values):,.0f}–{max(values):,.0f} bp", T_MIN, p.muted, align="right")
+        plot = (L + 78, top + 44, R - 8, top + 136)
         low, high = min(values), max(values)
-        pad = max(10.0, (high - low) * .15)
-        low, high = low - pad, high + pad
+        pad = max(10.0, (high - low) * .12)
+        lo, hi = low - pad, high + pad
         px = lambda i: plot[0] + i / (len(values) - 1) * (plot[2] - plot[0])
-        py = lambda v: plot[3] - (v - low) / (high - low) * (plot[3] - plot[1])
-        for tick in (low + pad, high - pad):
-            canvas.line([(plot[0], py(tick)), (plot[2], py(tick))], p.line, 1, dashed=True, dash=(3, 5))
-            canvas.text(plot[0] - 10, py(tick) - 9, f"{tick:,.0f}", 14, p.soft, align="right")
+        py = lambda v: plot[3] - (v - lo) / (hi - lo) * (plot[3] - plot[1])
+        for tick in (low, high):
+            canvas.line([(plot[0], py(tick)), (plot[2], py(tick))], p.line, 1, dashed=True, dash=(4, 6))
+            canvas.text(plot[0] - 10, py(tick) - 15, f"{tick:,.0f}", T_MIN, p.soft, align="right")
         points = [(px(i), py(v)) for i, v in enumerate(values)]
-        canvas.draw.polygon(points + [(plot[2], plot[3]), (plot[0], plot[3])], fill=mix(stripe, p.card, .12))
-        canvas.line(points, stripe, 3)
-        canvas.dot(*points[-1], 6, stripe)
-        canvas.text(plot[0], plot[3] + 6, _short(history[0][0]), 13, p.soft)
-        canvas.text(plot[2], plot[3] + 6, _short(history[-1][0]), 13, p.soft, align="right")
+        canvas.draw.polygon(points + [(plot[2], plot[3]), (plot[0], plot[3])], fill=mix(stripe, p.card, .14))
+        canvas.line(points, stripe, 4)
+        canvas.dot(*points[-1], 8, stripe)
+        canvas.text(plot[0], plot[3] + 8, _short(history[0][0]), T_MIN, p.soft)
+        canvas.text(plot[2], plot[3] + 8, _short(history[-1][0]), T_MIN, p.soft, align="right")
     else:
-        canvas.text(L, top + 60, "Spread history unavailable", 16, p.muted)
+        canvas.text(L, top + 70, "History unavailable", T_BODY, p.muted)
 
-    # Par and liquidity strip.
-    strip = y0 + 482
-    canvas.draw.rounded_rectangle((L - 8, strip, R + 8, strip + 80), radius=min(8, p.radius), fill=p.tint)
+    # Par (or SATA's rate-cut test), liquidity and size.
+    strip = top + 188
+    canvas.draw.rounded_rectangle((L - 10, strip, R + 10, strip + 104), radius=min(10, p.radius + 4), fill=p.tint)
     par, liquidity = hero["par"], hero["liquidity"]
     at = par.get("at_par_20")
-    cells = (("CLOSED ≥ $100", f"{at} of {par.get('sessions')}" if at is not None else "—", "last 20 sessions"),
-             ("30-DAY ADV", _money(liquidity.get("adv")), "Yahoo close × volume"),
-             ("TURNOVER", _pct(liquidity.get("turnover")) + "/day" if liquidity.get("turnover") else "—", "of shares outstanding"),
-             ("OUTSTANDING", _money(liquidity.get("notional")), "at $100 par"))
-    cell = (R - L) / 4
-    for n, (label, value, note) in enumerate(cells):
-        cx = L + n * cell
-        canvas.text(cx, strip + 10, label, 13, p.muted, True, max_width=cell - 12)
-        canvas.text(cx, strip + 28, value, 22, p.ink, True, max_width=cell - 12)
-        canvas.text(cx, strip + 56, note, 13, p.soft, max_width=cell - 12)
-    rule_y = strip + 92
+    first = ("≥ $100", f"{at}/{par.get('sessions')} days" if at is not None else "—", p.ink)
     if ticker == "SATA" and par.get("prior_avg"):
+        # The prospectus allows a rate cut only if the prior month averaged ≥ $99.
         allowed = par["prior_avg"] >= 99
-        canvas.text(L, rule_y, f"Rate cut allowed only if the prior month averaged ≥ $99 · {par['prior_month']:%b} "
-                    f"${par['prior_avg']:.2f} → {'allowed' if allowed else 'not allowed'}", 16,
-                    p.accent if allowed else p.positive, True, max_width=R - L)
-    elif ticker == "STRC":
-        last = _short(par.get("last_par")) if par.get("last_par") else "—"
-        share = data["credit_adv"] / data["btc_adv"] * 100 if data["btc_adv"] else None
-        canvas.text(L, rule_y, f"Rate set monthly by Strategy · last close ≥ $100 {last} · "
-                    f"STRC + SATA trade {_pct(share)} of bitcoin's spot volume", 16, p.muted, True, max_width=R - L)
+        first = ("CUT TEST", f"${par['prior_avg']:.2f}", p.accent if allowed else p.positive)
+    cells = (first, ("30D VOLUME", _money(liquidity.get("adv"), 0) + "/d" if liquidity.get("adv") else "—", p.ink),
+             ("SIZE", _money(liquidity.get("notional")), p.ink))
+    cell = (R - L) / 3
+    for n, (label, value, color) in enumerate(cells):
+        cx = L + 4 + n * cell
+        canvas.text(cx, strip + 12, label, T_MIN, p.muted, True, max_width=cell - 12)
+        canvas.text(cx, strip + 48, value, T_VALUE - 6, color, True, max_width=cell - 12)
+
+    # The issuer's USD cover against its own target: what stands behind the coupon.
+    cover = data["cover"]["MSTR" if ticker == "STRC" else "ASST"]
+    y = strip + 124
+    weeks, target, current = cover["weeks"], cover["target"], cover["current"]
+    canvas.text(L, y, "USD COVER", T_MIN, p.muted, True)
+    canvas.text(L, y + 34, f"{current:.0f} mo" if current else "—", T_VALUE - 4, p.ink, True)
+    if current and target:
+        note = (f"at {target:.0f}-mo goal" if cover["kind"] == "goal" and abs(current - target) < .5
+                else f"{current / target:.1f}× floor" if cover["kind"] == "floor" else f"{current - target:+.0f} vs goal")
+        canvas.text(L, y + 84, note, T_MIN, p.positive if current >= target - .5 else p.negative, True, max_width=220)
+    plot = (L + 250, y + 8, R, y + 112)
+    if weeks and target:
+        high = max(max(months for _, months in weeks), target) * 1.15
+        slot = (plot[2] - plot[0]) / 12
+        for n, (_, months) in enumerate(weeks):
+            bx = plot[0] + (12 - len(weeks) + n) * slot
+            h = months / high * (plot[3] - plot[1])
+            color = p.positive if months >= target - .5 else p.negative
+            canvas.draw.rectangle((bx + 3, plot[3] - h, bx + slot - 3, plot[3]), fill=mix(color, p.card, .6 if n < len(weeks) - 1 else 1))
+        ty = plot[3] - target / high * (plot[3] - plot[1])
+        canvas.line([(plot[0], ty), (plot[2], ty)], p.accent, 3, dashed=True, dash=(8, 5))
+        canvas.draw.line((plot[0], plot[3], plot[2], plot[3]), fill=p.line, width=2)
 
 
-def _rest(canvas, box, rest, p, theme):
+def _rest(canvas, box, rest, p, theme, headline):
     x0, y0, x1, y1 = box
-    L, R = x0 + 24, x1 - 24
+    L, R = x0 + 28, x1 - 28
     _card(canvas, box, p, theme)
-    _heading(canvas, L, y0 + 16, "The rest of the ladder · Strategy fixed-rate series", p, theme, "bp over benchmark · STRE in EUR", R)
-    columns = (("SERIES", L, "left"), ("PRICE", L + 420, "right"), ("STATED", L + 520, "right"),
-               ("EFFECTIVE", L + 640, "right"), ("OVER 3M BILL", L + 790, "right"), ("OVER HY", L + 900, "right"),
-               ("OUTSTANDING", R, "right"))
-    for label, x, align in columns:
-        canvas.text(x, y0 + 50, label, 13, p.muted, True, align=align)
-    canvas.draw.line((L, y0 + 70, R, y0 + 70), fill=p.line)
+    _heading(canvas, L, y0 + 18, "The rest of the ladder", p, "bp", R)
+    columns = (("PRICE", L + 262), ("YIELD", L + 412), (f"OVER {SHORT[headline].upper()}", L + 646), ("OVER HY", R))
+    for label, x in columns:
+        canvas.text(x, y0 + 64, label, T_MIN, p.muted, True, align="right")
+    canvas.draw.line((L, y0 + 102, R, y0 + 102), fill=p.line, width=2)
     for index, row in enumerate(rest):
         item = row["item"]
-        y = y0 + 80 + index * 34
+        y = y0 + 112 + index * 42
         currency = "€" if item.currency == "EUR" else "$"
-        canvas.text(L, y, item.ticker, 21, p.ink, True)
-        canvas.text(L + 72, y + 4, KIND[item.ticker], 15, p.soft, max_width=250)
-        values = (f"{currency}{item.price:,.2f}" if item.price else "—", _pct(item.rate), _pct(item.effective),
-                  _bp(row["spreads"].get("3M bill")).replace(" bp", ""), _bp(row["spreads"].get("HY corp")).replace(" bp", ""),
-                  _money(row["liquidity"].get("notional")))
-        for n, ((_, x, _), value) in enumerate(zip(columns[1:], values)):
-            canvas.text(x, y + 1, value, 19, p.ink, n in (2, 3), align="right")
+        canvas.text(L, y, item.ticker, T_BODY, p.ink, True)
+        values = (f"{currency}{item.price:,.2f}" if item.price else "—", _pct(item.effective),
+                  _bp(row["spreads"].get(headline)).replace(" bp", ""), _bp(row["spreads"].get("HY corp")).replace(" bp", ""))
+        for n, ((_, x), value) in enumerate(zip(columns, values)):
+            canvas.text(x, y, value, T_BODY, p.ink, n in (1, 2), align="right")
 
 
 def _calendar(canvas, box, data, p, theme):
     x0, y0, x1, y1 = box
-    L, R = x0 + 24, x1 - 24
+    L, R = x0 + 28, x1 - 28
     _card(canvas, box, p, theme)
-    _heading(canvas, L, y0 + 16, "On the calendar", p, theme, "days away", R)
+    _heading(canvas, L, y0 + 18, "Calendar", p, "days", R)
     today = data["now"].date()
-    for index, (day, label, note) in enumerate(data["calendar"]):
-        y = y0 + 52 + index * 30
+    for index, (day, label, note) in enumerate(data["calendar"][:5]):
+        y = y0 + 64 + index * 42
         parsed = date.fromisoformat(day)
-        canvas.pill(L, y - 2, f"{parsed:%b} {parsed.day}".upper(), 13, p.card, p.deep)
-        canvas.text(L + 86, y, label, 16, p.ink, True, max_width=R - L - 150)
-        canvas.text(R, y + 1, f"{(parsed - today).days} d", 15, p.muted, align="right")
-
-
-def _cover(canvas, box, cover, p, theme):
-    x0, y0, x1, y1 = box
-    L, R = x0 + 24, x1 - 24
-    _card(canvas, box, p, theme)
-    _heading(canvas, L, y0 + 16, "USD cover · vs each issuer's own target", p, theme, "months of preferred dividends", R)
-    for index, ticker in enumerate(("MSTR", "ASST")):
-        item = cover[ticker]
-        top = y0 + 52 + index * 120
-        weeks, target, current = item["weeks"], item["target"], item["current"]
-        canvas.text(L, top, item["name"], 20, p.ink, True)
-        value = f"{current:.0f} months" if current else "—"
-        end = canvas.text(L + 110, top, value, 20, p.ink, True)
-        if current and target:
-            on = sum(1 for _, months in weeks if months >= target - .5)
-            if item["kind"] == "goal":
-                note = f"at its {target:.0f}-month goal {on} of {len(weeks)} weeks" if abs(current - target) < .5 else \
-                    f"{current - target:+.0f} vs its {target:.0f}-month goal"
-            else:
-                note = f"{current / target:.1f}× its {target:.0f}-month floor · above it {on} of {len(weeks)} weeks"
-            canvas.text(end + 14, top + 3, note, 16, p.positive if current >= target - .5 else p.negative, True, max_width=R - end - 14)
-        plot = (L, top + 28, R, top + 96)
-        if not weeks or not target:
-            canvas.text(L, top + 44, "Weekly history unavailable", 15, p.muted)
-            continue
-        high = max(max(months for _, months in weeks), target) * 1.18
-        gutter = 104
-        slot = (plot[2] - plot[0] - gutter) / 12
-        base = plot[3]
-        for n, (day, months) in enumerate(weeks):
-            bx = plot[0] + gutter + (12 - len(weeks) + n) * slot
-            height = months / high * (plot[3] - plot[1])
-            color = p.positive if months >= target - .5 else p.negative
-            canvas.draw.rectangle((bx + 3, base - height, bx + slot - 3, base), fill=mix(color, p.card, .78 if n < len(weeks) - 1 else 1))
-        ty = base - target / high * (plot[3] - plot[1])
-        canvas.line([(plot[0] + gutter - 6, ty), (plot[2], ty)], p.accent, 2, dashed=True, dash=(6, 4))
-        canvas.text(plot[0], ty - 9, f"{target:.0f}-mo {item['kind']}", 14, p.accent, True, max_width=gutter - 12)
-        canvas.draw.line((plot[0] + gutter - 6, base, plot[2], base), fill=p.line)
-        canvas.text(plot[2], base + 3, f"{_short(weeks[0][0])} → {_short(weeks[-1][0])}", 12, p.soft, align="right")
+        canvas.pill(L, y - 4, f"{parsed:%b} {parsed.day}".upper(), T_MIN, p.card, p.deep, pad=(10, 4))
+        short = label.replace(" dividend ", " ").replace("STRF · STRK · STRD · STRE", "STRF/K/D/E").replace(
+            "ASST warrant exercise deadline", "ASST warrants").replace("Quarter end · QTD restarts", "Quarter end")
+        canvas.text(L + 128, y, short, T_MIN, p.ink, True, max_width=R - L - 180)
+        canvas.text(R, y, f"{(parsed - today).days}", T_MIN, p.muted, align="right")
 
 
 def _flow(canvas, box, ledger, p, theme):
     x0, y0, x1, y1 = box
-    L, R = x0 + 24, x1 - 24
+    L, R = x0 + 28, x1 - 28
     _card(canvas, box, p, theme)
-    _heading(canvas, L, y0 + 16, "Flow ledger · last four filing weeks", p, theme, "+ issued / − repurchased", R)
-    columns = (("WEEK OF", L, "left"), ("STRC", L + 212, "right"), ("STRF/K/D/E", L + 324, "right"),
-               ("MSTR ATM", L + 442, "right"), ("SATA", L + 550, "right"), ("STRC BUYBACK", L + 654, "right"),
-               ("BTC BOUGHT", R, "right"))
-    for label, x, align in columns:
-        canvas.text(x, y0 + 50, label, 13, p.muted, True, align=align)
-    canvas.draw.line((L, y0 + 70, R, y0 + 70), fill=p.line)
+    _heading(canvas, L, y0 + 20, "Flow ledger · last four filing weeks", p, "+ issued / − repurchased", R)
+    labels = ("WEEK", "STRC", "STRF/K/D/E", "MSTR ATM", "SATA", "BTC BOUGHT")
+    span = (R - L) / len(labels)
+    centers = [L + span * (n + .5) for n in range(len(labels))]
+    for label, x in zip(labels, centers):
+        canvas.text(x, y0 + 66, label, T_MIN, p.muted, True, align="center", max_width=span - 8)
+    canvas.draw.line((L, y0 + 104, R, y0 + 104), fill=p.line, width=2)
     totals = {"strc": 0, "other": 0, "mstr": 0, "sata": 0}
     for index, entry in enumerate(ledger):
-        y = y0 + 80 + index * 34
+        y = y0 + 114 + index * 46
         values = (_short(entry["week"]), _money(entry.get("strc"), signed=True), _money(entry.get("other"), signed=True),
                   _money(entry.get("mstr"), signed=True), _money(entry.get("sata"), signed=True),
-                  f"{entry['buyback_share']:.0f}% of vol" if entry.get("buyback_share") else "—",
                   f"{(entry.get('mstr_btc') or 0):,.0f} · {(entry.get('asst_btc') or 0):,.0f}")
-        for (_, x, align), value in zip(columns, values):
+        for value, x in zip(values, centers):
             money = "$" in value
             color = p.negative if money and value.startswith("−") else p.positive if money and value.startswith("+") else p.ink
-            canvas.text(x, y, value, 18, color, money, align=align)
+            canvas.text(x, y, value, T_BODY - 2, color, money, align="center", max_width=span - 8)
         for key in totals:
             totals[key] += entry.get(key) or 0
-    y = y0 + 84 + len(ledger) * 34
-    canvas.draw.line((L, y - 6, R, y - 6), fill=p.line)
-    canvas.text(L, y, f"{len(ledger)}-week total", 18, p.ink, True)
-    for key, (_, x, _) in zip(("strc", "other", "mstr", "sata"), columns[1:5]):
+    y = y0 + 118 + len(ledger) * 46
+    canvas.draw.line((L, y - 8, R, y - 8), fill=p.line, width=2)
+    canvas.text(centers[0], y + 2, f"{len(ledger)} WK", T_BODY - 2, p.ink, True, align="center")
+    for key, x in zip(("strc", "other", "mstr", "sata"), centers[1:5]):
         value = _money(totals[key], signed=True)
-        canvas.text(x, y, value, 18, p.negative if value.startswith("−") else p.positive if value.startswith("+") else p.ink,
-                    True, align="right")
-    canvas.text(R, y + 2, "MSTR · ASST", 13, p.soft, align="right")
-    canvas.text(L, y1 - 28, "Strategy 8-K cash; SATA = net share change × $100. Buyback = STRC repurchased ÷ STRC shares traded.",
-                13, p.soft, max_width=R - L)
+        canvas.text(x, y + 2, value, T_BODY - 2, p.negative if value.startswith("−") else p.positive if value.startswith("+") else p.ink,
+                    True, align="center", max_width=span - 8)
+    canvas.text(centers[5], y + 6, "MSTR · ASST", T_MIN, p.soft, align="center")
 
 
 def _header(canvas, data, p, theme):
     on_space = theme.decor == "orbit"
     muted = "#AEB6D6" if on_space else p.muted
-    light = "#F3F1EC" if on_space else p.deep
-    canvas.text(56, 44, "THE DIGITAL CREDIT REPORT  ·  WEDNESDAY  ·  DIGITAL CREDIT SPREADS", 18, p.accent, True)
-    themes.title(canvas, 56, 122, TITLE, 56, p, theme, on_space=on_space)
-    canvas.text(56, 138, "What STRC and SATA pay over cash, Treasuries and corporate credit · the rest of the ladder below",
-                20, muted, max_width=1060)
+    canvas.text(M, 34, "DIGITAL CREDIT REPORT · WEDNESDAY", T_MIN, p.accent, True)
     stamp = data["stamp"]
     if stamp:
         parsed = date.fromisoformat(stamp)
         closed = parsed < data["now"].date() or data["now"].hour >= 16
-        canvas.text(WIDTH - 56, 46, f"{'CLOSE' if closed else 'INTRADAY'} · {parsed:%a %b} {parsed.day}, {parsed.year}".upper(),
-                    19, light, True, align="right")
-    refs = "  ·  ".join(f"{label} {value:.2f}%" for label, (_, value) in data["references"] if value is not None)
-    canvas.text(WIDTH - 56, 76, refs, 18, muted, align="right", max_width=620)
-    heroes = data["heroes"]
-    gap = (heroes["SATA"]["item"].effective - heroes["STRC"]["item"].effective) * 100 \
-        if heroes["SATA"]["item"].effective and heroes["STRC"]["item"].effective else None
-    canvas.text(WIDTH - 56, 104, f"FRED as of {_short(data['references'][0][1][0])} · SATA over STRC {_bp(gap)}", 16,
-                muted, align="right", max_width=620)
+        canvas.text(WIDTH - M, 34, f"{'CLOSE' if closed else 'INTRADAY'} {parsed:%a %b} {parsed.day}".upper(), T_MIN, p.accent,
+                    True, align="right")
+    themes.title(canvas, M, 146, TITLE, 76, p, theme, on_space=on_space)
+    refs = "  ·  ".join(f"{SHORT[label]} {value:.2f}%" for label, (_, value) in data["references"] if value is not None)
+    canvas.text(M, 176, refs, T_MIN, muted, max_width=WIDTH - 2 * M)
 
 
-def render_png(data: dict, theme: themes.Theme = themes.CLASSIC) -> tuple[bytes, list[str]]:
+def render_png(data: dict, theme: themes.Theme = themes.DEFAULT) -> tuple[bytes, list[str]]:
     p = theme.wednesday
     with fontset(theme.fontset):
-        canvas = Canvas((WIDTH, HEIGHT), p.bg)
+        canvas = Canvas((WIDTH, HEIGHT), p.bg, floor=T_MIN)
         if theme.key == "classic":
             _frame(canvas, p)
-            _guilloche(canvas, (760, 40, 1090, 108), mix(p.positive, p.bg, .16))
+            _guilloche(canvas, (1000, 70, 1390, 150), mix(p.positive, p.bg, .16))
         else:
-            themes.background(canvas, p, theme, header_height=160, orbit_at=(930, 70, .62))
+            themes.background(canvas, p, theme, header_height=226, orbit_at=(1150, 110, .55))
         _header(canvas, data, p, theme)
         heroes = data["heroes"]
-        scale = max((value for hero in heroes.values() for value in hero["spreads"].values() if value is not None), default=1000) * 1.06
+        scale = max((value for hero in heroes.values() for value in hero["spreads"].values() if value is not None), default=1000) * 1.04
+        top = 226
         for index, ticker in enumerate(HEROES):
-            x0 = 56 + index * 852
-            _hero(canvas, (x0, 176, x0 + 836, 780), ticker, heroes[ticker], scale, p, theme,
-                  p.accent if ticker == "STRC" else p.accent2, data)
-        _rest(canvas, (56, 796, 1172, 1006), data["rest"], p, theme)
-        _calendar(canvas, (1190, 796, 1744, 1006), data, p, theme)
-        _cover(canvas, (56, 1022, 900, 1316), data["cover"], p, theme)
-        _flow(canvas, (918, 1022, 1744, 1316), data["ledger"], p, theme)
-        stale = data.get("stale") or ()
-        footer = ("Effective yield = stated rate × $100 ÷ price (Strategy KPIs; SATA = Strive daily dividend × 252). "
-                  "Sources: strategy.com · strive.com · Yahoo Finance · FRED (SOFR, DGS3MO, DGS10, ICE BofA IG/HY) · SEC 8-Ks.")
-        if stale:
-            footer += " Saved snapshot: " + ", ".join(stale) + "."
-        canvas.text(56, 1330, footer, 15, p.muted, max_width=1688)
-        canvas.text(56, 1352, "USD cover: Strategy (USD Reserve + USD Cash) ÷ current monthly dividends; Strive's dashboard reserve. "
-                    "Spread history uses each day's close, stated rate and 3M bill.", 14, p.soft, max_width=1688)
+            x0 = M + index * (HALF + GAP)
+            _hero(canvas, (x0, top, x0 + HALF, top + 966), ticker, heroes[ticker], scale, p, theme, p.company(ticker), data)
+        y = top + 984
+        split = M + 868
+        _rest(canvas, (M, y, split, y + 300), data["rest"], p, theme, data["headline"])
+        _calendar(canvas, (split + GAP, y, WIDTH - M, y + 300), data, p, theme)
+        y += 318
+        _flow(canvas, (M, y, WIDTH - M, y + 356), data["ledger"], p, theme)
         png = canvas.save(metadata={"Title": "The Coupon Sheet", "Theme": theme.key})
     return png, canvas.overflows
+
+
+def notes(data: dict) -> list[str]:
+    """Footnotes for the web page; the X image carries none."""
+    headline = data["headline"]
+    stale = data.get("stale") or ()
+    return [line for line in (
+        "Effective yield = stated rate × $100 ÷ price (Strategy KPIs; SATA = Strive's daily dividend × 252). "
+        f"Spreads = effective yield − benchmark, in basis points. Headline benchmark: {headline} — Strategy's stated "
+        "risk-free rate and the bill Jeff Walton compares digital credit to; both preferreds reset monthly around $100 par.",
+        "Benchmarks from FRED: SOFR, DGS3MO (3M bill), DGS10 (10Y), ICE BofA US Corporate (IG) and "
+        f"High Yield effective yields, as of {_short(data['references'][0][1][0])}.",
+        "12-week history uses each day's close, the stated rate in effect that day and the benchmark that day.",
+        "USD cover: Strategy (USD Reserve + USD Cash) ÷ current monthly dividends against its 12-month floor; "
+        "Strive's dashboard reserve against its 18-month goal.",
+        "Flow ledger: Strategy 8-K cash; SATA = net share change × $100. SATA may cut its rate only if the prior month "
+        "averaged at least $99.",
+        "Saved snapshot used for: " + ", ".join(stale) + "." if stale else "",
+    ) if line]
 
 
 def audit_rows(data: dict) -> list[dict]:

@@ -17,5 +17,16 @@
   "strive_reserve_goal_months": {
     "value": 18,
     "note": "Strive's dashboard reports an 18-month dividend reserve every week; the panel reads cover against that goal."
+  },
+  "spread_benchmark": {
+    "label": "3M bill",
+    "note": "Headline spread benchmark for STRC and SATA. Strategy defines its risk-free rate as the 3-month Treasury yield; Jeff Walton benchmarks digital credit against T-bills (\"A three-month T-Bill\") while calling it moderate-duration credit; both securities reset monthly around $100 par. Options: SOFR, 3M bill, 10Y, IG corp, HY corp.",
+    "sources": [
+      "https://tnorth.com/digital-credit/thesis/",
+      "https://x.com/PunterJeff/status/2031706638759932054",
+      "https://www.sec.gov/Archives/edgar/data/1920406/000095010326007179/dp246652_fwp.htm",
+      "https://www.sec.gov/Archives/edgar/data/1050446/000119312526161837/d944734ddefa14a.htm",
+      "https://www.sec.gov/Archives/edgar/data/1050446/000119312525161953/d896883dfwp.htm"
+    ]
   }
 }

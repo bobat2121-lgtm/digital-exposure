@@ -16,6 +16,11 @@ from PIL import Image, ImageColor, ImageDraw, ImageFont
 
 ASSETS = Path(__file__).resolve().parents[1] / "assets"
 
+# Phone-first type scale for the 1440-px-wide panels. A phone shows the image
+# about 390 CSS px wide (≈0.27 px per canvas px), so 28 px is the smallest
+# text that stays legible there; key numbers are 44 px and up.
+T_MIN, T_LABEL, T_BODY, T_VALUE, T_BIG, T_HERO = 28, 30, 34, 44, 64, 92
+
 
 # Font sets per theme: (file, variable-font style or None). "key" is the
 # display face for a title's key word (serif in the classic Imprint style).
@@ -64,15 +69,18 @@ def mix(color: str, background: str, opacity: float) -> tuple[int, int, int]:
 
 
 class Canvas:
-    def __init__(self, size: tuple[int, int], background: str):
+    def __init__(self, size: tuple[int, int], background: str, *, floor: int = 12):
         self.image = Image.new("RGB", size, background)
         self.draw = ImageDraw.Draw(self.image)
         self.background = background
         self.overflows: list[str] = []
+        self.floor = floor          # text never shrinks below this size
+        self.smallest: int | None = None  # smallest text size actually drawn
 
     # ── text ────────────────────────────────────────────────────────────────
     def fit(self, text: str, size: int, max_width: float | None, bold=False, serif=False, minimum=12) -> tuple[str, int]:
         text = str(text)
+        minimum = max(minimum, self.floor)
         if max_width is None:
             return text, size
         while size > minimum and width(text, size, bold, serif) > max_width:
@@ -87,7 +95,11 @@ class Canvas:
     def text(self, x, y, text, size=22, color="#000", bold=False, *, max_width=None, align="left",
              serif=False, minimum=12, anchor_top=True) -> float:
         """Draw one line; return its right edge. ``align``: left, right or center."""
+        if size < self.floor:
+            self.overflows.append(f"below {self.floor}px: {text}")  # too small to read on a phone
         text, size = self.fit(text, size, max_width, bold, serif, minimum)
+        if text:
+            self.smallest = size if self.smallest is None else min(self.smallest, size)
         length = width(text, size, bold, serif)
         if align == "right":
             x -= length

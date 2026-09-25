@@ -17,6 +17,15 @@ from report.live_report import resolve_complete_report
 FEED = json.loads((ROOT / "data" / "latest-report-filings.json").read_text())
 
 
+def assert_phone_ready(case, png):
+    """X shows up to 3:4 uncropped; the type scale assumes a 1440-px width."""
+    from io import BytesIO
+    from PIL import Image
+    image = Image.open(BytesIO(png))
+    case.assertEqual(image.width, 1440)
+    case.assertLessEqual(image.height / image.width, 4 / 3)
+
+
 def offline_extras():
     return extras_module.load_extras(offline=True)
 
@@ -68,10 +77,19 @@ class MondayPreviewTests(unittest.TestCase):
         self.assertIsNone(preview.extras["ASST"].warrants)
         self.assertIsNotNone(self.preview.extras["ASST"].warrants)
 
-    def test_renders_without_shortened_text(self):
-        png, overflows = monday_preview.render_png(self.preview)
-        self.assertTrue(png.startswith(b"\x89PNG"))
-        self.assertEqual(overflows, [])
+    def test_every_layout_and_style_renders_phone_ready(self):
+        # Overflows include any text drawn below the 28-px phone minimum.
+        from panels import themes
+        for theme in themes.THEMES.values():
+            for layout in monday_preview.VARIANTS:
+                with self.subTest(theme=theme.key, layout=layout):
+                    png, overflows = monday_preview.render_png(self.preview, theme, layout)
+                    self.assertEqual(overflows, [])
+                    assert_phone_ready(self, png)
+
+    def test_footnotes_live_on_the_page(self):
+        lines = monday_preview.notes(self.preview)
+        self.assertTrue(any("Amplification = (debt + preferred) ÷ BTC value" in line for line in lines))
 
 
 class WednesdayTests(unittest.TestCase):
@@ -85,9 +103,15 @@ class WednesdayTests(unittest.TestCase):
         sata = next(item for item in data["ladder"] if item.ticker == "SATA")
         self.assertAlmostEqual(sata.effective, sata.rate * 100 / sata.price)
         self.assertEqual(len(data["ledger"]), 4)
-        png, overflows = wednesday.render_png(data)
-        self.assertTrue(png.startswith(b"\x89PNG"))
-        self.assertEqual(overflows, [])
+        self.assertEqual(data["headline"], "3M bill")
+        strc = data["heroes"]["STRC"]
+        self.assertAlmostEqual(strc["spreads"]["3M bill"], (strc["item"].effective - data["bill"]) * 100)
+        from panels import themes
+        for theme in themes.THEMES.values():
+            with self.subTest(theme=theme.key):
+                png, overflows = wednesday.render_png(data, theme)
+                self.assertEqual(overflows, [])
+                assert_phone_ready(self, png)
 
 
 class FridayPreviewTests(unittest.TestCase):
@@ -108,9 +132,14 @@ class FridayPreviewTests(unittest.TestCase):
         derived = friday_preview.derive(panel, dataset, offline_extras(), FEED)
         self.assertEqual(sum(derived["tally"].values()), 7)
         self.assertEqual(set(derived["turnover"]), {"MSTR", "ASST", "STRC", "SATA"})
-        png, overflows = friday_preview.render_png(panel, derived)
-        self.assertTrue(png.startswith(b"\x89PNG"))
-        self.assertEqual(overflows, [])
+        self.assertEqual(set(derived["thresholds"]), {label for label, *_ in derived["checklist"]})
+        from panels import themes
+        for theme in themes.THEMES.values():
+            with self.subTest(theme=theme.key):
+                png, overflows = friday_preview.render_png(panel, derived, theme=theme)
+                self.assertEqual(overflows, [])
+                assert_phone_ready(self, png)
+        self.assertTrue(friday_preview.notes(panel, derived))
 
 
 if __name__ == "__main__":

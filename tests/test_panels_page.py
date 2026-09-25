@@ -24,9 +24,9 @@ class PanelsPageTests(TestCase):
         audit = [{"metric": "BTC price", "value": "$1", "source": "test"}]
         self.calls = {}
         targets = {
-            "monday_png": (png, [], None, False, audit),
-            "wednesday_png": (png, [], audit),
-            "friday_png": (png, [], "2026-09-18", audit),
+            "monday_png": (png, [], None, False, audit, ["note"]),
+            "wednesday_png": (png, [], audit, ["note"]),
+            "friday_png": (png, [], "2026-09-18", audit, ["note"]),
             "_extras": {"stale": []},
         }
         for name, value in targets.items():
@@ -43,24 +43,29 @@ class PanelsPageTests(TestCase):
         app = self.app()
         self.assertEqual(len(app.exception), 0, [item.message for item in app.exception])
         self.assertEqual([tab.label for tab in app.tabs], list(panels_page.TABS.values()))
-        self.calls["monday_png"].assert_called_once_with("classic")
+        self.calls["monday_png"].assert_called_once_with("neon", "b")
         self.calls["wednesday_png"].assert_not_called()
         self.calls["friday_png"].assert_not_called()
         self.assertEqual(app.query_params["report"], ["monday"])
-        self.assertIsNone(app.query_params.get("theme"))  # classic keeps the plain URL
+        self.assertIsNone(app.query_params.get("theme"))  # the default style keeps the plain URL
 
     def test_deep_link_selects_tab_and_theme(self):
-        app = self.app({"report": "friday", "theme": "neon"})
+        app = self.app({"report": "friday", "theme": "classic"})
         self.assertEqual(len(app.exception), 0, [item.message for item in app.exception])
-        self.calls["friday_png"].assert_called_once_with("neon")
+        self.calls["friday_png"].assert_called_once_with("classic")
         self.calls["monday_png"].assert_not_called()
         self.assertEqual(app.query_params["report"], ["friday"])
 
-    def test_unknown_values_fall_back_to_monday_classic(self):
-        app = self.app({"report": "sunday", "theme": "vapor"})
+    def test_unknown_values_fall_back_to_monday_neon(self):
+        app = self.app({"report": "sunday", "theme": "vapor", "layout": "z"})
         self.assertEqual(len(app.exception), 0, [item.message for item in app.exception])
-        self.calls["monday_png"].assert_called_once_with("classic")
-        self.assertEqual(app.query_params["theme"], ["classic"])
+        self.calls["monday_png"].assert_called_once_with("neon", "b")
+        self.assertEqual(app.query_params["theme"], ["neon"])
+
+    def test_monday_layout_link(self):
+        app = self.app({"layout": "c"})
+        self.assertEqual(len(app.exception), 0, [item.message for item in app.exception])
+        self.calls["monday_png"].assert_called_once_with("neon", "c")
 
     def test_classic_link_keeps_the_detailed_reports(self):
         with patch("monday_page.render") as monday:
