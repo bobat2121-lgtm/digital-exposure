@@ -33,7 +33,8 @@ def main():
     parser.add_argument("--save-extras", action="store_true", help="Save the fetched extras as the offline snapshot")
     parser.add_argument("--themes", default=themes.DEFAULT.key, help="Comma-separated: " + ", ".join(themes.THEMES))
     parser.add_argument("--layouts", default="c", help="Monday funding layouts: c (waterfall, default), b (ledger), a (headline)")
-    parser.add_argument("--extra", action="store_true", help="Also write the extra-data test copies (*-extra.png)")
+    parser.add_argument("--extra", action="store_true",
+                        help="Also write the test copies (*-extra.png, and wednesday-same-rows.png)")
     args = parser.parse_args()
     chosen = [themes.get(key.strip()) for key in args.themes.split(",") if key.strip()]
     layouts = {"a": "headline", "b": "ledger", "c": "waterfall"}
@@ -82,8 +83,12 @@ def main():
         (args.out / name("wednesday", theme)).write_bytes(png)
         overflows += missed
         if args.extra:
-            png, missed = wednesday.render_png(data, theme, extra=True)
+            # Test copies: the same two rows for STRC and SATA, and the same first row only.
+            png, missed = wednesday.render_png(data, theme, extra=True, same_rows=True)
             (args.out / name("wednesday", theme).replace(".png", "-extra.png")).write_bytes(png)
+            overflows += missed
+            png, missed = wednesday.render_png(data, theme, same_rows=True)
+            (args.out / name("wednesday", theme).replace(".png", "-same-rows.png")).write_bytes(png)
             overflows += missed
     audit["panels"]["wednesday"] = {"overflows": overflows, "values": wednesday.audit_rows(data), "notes": wednesday.notes(data)}
 

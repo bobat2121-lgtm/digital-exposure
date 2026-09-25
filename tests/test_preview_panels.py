@@ -57,17 +57,21 @@ class MondayPreviewTests(unittest.TestCase):
         self.report = resolve_complete_report(self.prices, FEED).report
         self.preview = monday_preview.build_preview(self.report, self.prices, FEED, offline_extras())
 
-    def test_amplification_uses_each_issuers_definition(self):
+    def test_amplification_is_btc_reserve_over_net_reserve_for_both(self):
+        from report.calculations import liquid_assets
         strive = next(c for c in self.report.companies if c.ticker == "ASST")
-        bitcoin = strive.current.btc_holdings * self.report.current_btc_price
-        # Strive: (notional preferred + debt) ÷ BTC value, in %.
-        expected = (strive.current.debt_principal + strive.current.preferred_claims) / bitcoin * 100
-        self.assertAlmostEqual(self.preview.extras["ASST"].amplification_pct, expected)
-        # Strategy: its own KPI, BTC reserve ÷ net BTC reserve, in ×.
+        current = strive.current
+        bitcoin = current.btc_holdings * self.report.current_btc_price
+        net = bitcoin + liquid_assets(current) - current.debt_principal - current.preferred_claims
+        asst = self.preview.extras["ASST"]
+        self.assertAlmostEqual(asst.amplification_x, bitcoin / net)
+        self.assertTrue(monday_preview._amplification(asst)[0].endswith("×"))
+        # Strive's own % ratio stays available for the audit.
+        self.assertAlmostEqual(asst.amplification_pct, (current.debt_principal + current.preferred_claims) / bitcoin * 100)
+        # Strategy shows its strategy.com KPI.
         strategy = self.preview.extras["MSTR"]
         kpi = offline_extras()["strategy"]["btc"]["amplification"]
         self.assertAlmostEqual(strategy.amplification_x, kpi)
-        self.assertIsNone(strategy.amplification_pct)
         self.assertEqual(monday_preview._amplification(strategy)[0], f"{kpi:.2f}×")
 
     def test_funding_splits_into_bitcoin_and_dividends(self):
@@ -141,8 +145,7 @@ class MondayPreviewTests(unittest.TestCase):
 
     def test_footnotes_live_on_the_page(self):
         lines = monday_preview.notes(self.preview)
-        self.assertTrue(any("BTC reserve ÷ net BTC reserve" in line and "(notional preferred + debt) ÷ BTC value" in line
-                            for line in lines))
+        self.assertTrue(any(line.startswith("Amplification = BTC reserve ÷ net BTC reserve") for line in lines))
         self.assertTrue(any(line.startswith("BTC = the week's bitcoin purchase cost") for line in lines))
 
 

@@ -55,6 +55,14 @@ The unattended Worker was deployed September 7, 2026. Code upload version:
 `39f0b038-b045-4f4f-a187-05c716f16684`. Final active version after removing the
 unused acknowledgement secret: **`93111efc-60dd-4f3c-a14d-687ef7111626`**.
 
+**Sep 25, 2026 redeploy: version `dd589cb4-0836-4069-bbe0-b92126794cac`.** Before the
+deploy, the live bundle matched a dry-run build of `main` at 34e69e9 exactly, so the
+redeploy shipped only the parser addition: `weekly_btc_cost_usd`, `btc_cost_basis_usd`,
+`btc_average_cost_usd` and `usd_reserve_dividends_interest_usd` (parser version unchanged
+at `sec-weekly-v4`, so no stored filing is reparsed). The feed still served all 100
+records, and admin routes still returned 401 without a token. The new facts arrive
+with the Sep 28 filings.
+
 SEC polling remains Monday 06:45–09:30 America/New_York, targeting 30-second
 intervals. The next window after deployment is September 14, 2026 at 06:45 EDT.
 The fixed initial notification cutoff is `2026-09-08T00:00:00Z`; preserve it on

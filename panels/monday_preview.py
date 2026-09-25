@@ -22,7 +22,7 @@ from report.models import Report
 from report.presentation import build_report_view
 from report.view_types import CompanyView, ReportView
 
-from .draw import T_BIG, T_BODY, T_HERO, T_LABEL, T_MIN, T_VALUE, Canvas, font, fontset, mix, width
+from .draw import T_BIG, T_BODY, T_HERO, T_LABEL, T_MIN, T_VALUE, Canvas, cap_middle, fontset, mix, width
 from .extras import strategy_weeks
 from . import themes
 
@@ -31,7 +31,7 @@ CONFIG = ROOT / "data" / "preview-config.json"
 ET = ZoneInfo("America/New_York")
 
 WIDTH, HEIGHT = 1440, 1760
-EXTRA_HEIGHT = 1920  # the extra-data test copy adds a bitcoin cost box (still 3:4)
+EXTRA_HEIGHT = 1760 + 104 + 20  # the test copy adds the bitcoin cost box (still within 3:4)
 MARGIN, GAP = 40, 24
 PANEL = (WIDTH - 2 * MARGIN - GAP) // 2
 INSET = 30
@@ -42,9 +42,9 @@ TITLE = ("The ", "Accretion", " Ledger")
 @dataclass(frozen=True)
 class CompanyExtras:
     ticker: str
-    amplification_pct: float | None = None      # Strive: (notional preferred + debt) ÷ BTC, in %
+    amplification_pct: float | None = None      # Strive's own ratio, (notional preferred + debt) ÷ BTC in % (audit only)
     amplification_change_pp: float | None = None
-    amplification_x: float | None = None        # Strategy: BTC reserve ÷ net BTC reserve, in ×
+    amplification_x: float | None = None        # shown: BTC reserve ÷ net BTC reserve, in ×
     amplification_change_x: float | None = None
     amplification_source: str = ""
     preferred_pct: float | None = None
@@ -294,8 +294,9 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
             amp_x, amp_source = (kpi, "strategy.com KPI") if kpi else (metrics.net_btc_amplification, "derived")
             amp_change_x = metrics.amplification_change
         else:
-            amp_x = amp_change_x = None
-            amp_source = "derived: (SATA notional + debt) ÷ BTC value"
+            # The same × definition for Strive, from its reported balances.
+            amp_x, amp_change_x = metrics.net_btc_amplification, metrics.amplification_change
+            amp_source = "derived: BTC value ÷ (BTC + cash − debt − SATA notional)"
         months, years, breakeven, source = _coverage(ticker, company, report.current_btc_price, extras, facts)
         key = "strategy_reserve_floor_months" if ticker == "MSTR" else "strive_reserve_goal_months"
         target = _n((config.get(key) or {}).get("value"))
@@ -384,13 +385,15 @@ def _cash_line(e: CompanyExtras):
 
 
 CASH_BOX_H = 96
+COST_BOX_H = 104   # test copy: the bitcoin cost box
 
 
 def _cash_box(canvas, e, L, R, y, p, headline=None):
     """The cash balance and what it is made of (Strive: cash + STRC held)."""
-    canvas.draw.rounded_rectangle((L, y, R, y + CASH_BOX_H), radius=min(10, p.radius + 4), fill=p.cash)
-    canvas.text(L + 18, y + 12, headline or _cash_line(e), T_LABEL, p.ink, max_width=R - L - 36)
-    canvas.text(L + 18, y + 54, e.liquid_detail, T_MIN, p.muted, max_width=R - L - 36)
+    box = (L, y, R, y + CASH_BOX_H)
+    canvas.draw.rounded_rectangle(box, radius=min(10, p.radius + 4), fill=p.cash)
+    canvas.cells(box, [[(headline or _cash_line(e), T_LABEL, p.ink, False), (e.liquid_detail, T_MIN, p.muted, False)]],
+                 inset=36)
 
 
 def _common_note(e: CompanyExtras):
@@ -436,12 +439,6 @@ def cash_step_label(e: CompanyExtras) -> str:
     return "TO CASH" if (e.liquid_change or 0) > 0 else "FROM CASH"
 
 
-def _cap_middle(size: int) -> float:
-    """Offset from a line's top to the middle of its capitals (text is drawn top-anchored)."""
-    box = font(size, True).getbbox("H", anchor="lt")
-    return (box[1] + box[3]) / 2
-
-
 def _top_waterfall(canvas, e, L, R, y, p, stripe):
     """C · Waterfall, read down: common + preferred ± cash = BTC + DIVs.
 
@@ -484,8 +481,8 @@ def _top_waterfall(canvas, e, L, R, y, p, stripe):
         fill = color if isinstance(color, tuple) else mix(color, p.card, .85)  # DIVs arrives pre-tinted
         canvas.draw.rounded_rectangle((x0, ry + 8, max(x1, x0 + 4), ry + 42), radius=min(4, p.radius), fill=fill)
         # Center both texts on the bar (ry + 25) by their cap height, not the font box.
-        canvas.text(L, ry + 25 - _cap_middle(T_MIN), label, T_MIN, p.muted, True, max_width=label_w - 10)
-        canvas.text(R, ry + 25 - _cap_middle(T_LABEL), text, T_LABEL, tone, True, align="right", max_width=value_w)
+        canvas.text(L, ry + 25 - cap_middle(T_MIN), label, T_MIN, p.muted, True, max_width=label_w - 10)
+        canvas.text(R, ry + 25 - cap_middle(T_LABEL), text, T_LABEL, tone, True, align="right", max_width=value_w)
         if n + 1 < len(steps) and steps[n + 1][2] == b:  # each step starts where the last one ended
             canvas.line([(px(b), ry + 42), (px(b), rows_y[n + 1] + 8)], p.soft, 2, dashed=True, dash=(4, 4))
     # The total carries down to where the uses end.
@@ -580,32 +577,27 @@ def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, report_company, i
     radius = min(12, p.radius)
     canvas.draw.rounded_rectangle((L - 12, y, R + 12, y + box_h), radius=radius, fill=p.tint)
     on_target = e.reserve_months and e.target_months and e.reserve_months >= e.target_months - .5
-    cells = (("USD COVER", f"{e.reserve_months:.0f} mo" if e.reserve_months else "—", _cover_note(e), on_target),
-             ("COVERAGE", f"{e.coverage_years:.0f} yrs" if e.coverage_years else "—", "", False),
-             ("BREAK-EVEN", f"{_pct(e.breakeven_pct, 2)}" if e.breakeven_pct else "—", "", False))
-    cell = (R - L) / 3
-    for n, (label, value, note, good) in enumerate(cells):
-        cx = L + 6 + n * cell
-        canvas.text(cx, y + 16, label, T_MIN, p.muted, True, max_width=cell - 12)
-        canvas.text(cx, y + 52, value, T_VALUE - 4, p.ink, True, max_width=cell - 12)
-        if note:
-            canvas.text(cx, y + 96, note, T_MIN, p.positive if good else p.soft, good, max_width=cell - 12)
+    # Every cell carries a short note so the three stacks share one centered grid.
+    cells = (("USD COVER", f"{e.reserve_months:.0f} mo" if e.reserve_months else "—", _cover_note(e),
+              p.positive if on_target else p.soft, bool(on_target)),
+             ("COVERAGE", f"{e.coverage_years:.0f} yrs" if e.coverage_years else "—", "of dividends", p.soft, False),
+             ("BREAK-EVEN", f"{_pct(e.breakeven_pct, 2)}" if e.breakeven_pct else "—", "BTC gain / yr", p.soft, False))
+    canvas.cells((L - 12, y, R + 12, y + box_h),
+                 [[(label, T_MIN, p.muted, True), (value, T_VALUE - 4, p.ink, True), (note, T_MIN, color, bold)]
+                  for label, value, note, color, bold in cells], gap=16)
     y += box_h + 20
 
     if extra:
         # Test copy: what the bitcoin cost, and where the price sits against it.
         gain = btc_price / e.average_cost * 100 - 100 if btc_price and e.average_cost else None
-        canvas.draw.rounded_rectangle((L - 12, y, R + 12, y + box_h), radius=radius, fill=p.tint)
-        cells = (("AVG COST", f"${e.average_cost:,.0f}" if e.average_cost else "—", None),
-                 ("VS COST", _pct(gain, 1, True), gain),
-                 ("COST BASIS", _money(e.cost_basis, False), None))
-        for n, (label, value, tone) in enumerate(cells):
-            cx = L + 6 + n * cell
-            canvas.text(cx, y + 16, label, T_MIN, p.muted, True, max_width=cell - 12)
-            canvas.text(cx, y + 52, value, T_VALUE - 4, _tone_text(value, p) if tone is not None else p.ink, True,
-                        max_width=cell - 12)
-        canvas.text(L + 6, y + 96, "bitcoin bought to date, fees included", T_MIN, p.soft, max_width=R - L - 12)
-        y += box_h + 20
+        cost_h = COST_BOX_H
+        canvas.draw.rounded_rectangle((L - 12, y, R + 12, y + cost_h), radius=radius, fill=p.tint)
+        cells = (("AVG COST", f"${e.average_cost:,.0f}" if e.average_cost else "—", p.ink),
+                 ("VS COST", _pct(gain, 1, True), _tone_text(_pct(gain, 1, True), p)),
+                 ("COST BASIS", _money(e.cost_basis, False), p.ink))
+        canvas.cells((L - 12, y, R + 12, y + cost_h),
+                     [[(label, T_MIN, p.muted, True), (value, T_VALUE - 4, color, True)] for label, value, color in cells])
+        y += cost_h + 20
 
     # Growth: the same multi-week window for both companies, then QTD and YTD.
     weeks = e.window.get("weeks")
@@ -613,17 +605,14 @@ def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, report_company, i
                 _pct(e.window.get("nav"), 1, True) if weeks else "—")]
     columns += [(period.period, _one_decimal(period.btc_growth), _one_decimal(period.nav_growth)) for period in c.periods[:2]]
     box_h = min(186, bottom - 28 - y)
-    canvas.draw.rounded_rectangle((L - 12, y, R + 12, y + box_h), radius=radius, fill=p.tint)
-    label_w = (R - L) * .34
-    col_w = (R - L - label_w) / max(1, len(columns))
-    canvas.text(L + 6, y + 16, "GROWTH", T_MIN, p.muted, True)
-    for n, (label, btc, nav) in enumerate(columns):
-        cx = L + label_w + (n + 1) * col_w - 6
-        canvas.text(cx, y + 16, label, T_MIN, p.muted, True, align="right")
-        canvas.text(cx, y + 62, btc, T_BODY + 2, _tone_text(btc, p), True, align="right", max_width=col_w - 8)
-        canvas.text(cx, y + 122, nav, T_BODY + 2, _tone_text(nav, p), True, align="right", max_width=col_w - 8)
-    canvas.text(L + 6, y + 66, "BTC / share", T_BODY - 2, p.ink, True, max_width=label_w - 8)
-    canvas.text(L + 6, y + 126, "NAV / share", T_BODY - 2, p.ink, True, max_width=label_w - 8)
+    box = (L - 12, y, R + 12, y + box_h)
+    canvas.draw.rounded_rectangle(box, radius=radius, fill=p.tint)
+    table = [[("GROWTH", T_MIN, p.muted, True), ("BTC / share", T_BODY - 2, p.ink, True), ("NAV / share", T_BODY - 2, p.ink, True)]]
+    table += [[(label, T_MIN, p.muted, True), (btc, T_BODY + 2, _tone_text(btc, p), True), (nav, T_BODY + 2, _tone_text(nav, p), True)]
+              for label, btc, nav in columns]
+    label_share = .36
+    canvas.cells(box, table, gap=34, inset=8,
+                 widths=[label_share] + [(1 - label_share) / len(columns)] * len(columns))
 
 
 def _header(canvas, preview, theme, p):
@@ -672,9 +661,9 @@ def notes(preview: MondayPreview, extra: bool = False) -> list[str]:
         "Strive's common figure is an estimate: net share change × prior-week VWAP.",
         f"BTC = the week's bitcoin purchase cost, fees included ({costs}). DIVs = the rest of the week's funding: preferred "
         f"dividends and interest, plus fees and other uses. {stated}".strip(),
-        "Amplification, each issuer's own definition. Strategy: BTC reserve ÷ net BTC reserve, its strategy.com KPI since "
-        "July 23, 2026 (\"amplification\"); the weekly change comes from the 8-K balances. Strive: (notional preferred + debt) "
-        "÷ BTC value, its stated ratio (Strive has no debt).",
+        "Amplification = BTC reserve ÷ net BTC reserve (BTC + cash − debt − preferred), Strategy's definition since "
+        "July 23, 2026, for both companies. MSTR shows its strategy.com KPI; ASST is computed from Strive's balances with "
+        "SATA at $100 notional (Strive has no debt). Weekly changes come from the filed balances.",
         "NAV, price/NAV, coverage and growth are estimates from dated balances and reconstructed preferred "
         "claims at the displayed prices; growth holds prices constant.",
         "USD cover = months of dividend (and, for Strategy, interest) obligations held in USD, read against Strategy's 12-month "
@@ -711,7 +700,7 @@ def audit_rows(preview: MondayPreview) -> list[dict]:
              "source": extra.cost_source or "—"},
             {"metric": f"{company.ticker} price / basic NAV", "value": _clean(company.price_to_nav), "source": "derived"},
             {"metric": f"{company.ticker} sats per share", "value": company.bitcoin.value, "source": "derived"},
-            {"metric": f"{company.ticker} amplification ({'BTC reserve ÷ net BTC reserve' if extra.amplification_x is not None else '(notional preferred + debt) ÷ BTC'})",
+            {"metric": f"{company.ticker} amplification (BTC reserve ÷ net BTC reserve)",
              "value": " / ".join(_amplification(extra)), "source": extra.amplification_source},
             {"metric": f"{company.ticker} USD cover (months)", "value": f"{extra.reserve_months:.1f} ({_cover_note(extra)})" if extra.reserve_months else "—", "source": extra.coverage_source},
             {"metric": f"{company.ticker} {extra.window.get('weeks', '?')}-week BTC/share", "value": _pct(extra.window.get("btc"), 2, True), "source": f"since {extra.window.get('start', '—')}"},

@@ -27,8 +27,9 @@ The same parser also records dollar facts where Strategy's 8-K states them: `wee
 aggregate and average purchase price of the ending holdings, from the table or the "acquired at an aggregate purchase
 price of" sentence), and `usd_reserve_dividends_interest_usd` (the USD Reserve used for dividends and interest, when the
 8-K says so). These are additive; the parser version is unchanged, so they appear on filings parsed after the next
-deploy. Until then the panels read them from `data/strategy-weekly-8k.json` for the weeks it covers (through
-Sep 20, 2026) and otherwise estimate the week's BTC cost, which the panel audit flags as a WARN.
+deploy (Sep 25, 2026, version `dd589cb4`), so they start with the Sep 28 filings. Earlier weeks come from
+`data/strategy-weekly-8k.json` (through Sep 20, 2026). If neither has a week, the panels estimate its BTC cost and
+the panel audit flags it as a WARN.
 
 `extractionValidated: true` means the supported table shape and arithmetic checks passed. The filing status is `ready_for_review`; it is **not** a claim that debt, preferred claims, prices and all other report inputs were independently refreshed. Consumers should retain the last complete report until all necessary inputs have been reconciled. Unknown layouts remain `partial` or `not_weekly`; missing fields are omitted, never zero-filled. Primary documents containing only a link to a press-release exhibit require an additional parser before automatic extraction; the filing is still discovered immediately.
 

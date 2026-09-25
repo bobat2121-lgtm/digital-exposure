@@ -82,7 +82,7 @@ def wednesday_png(style=DEFAULT_STYLE, extra=False):
     from panels.wednesday import audit_rows, build, notes, render_png
     preview, _, _ = _monday()
     data = build(_extras(), _feed(), preview)
-    png, overflows = render_png(data, themes.get(style), extra=extra)
+    png, overflows = render_png(data, themes.get(style), extra=extra, same_rows=extra)  # the test copy: same rows for both
     return png, overflows, audit_rows(data), notes(data, extra)
 
 

@@ -42,8 +42,7 @@ Nasdaq estimates; the weekly task replaces them with confirmed dates.
   its inked width, so a trailing glyph such as "y" no longer trips the clip check.
 - **Filing worker.** The parser now also records `weekly_btc_cost_usd`,
   `btc_cost_basis_usd`, `btc_average_cost_usd` and `usd_reserve_dividends_interest_usd`.
-  It needs a `wrangler deploy`; until then the history file covers weeks through
-  Sep 20, and later weeks' BTC cost is estimated and flagged as a WARN.
+  Deployed Sep 25 (version `dd589cb4`); the new facts start with the Sep 28 filings.
 - **Test copies** (`?extra=1`) add the top items from section 3; see PANELS.md.
 
 ## 1. Does everything update automatically?

@@ -92,14 +92,14 @@ then what it did per share.
   shows its makeup: Strategy's "$5.04B reserve + $1.05B USD cash", and Strive's
   "$229.6m cash + $49.7m STRC" (the STRC it holds).
 - **Per share:** BTC/share, NAV/share, amplification and shares, each with its
-  weekly change. Amplification uses each issuer's own definition:
-  - Strategy: BTC reserve ÷ net BTC reserve, in × (strategy.com's `amplification`
-    KPI since Jul 23, 2026; the weekly change comes from the 8-K balances).
-  - Strive: (notional preferred + debt) ÷ BTC value, in % (its stated "Bitcoin
-    amplification ratio"; Strive has no debt).
+  weekly change. Amplification is BTC reserve ÷ net BTC reserve (BTC + cash − debt −
+  preferred), in ×, for both: Strategy's definition since Jul 23, 2026. MSTR shows
+  strategy.com's `amplification` KPI; ASST is computed from Strive's balances with
+  SATA at $100 notional. Weekly changes come from the filed balances.
 
   Strive's PIPE warrant tag (25.8M @ $27, due Oct 13) disappears after the deadline.
-- **Coverage against each issuer's own target:**
+- **Coverage against each issuer's own target** (each cell's text is centered, with a
+  short note: "of dividends", "BTC gain / yr"):
   - Strategy's USD cover as a multiple of its 12-month floor.
   - Strive's as "at 18-mo goal".
   - Total coverage in years and BTC break-even.
@@ -202,12 +202,15 @@ show each panel with the extra data under review. They stay 1440 wide and within
 decide against them. The regular panels are unchanged.
 
 - **Monday:** a bitcoin cost box per company: average cost, BTC price vs that cost,
-  and cost basis (Strategy's 8-K; Strive's dashboard). The panel grows to 1440 × 1920.
-- **Wednesday:** a backing row in each hero card.
-  - STRC: BTC floor, tax-equivalent yield and market credit (strategy.com).
-  - SATA: BTC floor, stated rate and the prior-month average behind the rate-cut test.
+  and cost basis (Strategy's 8-K; Strive's dashboard). The panel grows to 1440 × 1884.
+- **Wednesday:** the same two rows for STRC and SATA.
+  - First row: closes at or above $100 (last 20), 30-day volume and size. SATA's
+    rate-cut test moves to the footnote.
+  - Backing row: BTC floor, stated rate and the prior month's average close.
   - BTC floor = (debt + preferred notional senior to and including the series − USD
     cash) ÷ BTC held. strategy.com publishes STRC's; SATA's uses the same formula.
+  - `render_previews.py --extra` also writes `wednesday-same-rows.png`: the same first
+    row without the backing row.
 - **Friday:** a markets band: BTC implied volatility (Deribit DVOL), the 3-month
   futures basis (Deribit, annualized) and stablecoin supply (DefiLlama), each with
   its 7-day change. The checklist and BTC chart are shorter to make room.

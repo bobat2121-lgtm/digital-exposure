@@ -63,6 +63,17 @@ def width(text: str, size: int, bold: bool = False, serif: bool = False) -> floa
     return font(size, bold, serif).getlength(str(text))
 
 
+def cap_middle(size: int, bold: bool = True, serif: bool = False) -> float:
+    """Offset from a top-anchored line's y to the middle of its capitals."""
+    box = font(size, bold, serif).getbbox("H", anchor="lt")
+    return (box[1] + box[3]) / 2
+
+
+def cap_height(size: int, bold: bool = True, serif: bool = False) -> float:
+    box = font(size, bold, serif).getbbox("H", anchor="lt")
+    return box[3] - box[1]
+
+
 def mix(color: str, background: str, opacity: float) -> tuple[int, int, int]:
     a, b = ImageColor.getrgb(color), ImageColor.getrgb(background)
     return tuple(round(bg * (1 - opacity) + fg * opacity) for fg, bg in zip(a, b))
@@ -168,21 +179,50 @@ class Canvas:
     def pill(self, x, y, text, size, fg, bg, bold=True, align="left", pad=(12, 5)) -> float:
         length = width(text, size, bold)
         x0 = x - length - 2 * pad[0] if align == "right" else x
-        self.draw.rounded_rectangle((x0, y, x0 + length + 2 * pad[0], y + size + 2 * pad[1] + 2), radius=(size + 2 * pad[1]) // 2, fill=bg)
-        self.text(x0 + pad[0], y + pad[1], text, size, fg, bold)
+        box = (x0, y, x0 + length + 2 * pad[0], y + size + 2 * pad[1] + 2)
+        self.chip(box, text, size, fg, bg, bold, radius=(size + 2 * pad[1]) // 2)
         return x0
 
     def chip(self, box, text, size, fg, bg, bold=True, radius=None) -> None:
-        """A fixed-size rounded cell with its text centered on the ink, not the font box."""
+        """A rounded cell with its text centered: across by the ink, down by the capitals."""
         x0, y0, x1, y1 = box
         self.draw.rounded_rectangle(box, radius=(y1 - y0) // 2 if radius is None else radius, fill=bg)
         text, size = self.fit(text, size, x1 - x0 - 8, bold)
         if text:
             self.smallest = size if self.smallest is None else min(self.smallest, size)
-        left, top, right, bottom = font(size, bold).getbbox(text, anchor="lt")
+        left, _, right, _ = font(size, bold).getbbox(text, anchor="lt")
         x = (x0 + x1) / 2 - (left + right) / 2
-        y = (y0 + y1) / 2 - (top + bottom) / 2
+        y = (y0 + y1) / 2 - cap_middle(size, bold)
         self.draw.text((x, y), text, font=font(size, bold), fill=fg, anchor="lt")
+
+    def cells(self, box, columns, gap=14, inset=12, widths=None):
+        """Equal-width columns of stacked lines inside a colored box.
+
+        ``columns`` holds one list of lines per column; a line is (text, size,
+        color, bold) or None for an empty slot. Each line is centered in its
+        column, and the rows share one grid centered in the box by cap height,
+        so labels and values line up across columns. ``widths`` optionally sets
+        each column's share of the box.
+        """
+        x0, y0, x1, y1 = box
+        rows = max(len(column) for column in columns)
+        sizes = [max((column[r][1] for column in columns if r < len(column) and column[r]), default=0) for r in range(rows)]
+        heights = [cap_height(size, True) if size else 0 for size in sizes]
+        total = sum(heights) + gap * (rows - 1)
+        top = (y0 + y1) / 2 - total / 2
+        shares = widths or [1 / len(columns)] * len(columns)
+        left = x0
+        for column, share in zip(columns, shares):
+            span = (x1 - x0) * share
+            cx, left = left + span / 2, left + span
+            row_top = top
+            for r in range(rows):
+                line = column[r] if r < len(column) else None
+                if line and line[0]:
+                    text, size, color, bold = line
+                    self.text(cx, row_top + heights[r] / 2 - cap_middle(size, bold), text, size, color, bold,
+                              align="center", max_width=span - inset)
+                row_top += heights[r] + gap
 
     def save(self, *, metadata: dict | None = None) -> bytes:
         from io import BytesIO
