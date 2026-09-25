@@ -338,10 +338,19 @@ def _top_ledger(canvas, e, L, R, y, p, stripe):
     _cash_box(canvas, e, L, R, y + 86, p)
 
 
+def cash_step_label(e: CompanyExtras) -> str:
+    """FROM CASH when the balance fell (it funded buying), TO CASH when it rose."""
+    return "TO CASH" if (e.liquid_change or 0) > 0 else "FROM CASH"
+
+
 def _top_waterfall(canvas, e, L, R, y, p, stripe):
-    """C · Waterfall: common + preferred + cash = what went into bitcoin."""
+    """C · Waterfall: common + preferred ± cash = what went into bitcoin.
+
+    Cash is labeled by direction: FROM CASH when the balance funded purchases,
+    TO CASH when part of the raise was kept (the bar then steps down).
+    """
     drawn = -e.liquid_change if e.liquid_change is not None else None
-    steps = (("COMMON", e.common_capital), ("PREF", e.preferred_capital), ("CASH", drawn))
+    steps = (("COMMON", e.common_capital), ("PREF", e.preferred_capital), (cash_step_label(e), drawn))
     if any(value is None for _, value in steps):
         canvas.text(L, y + 60, "Funding detail unavailable", T_BODY, p.muted)
         return
@@ -354,21 +363,27 @@ def _top_waterfall(canvas, e, L, R, y, p, stripe):
     span = (high - low) or 1
     top, bottom = y + 46, y + 206
     py = lambda v: bottom - (v - low) / span * (bottom - top)
-    slot = (R - L) / 4
+    # The cash column is wider so "FROM CASH" fits at the phone minimum.
+    shares = (.24, .22, .29, .25)
+    edges = [L]
+    for share in shares:
+        edges.append(edges[-1] + share * (R - L))
     canvas.line([(L, py(0)), (R, py(0))], p.line, 2)
-    bars = [(label, value, a, b, p.soft if label == "CASH" else p.positive if value >= 0 else p.negative)
-            for (label, value), (a, b) in zip(steps, levels)]
+    bars = [(label, value, a, b, p.soft if n == 2 else p.positive if value >= 0 else p.negative)
+            for n, ((label, value), (a, b)) in enumerate(zip(steps, levels))]
     bars.append(("INTO BTC", level, 0.0, level, stripe))
     for n, (label, value, a, b, color) in enumerate(bars):
-        x = L + n * slot
+        x, slot = edges[n], edges[n + 1] - edges[n]
         y0, y1 = sorted((py(a), py(b)))
-        canvas.draw.rectangle((x + 16, y0, x + slot - 16, max(y1, y0 + 4)), fill=mix(color, p.card, .85))
+        canvas.draw.rectangle((x + 14, y0, x + slot - 14, max(y1, y0 + 4)), fill=mix(color, p.card, .85))
         if n < 3:
-            canvas.line([(x + slot - 16, py(b)), (x + slot + 16, py(b))], p.soft, 2, dashed=True, dash=(5, 4))
-        text = _money(value, signed=n < 3)
+            canvas.line([(x + slot - 14, py(b)), (x + slot + 14, py(b))], p.soft, 2, dashed=True, dash=(5, 4))
+        # Raises carry their sign; cash and the total are plain amounts (the label gives direction).
+        text = _money(value, signed=True) if n < 2 else _money(abs(value), signed=False)
         above = value >= 0 or n == 3
         ty = y0 - 38 if above else y1 + 6
-        canvas.text(x + slot / 2, ty, text, T_MIN, _tone_text(text, p) if n < 3 else p.ink, True, align="center", max_width=slot - 4)
+        canvas.text(x + slot / 2, ty, text, T_MIN, _tone_text(text, p) if n < 2 else p.ink, True, align="center",
+                    max_width=slot - 4)
         canvas.text(x + slot / 2, y + 256, label, T_MIN, p.muted, True, align="center", max_width=slot - 4)
     canvas.draw.rounded_rectangle((L, y + 306, R, y + 370), radius=min(10, p.radius + 4), fill=p.cash)
     canvas.text(L + 18, y + 322, f"Cash on hand {_money(e.liquid_balance, False)}", T_LABEL, p.ink, max_width=R - L - 36)

@@ -87,6 +87,11 @@ class MondayPreviewTests(unittest.TestCase):
                     self.assertEqual(overflows, [])
                     assert_phone_ready(self, png)
 
+    def test_waterfall_labels_cash_by_direction(self):
+        # Strategy drew $310m of cash; Strive kept $25.3m of its raise as cash.
+        self.assertEqual(monday_preview.cash_step_label(self.preview.extras["MSTR"]), "FROM CASH")
+        self.assertEqual(monday_preview.cash_step_label(self.preview.extras["ASST"]), "TO CASH")
+
     def test_footnotes_live_on_the_page(self):
         lines = monday_preview.notes(self.preview)
         self.assertTrue(any("Amplification = (debt + preferred) ÷ BTC value" in line for line in lines))
