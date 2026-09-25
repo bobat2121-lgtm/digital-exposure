@@ -114,6 +114,20 @@ def _json_time(milliseconds):
 
 
 # ── Strive ──────────────────────────────────────────────────────────────────
+def _strive_dashboard_amplification() -> dict | None:
+    """Strive's own "Amplification Ratio" inputs from its treasury dashboard (latest day)."""
+    today = datetime.now(UTC).date()
+    url = STRIVE.replace("base-data", "calculated") + "?" + urlencode(
+        {"fromDate": (today - timedelta(days=10)).isoformat(), "toDate": today.isoformat()})
+    rows = [row for row in (_json(url).get("data") or {}).get("btcNav") or [] if number(row.get("btcNav"))]
+    if not rows:
+        return None
+    row = max(rows, key=lambda item: item.get("date", ""))
+    nav, notional, debt = number(row["btcNav"]), number(row.get("preferredStockMarketCap")), number(row.get("debt")) or 0
+    return {"date": row.get("date"), "btc_nav": nav, "sata_notional": notional, "debt": debt,
+            "amplification_pct": (debt + notional) / nav * 100 if notional is not None else None}
+
+
 def fetch_strive() -> dict:
     data = _json(STRIVE)["data"]
     cash = sorted(data.get("cashDebt") or [], key=lambda row: row.get("date", ""), reverse=True)
@@ -152,7 +166,16 @@ def fetch_strive() -> dict:
         "treasury_feed": {key: feed.get(key) for key in ("asOf", "reserveMonths", "totalDividendCoverage", "dividendRate",
                                                          "btcHoldings", "cash", "marketableSecurities", "debt")} if feed else None,
         "sata_rate_as_of": latest_paid.get("payDate"),
+        "dashboard_amplification": _optional(_strive_dashboard_amplification),
     }
+
+
+def _optional(fetch):
+    """A secondary figure that must never fail its section."""
+    try:
+        return fetch()
+    except Exception:
+        return None
 
 
 def federal_holidays(year: int) -> set[date]:

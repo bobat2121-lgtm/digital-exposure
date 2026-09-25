@@ -68,12 +68,12 @@ def _monday():
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def monday_png(style=DEFAULT_STYLE, layout=DEFAULT_LAYOUT, extra=False):
+def monday_png(style=DEFAULT_STYLE, layout=DEFAULT_LAYOUT):
     from panels import themes
     from panels.monday_preview import audit_rows, notes, render_png
     preview, notice, saved = _monday()
-    png, overflows = render_png(preview, themes.get(style), LAYOUTS.get(layout, LAYOUTS[DEFAULT_LAYOUT]), extra=extra)
-    return png, overflows, notice, saved, audit_rows(preview), notes(preview, extra)
+    png, overflows = render_png(preview, themes.get(style), LAYOUTS.get(layout, LAYOUTS[DEFAULT_LAYOUT]))
+    return png, overflows, notice, saved, audit_rows(preview), notes(preview)
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -82,7 +82,7 @@ def wednesday_png(style=DEFAULT_STYLE, extra=False):
     from panels.wednesday import audit_rows, build, notes, render_png
     preview, _, _ = _monday()
     data = build(_extras(), _feed(), preview)
-    png, overflows = render_png(data, themes.get(style), extra=extra, same_rows=extra)  # the test copy: same rows for both
+    png, overflows = render_png(data, themes.get(style), extra=extra)
     return png, overflows, audit_rows(data), notes(data, extra)
 
 
@@ -136,8 +136,8 @@ def render():
         st.segmented_control("Style", list(STYLES), format_func=STYLES.get, key="panel_style", label_visibility="collapsed")
     with top[1]:
         st.toggle("Test copy: extra data", key="panel_extra",
-                  help="Adds the extra data under review: bitcoin cost (Monday), BTC floor and issuer credit figures "
-                       "(Wednesday), implied volatility, futures basis and stablecoin supply (Friday).")
+                  help="Adds the extra data under review: a backing row with BTC floor, stated rate and prior-month "
+                       "average (Wednesday), and implied volatility, futures basis and stablecoin supply (Friday).")
     with top[2]:
         st.button("Refresh data", on_click=_refresh, key="panels_refresh", icon=":material/refresh:")
     extra = bool(st.session_state.get("panel_extra"))
@@ -168,9 +168,9 @@ def render():
             if st.query_params.get("layout", DEFAULT_LAYOUT) != layout:
                 st.query_params["layout"] = layout
             with st.spinner("Building Monday…"):
-                png, overflows, notice, saved, audit, footnotes = monday_png(style, layout, extra)
+                png, overflows, notice, saved, audit, footnotes = monday_png(style, layout)
             _show(png, "Monday", style, overflows, (notice, "Saved quotes (price refresh unavailable)." if saved else ""),
-                  audit, footnotes, extra)
+                  audit, footnotes)
     elif active == "wednesday":
         with wednesday, st.spinner("Building Wednesday…"):
             png, overflows, audit, footnotes = wednesday_png(style, extra)

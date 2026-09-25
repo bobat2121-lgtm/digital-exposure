@@ -465,7 +465,7 @@ def _heading(canvas, x, y, text, p, right=None, right_x=None):
         canvas.text(right_x, y + 2, right, T_MIN, p.muted, align="right", max_width=(right_x - x) * .32)
 
 
-def _hero(canvas, box, ticker, hero, scale, p, theme, stripe, data, lay=STANDARD, same_rows=False):
+def _hero(canvas, box, ticker, hero, scale, p, theme, stripe, data, lay=STANDARD):
     x0, y0, x1, y1 = box
     L, R = x0 + 28, x1 - 28
     item = hero["item"]
@@ -524,20 +524,16 @@ def _hero(canvas, box, ticker, hero, scale, p, theme, stripe, data, lay=STANDARD
     else:
         canvas.text(L, top + 70, "History unavailable", T_BODY, p.muted)
 
-    # Par (or SATA's rate-cut test), liquidity and size.
+    # The same row for both: closes at or above par, liquidity and size.
     strip = top + 88 + lay.plot_h
     canvas.draw.rounded_rectangle((L - 10, strip, R + 10, strip + 104), radius=min(10, p.radius + 4), fill=p.tint)
     par, liquidity = hero["par"], hero["liquidity"]
     at = par.get("at_par_20")
-    first = ("≥ $100", f"{at}/{par.get('sessions')} days" if at is not None else "—", p.ink)
-    if ticker == "SATA" and par.get("prior_avg") and not same_rows:
-        # Strive may cut SATA's rate only if the prior month's closes averaged ≥ $99.
-        allowed = par["prior_avg"] >= 99
-        first = ("RATE CUT", "Allowed" if allowed else "Blocked", p.accent if allowed else p.positive)
-    cells = (first, ("30D VOLUME", _money(liquidity.get("adv"), 0) + "/d" if liquidity.get("adv") else "—", p.ink),
-             ("SIZE", _money(liquidity.get("notional")), p.ink))
+    cells = (("≥ $100", f"{at}/{par.get('sessions')} days" if at is not None else "—"),
+             ("30D VOLUME", _money(liquidity.get("adv"), 0) + "/d" if liquidity.get("adv") else "—"),
+             ("SIZE", _money(liquidity.get("notional"))))
     canvas.cells((L - 10, strip, R + 10, strip + 104),
-                 [[(label, T_MIN, p.muted, True), (value, T_VALUE - 6, color, True)] for label, value, color in cells])
+                 [[(label, T_MIN, p.muted, True), (value, T_VALUE - 6, p.ink, True)] for label, value in cells])
 
     y = strip + 116
     if lay.backing:
@@ -661,10 +657,8 @@ def _header(canvas, data, p, theme):
     canvas.text(M, 176, refs, T_MIN, muted, max_width=WIDTH - 2 * M)
 
 
-def render_png(data: dict, theme: themes.Theme = themes.DEFAULT, extra: bool = False,
-               same_rows: bool = False) -> tuple[bytes, list[str]]:
-    """``extra`` adds each hero's backing row (test copy). ``same_rows`` shows STRC's
-    first row (closes ≥ $100, volume, size) for SATA too, instead of its rate-cut test."""
+def render_png(data: dict, theme: themes.Theme = themes.DEFAULT, extra: bool = False) -> tuple[bytes, list[str]]:
+    """``extra`` adds each hero's backing row (the test copy)."""
     p = theme.wednesday
     lay = EXTRA if extra else STANDARD
     with fontset(theme.fontset):
@@ -681,15 +675,14 @@ def render_png(data: dict, theme: themes.Theme = themes.DEFAULT, extra: bool = F
         for index, ticker in enumerate(HEROES):
             x0 = M + index * (HALF + GAP)
             _hero(canvas, (x0, top, x0 + HALF, top + lay.hero_h), ticker, heroes[ticker], scale, p, theme, p.company(ticker),
-                  data, lay, same_rows)
+                  data, lay)
         y = top + lay.hero_h + 18
         split = M + 820
         _rest(canvas, (M, y, split, y + lay.table_h), data["rest"], p, theme, data["headline"], lay)
         _calendar(canvas, (split + GAP, y, WIDTH - M, y + lay.table_h), data, p, theme, lay)
         y += lay.table_h + 18
         _flow(canvas, (M, y, WIDTH - M, y + lay.flow_h), data["ledger"], p, theme, lay)
-        png = canvas.save(metadata={"Title": "The Coupon Sheet", "Theme": theme.key, "Extra": "yes" if extra else "no",
-                                    "SameRows": "yes" if same_rows else "no"})
+        png = canvas.save(metadata={"Title": "The Coupon Sheet", "Theme": theme.key, "Extra": "yes" if extra else "no"})
     return png, canvas.overflows
 
 

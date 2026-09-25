@@ -57,18 +57,23 @@ class MondayPreviewTests(unittest.TestCase):
         self.report = resolve_complete_report(self.prices, FEED).report
         self.preview = monday_preview.build_preview(self.report, self.prices, FEED, offline_extras())
 
-    def test_amplification_is_btc_reserve_over_net_reserve_for_both(self):
-        from report.calculations import liquid_assets
+    def test_amplification_uses_each_issuers_own_formula(self):
         strive = next(c for c in self.report.companies if c.ticker == "ASST")
         current = strive.current
         bitcoin = current.btc_holdings * self.report.current_btc_price
-        net = bitcoin + liquid_assets(current) - current.debt_principal - current.preferred_claims
+        # Strive: (debt + SATA notional) ÷ BTC value, its dashboard's Amplification Ratio (about 50%, i.e. 0.5×).
         asst = self.preview.extras["ASST"]
-        self.assertAlmostEqual(asst.amplification_x, bitcoin / net)
-        self.assertTrue(monday_preview._amplification(asst)[0].endswith("×"))
-        # Strive's own % ratio stays available for the audit.
-        self.assertAlmostEqual(asst.amplification_pct, (current.debt_principal + current.preferred_claims) / bitcoin * 100)
-        # Strategy shows its strategy.com KPI.
+        ratio = (current.debt_principal + current.preferred_claims) / bitcoin
+        self.assertAlmostEqual(asst.amplification_x, ratio)
+        self.assertAlmostEqual(asst.amplification_pct, ratio * 100)
+        self.assertLess(asst.amplification_x, 1)
+        self.assertEqual(monday_preview._amplification(asst)[0], f"{ratio:.2f}×")
+        # Same SATA notional as Strive's dashboard, so at its BTC value the ratio is Strive's own figure.
+        dashboard = offline_extras()["strive"]["dashboard_amplification"]
+        self.assertEqual(current.preferred_claims, dashboard["sata_notional"])
+        self.assertAlmostEqual((current.debt_principal + current.preferred_claims) / dashboard["btc_nav"] * 100,
+                               dashboard["amplification_pct"])
+        # Strategy: its strategy.com KPI, BTC reserve ÷ net BTC reserve.
         strategy = self.preview.extras["MSTR"]
         kpi = offline_extras()["strategy"]["btc"]["amplification"]
         self.assertAlmostEqual(strategy.amplification_x, kpi)
@@ -120,13 +125,7 @@ class MondayPreviewTests(unittest.TestCase):
                     self.assertEqual(overflows, [])
                     assert_phone_ready(self, png)
 
-    def test_extra_data_test_copy_stays_phone_ready(self):
-        from panels import themes
-        for theme in themes.THEMES.values():
-            with self.subTest(theme=theme.key):
-                png, overflows = monday_preview.render_png(self.preview, theme, extra=True)
-                self.assertEqual(overflows, [])
-                assert_phone_ready(self, png)
+    def test_bitcoin_cost_box_uses_filed_cost_basis(self):
         strategy, strive = self.preview.extras["MSTR"], self.preview.extras["ASST"]
         # Sep 20 8-K: 846,000 BTC for $63.80B, $75,416 each; Strive's dashboard cost basis.
         self.assertEqual((strategy.cost_basis, strategy.average_cost), (63_800_000_000, 75_416))
@@ -145,7 +144,8 @@ class MondayPreviewTests(unittest.TestCase):
 
     def test_footnotes_live_on_the_page(self):
         lines = monday_preview.notes(self.preview)
-        self.assertTrue(any(line.startswith("Amplification = BTC reserve ÷ net BTC reserve") for line in lines))
+        self.assertTrue(any(line.startswith("Amplification uses each issuer's own formula") for line in lines))
+        self.assertTrue(any(line.startswith("Avg cost = aggregate bitcoin purchase price") for line in lines))
         self.assertTrue(any(line.startswith("BTC = the week's bitcoin purchase cost") for line in lines))
 
 

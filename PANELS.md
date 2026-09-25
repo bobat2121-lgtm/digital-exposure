@@ -6,7 +6,7 @@ download, the footnotes and an **Audit values** list. Only the open tab builds.
 
 | Day | Title | Size | Posting time |
 | --- | --- | --- | --- |
-| Monday | The **Accretion** Ledger | 1440 × 1760 | after both 8-Ks |
+| Monday | The **Accretion** Ledger | 1440 × 1884 | after both 8-Ks |
 | Wednesday | The **Coupon** Sheet | 1440 × 1920 (3:4) | after the 4:00 pm ET close |
 | Friday | The **Closing** Mark | 1440 × 1920 (3:4) | Friday 4:00 pm ET mark |
 
@@ -92,10 +92,14 @@ then what it did per share.
   shows its makeup: Strategy's "$5.04B reserve + $1.05B USD cash", and Strive's
   "$229.6m cash + $49.7m STRC" (the STRC it holds).
 - **Per share:** BTC/share, NAV/share, amplification and shares, each with its
-  weekly change. Amplification is BTC reserve ÷ net BTC reserve (BTC + cash − debt −
-  preferred), in ×, for both: Strategy's definition since Jul 23, 2026. MSTR shows
-  strategy.com's `amplification` KPI; ASST is computed from Strive's balances with
-  SATA at $100 notional. Weekly changes come from the filed balances.
+  weekly change. Amplification uses each issuer's own formula, shown in ×:
+  - Strategy: BTC reserve ÷ net BTC reserve (BTC + USD − debt − preferred),
+    strategy.com's `amplification` KPI since Jul 23, 2026 (about 1.25×).
+  - Strive: (debt + SATA notional) ÷ BTC value, the "Amplification Ratio" on its
+    treasury dashboard (about 0.51×, which Strive shows as 50.5%). The audit checks
+    it against Strive's dashboard figure.
+
+  The two measure different things and are not comparable.
 
   Strive's PIPE warrant tag (25.8M @ $27, due Oct 13) disappears after the deadline.
 - **Coverage against each issuer's own target** (each cell's text is centered, with a
@@ -103,6 +107,8 @@ then what it did per share.
   - Strategy's USD cover as a multiple of its 12-month floor.
   - Strive's as "at 18-mo goal".
   - Total coverage in years and BTC break-even.
+- **Bitcoin cost:** average cost per BTC, the BTC price vs that cost, and the cost
+  basis (Strategy's 8-K; Strive's dashboard).
 - **Growth on one shared window.** The "N WK" column uses the same number of weekly
   filings for both companies. QTD and YTD restart automatically at each quarter.
 
@@ -114,11 +120,11 @@ STRC and SATA carry the two treasuries, so they are the heroes. Each gets a card
 - effective yield;
 - a spread stack over SOFR, the 3-month bill, the 10-year, ICE BofA IG and HY;
 - 26 weeks of spread history, using each day's close, stated rate and 3-month bill;
-- closes at or above $100, 30-day volume and size. For SATA the first cell is instead
-  **RATE CUT: Allowed / Blocked**. Strive may lower SATA's rate only if SATA's closes
-  over the prior month averaged at least $99. A cut is capped at 0.25 pp plus any
-  fall in SOFR, and the rate cannot go below 1-month term SOFR (SATA pricing term
-  sheet, Jan 22, 2026). The page footnote gives the month's average.
+- the same row for both: closes at or above $100 (last 20 sessions), 30-day volume
+  and size. SATA's rate-cut test is in the page footnote: Strive may lower SATA's
+  rate only if its closes over the prior month averaged at least $99, by at most
+  0.25 pp plus any fall in SOFR, and never below 1-month term SOFR (SATA pricing term
+  sheet, Jan 22, 2026).
 - the issuer's USD cover against its own target, as a 12-week bar timeline with the
   target line. Strive sits on its 18-month goal every week. Strategy's weeks come from
   its 8-K balances: the filing feed, and before it `data/strategy-weekly-8k.json`
@@ -197,20 +203,15 @@ headline counts the cells in each state. These are rule-based states, not foreca
 ## Test copies with extra data (`?extra=1`)
 
 A toggle on the page (**Test copy: extra data**) and `render_previews.py --extra`
-show each panel with the extra data under review. They stay 1440 wide and within
-3:4, with no text under 28 px. Remove them by deleting the `extra` branches if you
-decide against them. The regular panels are unchanged.
+show the Wednesday and Friday panels with the extra data under review. They stay
+1440 wide and within 3:4, with no text under 28 px. Remove them by deleting the
+`extra` branches if you decide against them. (Monday's bitcoin cost box, first tried
+here, is now part of the regular panel.)
 
-- **Monday:** a bitcoin cost box per company: average cost, BTC price vs that cost,
-  and cost basis (Strategy's 8-K; Strive's dashboard). The panel grows to 1440 × 1884.
-- **Wednesday:** the same two rows for STRC and SATA.
-  - First row: closes at or above $100 (last 20), 30-day volume and size. SATA's
-    rate-cut test moves to the footnote.
-  - Backing row: BTC floor, stated rate and the prior month's average close.
-  - BTC floor = (debt + preferred notional senior to and including the series − USD
-    cash) ÷ BTC held. strategy.com publishes STRC's; SATA's uses the same formula.
-  - `render_previews.py --extra` also writes `wednesday-same-rows.png`: the same first
-    row without the backing row.
+- **Wednesday:** a backing row in each hero card, the same for STRC and SATA: BTC
+  floor, stated rate and the prior month's average close. BTC floor = (debt +
+  preferred notional senior to and including the series − USD cash) ÷ BTC held.
+  strategy.com publishes STRC's; SATA's uses the same formula.
 - **Friday:** a markets band: BTC implied volatility (Deribit DVOL), the 3-month
   futures basis (Deribit, annualized) and stablecoin supply (DefiLlama), each with
   its 7-day change. The checklist and BTC chart are shorter to make room.

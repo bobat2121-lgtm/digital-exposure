@@ -105,11 +105,13 @@ def audit_monday(report, monday, extras, rows, now):
                     source="BTC value ÷ (BTC + cash − debt − preferred claims)",
                     detail="the weekly change uses this model; claims include accrued dividends, strategy.com uses notional")
         else:
-            compare("monday", f"{t}.amplification", f"{t} amplification (×)", e.amplification_x, bitcoin / nav, .0005,
-                    source="BTC value ÷ (BTC + cash − debt − SATA notional)")
-            compare("monday", f"{t}.amp_ratio", f"{t} Strive amplification ratio %", e.amplification_pct,
-                    (cur.debt_principal + cur.preferred_claims) / bitcoin * 100, .01, source="(SATA notional + debt) ÷ BTC value",
-                    detail="Strive's own % ratio; the panel shows the × form")
+            compare("monday", f"{t}.amplification", f"{t} amplification (×), Strive's formula", e.amplification_x,
+                    (cur.debt_principal + cur.preferred_claims) / bitcoin, .0005, source="(debt + SATA notional) ÷ BTC value")
+            dashboard = (strive.get("dashboard_amplification") or {})
+            compare("monday", "ASST.amp_dashboard", "ASST amplification vs Strive's dashboard ratio", e.amplification_pct,
+                    number(dashboard.get("amplification_pct")), 1.0, warn_only=True,
+                    source=f"strive.com dashboard (debt + SATA notional) ÷ BTC NAV, {dashboard.get('date') or '—'}",
+                    detail="BTC price timing differs; a gap over 1 pp means different SATA shares or BTC held")
         raised = (e.common_capital or 0) + (e.preferred_capital or 0)
         compare("monday", f"{t}.raised", f"{t} raised = common + preferred", e.raised, raised, 1, source="ATM common + preferred")
         compare("monday", f"{t}.cash_change", f"{t} cash change", e.liquid_change, liquid - liquid_assets(prior), 1,
