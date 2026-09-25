@@ -92,6 +92,12 @@ class MondayPreviewTests(unittest.TestCase):
         self.assertEqual(monday_preview.cash_step_label(self.preview.extras["MSTR"]), "FROM CASH")
         self.assertEqual(monday_preview.cash_step_label(self.preview.extras["ASST"]), "TO CASH")
 
+    def test_strive_cash_shows_its_strc_portion(self):
+        strive = self.preview.extras["ASST"]
+        company = next(c for c in self.report.companies if c.ticker == "ASST")
+        self.assertIn("STRC", strive.liquid_detail)
+        self.assertIn(monday_preview._money(company.current.marketable_securities, False), strive.liquid_detail)
+
     def test_footnotes_live_on_the_page(self):
         lines = monday_preview.notes(self.preview)
         self.assertTrue(any("Amplification = (debt + preferred) ÷ BTC value" in line for line in lines))

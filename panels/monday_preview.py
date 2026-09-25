@@ -206,10 +206,11 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
         liquid_change = liquid - prior_liquid if liquid is not None and prior_liquid is not None else None
         if ticker == "MSTR":
             reserve, cash = _n(facts.get("usd_reserve_usd")), _n(facts.get("usd_cash_usd"))
-            detail = (f"USD Reserve {_money(reserve, False)} · USD Cash {_money(cash, False)}"
+            detail = (f"{_money(reserve, False)} reserve + {_money(cash, False)} USD cash"
                       if None not in (reserve, cash) else "USD Reserve + USD Cash")
         else:
-            detail = f"Cash {_money(current.cash, False)} · STRC held {_money(current.marketable_securities, False)}"
+            # Strive's liquidity includes the STRC it holds; show that portion.
+            detail = f"{_money(current.cash, False)} cash + {_money(current.marketable_securities, False)} STRC"
         metrics = calculate_company(company, report.current_btc_price, report.prior_btc_price)
         raised = (metrics.net_common_capital + metrics.net_preferred_capital
                   if None not in (metrics.net_common_capital, metrics.net_preferred_capital) else None)
@@ -295,9 +296,14 @@ def _cash_line(e: CompanyExtras):
     return f"Cash {verb}{amount} · {_money(e.liquid_balance, False)} on hand"
 
 
-def _cash_box(canvas, e, L, R, y, p):
-    canvas.draw.rounded_rectangle((L, y, R, y + 64), radius=min(10, p.radius + 4), fill=p.cash)
-    canvas.text(L + 18, y + 16, _cash_line(e), T_LABEL, p.ink, max_width=R - L - 36)
+CASH_BOX_H = 96
+
+
+def _cash_box(canvas, e, L, R, y, p, headline=None):
+    """The cash balance and what it is made of (Strive: cash + STRC held)."""
+    canvas.draw.rounded_rectangle((L, y, R, y + CASH_BOX_H), radius=min(10, p.radius + 4), fill=p.cash)
+    canvas.text(L + 18, y + 12, headline or _cash_line(e), T_LABEL, p.ink, max_width=R - L - 36)
+    canvas.text(L + 18, y + 54, e.liquid_detail, T_MIN, p.muted, max_width=R - L - 36)
 
 
 def _common_note(e: CompanyExtras):
@@ -361,7 +367,7 @@ def _top_waterfall(canvas, e, L, R, y, p, stripe):
     points = [v for pair in levels for v in pair] + [0.0, level]
     low, high = min(points), max(points)
     span = (high - low) or 1
-    top, bottom = y + 46, y + 206
+    top, bottom = y + 40, y + 184
     py = lambda v: bottom - (v - low) / span * (bottom - top)
     # The cash column is wider so "FROM CASH" fits at the phone minimum.
     shares = (.24, .22, .29, .25)
@@ -384,9 +390,8 @@ def _top_waterfall(canvas, e, L, R, y, p, stripe):
         ty = y0 - 38 if above else y1 + 6
         canvas.text(x + slot / 2, ty, text, T_MIN, _tone_text(text, p) if n < 2 else p.ink, True, align="center",
                     max_width=slot - 4)
-        canvas.text(x + slot / 2, y + 256, label, T_MIN, p.muted, True, align="center", max_width=slot - 4)
-    canvas.draw.rounded_rectangle((L, y + 306, R, y + 370), radius=min(10, p.radius + 4), fill=p.cash)
-    canvas.text(L + 18, y + 322, f"Cash on hand {_money(e.liquid_balance, False)}", T_LABEL, p.ink, max_width=R - L - 36)
+        canvas.text(x + slot / 2, y + 230, label, T_MIN, p.muted, True, align="center", max_width=slot - 4)
+    _cash_box(canvas, e, L, R, y + TOP_H - CASH_BOX_H, p, f"Cash on hand {_money(e.liquid_balance, False)}")
 
 
 TOPS = {"headline": _top_headline, "ledger": _top_ledger, "waterfall": _top_waterfall}
@@ -545,7 +550,7 @@ def audit_rows(preview: MondayPreview) -> list[dict]:
             {"metric": f"{company.ticker} total BTC held", "value": company.total_bitcoin.value if company.total_bitcoin else "—", "source": "SEC 8-K"},
             {"metric": f"{company.ticker} net common capital", "value": company.common.value, "source": "SEC 8-K ATM table" if company.ticker == "MSTR" else "share change × VWAP (est.)"},
             {"metric": f"{company.ticker} preferred capital", "value": company.preferred.value, "source": "SEC 8-K"},
-            {"metric": f"{company.ticker} cash balance / change", "value": f"{_money(extra.liquid_balance, False)} / {_money(extra.liquid_change)}", "source": "SEC 8-K"},
+            {"metric": f"{company.ticker} cash balance / change", "value": f"{_money(extra.liquid_balance, False)} / {_money(extra.liquid_change)} ({extra.liquid_detail})", "source": "SEC 8-K"},
             {"metric": f"{company.ticker} deployed (raised + cash drawn)", "value": _money(extra.net_funding, False), "source": "derived"},
             {"metric": f"{company.ticker} NAV / share (est.)", "value": _clean(company.nav_per_share), "source": "derived"},
             {"metric": f"{company.ticker} price / basic NAV", "value": _clean(company.price_to_nav), "source": "derived"},
