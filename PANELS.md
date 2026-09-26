@@ -47,6 +47,9 @@ serving, `.streamlit/config.toml`), so no font request leaves the app.
   close), all six preferreds against every benchmark, and 30-day dollar volume;
   Friday adds the markets tiles (DVOL, 3-month basis, stablecoins) and turnover as
   small multiples.
+- **Friday's BTC chart** on the web shows the last four years (`BTC_YEARS` in
+  `panels/web.py`) on a log axis with $10k–$200k style steps; the 200W and 50W SMAs
+  still come from the full price history. The X image's chart is unchanged.
 
 ## The X image: built for phones
 

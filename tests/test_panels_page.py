@@ -129,3 +129,22 @@ class FormulaListTests(TestCase):
             self.assertTrue(all(term and text for term, text in items))
         terms = {term for _, entries in web.MONDAY_FORMULAS for term, _ in entries}
         self.assertTrue({"Amplification, Strategy", "Amplification, Strive", "BTC", "DIVs"} <= terms)
+
+
+class BtcChartTests(TestCase):
+    def test_web_btc_chart_shows_four_years(self):
+        from panels import web
+        report = offline_reports()["friday_report"]
+        frame = web._btc_frame(report["panel"], report["derived"])
+        span = frame["date"].max() - frame["date"].min()
+        self.assertLessEqual(span.days, 4 * 366)
+        self.assertGreaterEqual(span.days, 4 * 365 - 7)
+        # Every line spans the window: the SMAs come from the full history, not the window.
+        self.assertEqual(set(frame["series"]), {"BTC", "200W SMA", "50W SMA", "Realized"})
+        sma = frame[frame["series"] == "200W SMA"]
+        self.assertEqual(sma["date"].min(), frame["date"].min())
+
+    def test_log_ticks_fit_the_data(self):
+        from panels import web
+        self.assertEqual(web._log_ticks(14_800, 132_000), ([10_000, 200_000], [10_000, 20_000, 50_000, 100_000, 200_000]))
+        self.assertEqual(web._log_ticks(20_000, 100_000), ([20_000, 100_000], [20_000, 50_000, 100_000]))

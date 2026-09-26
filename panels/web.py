@@ -593,7 +593,7 @@ def friday(panel, derived, *, notices=()) -> None:
              Html(f'<span class="chip" style="background:{colors[state]}">{state}</span>'))
             for label, value, _note, state in derived["checklist"]]))
     with right, st.container(border=True, key="fri_btc"):
-        heading("BTC · 200-week SMA", f"{fri._pct(derived['extension'], 1, True)} vs 200W")
+        heading(f"BTC · 200-week SMA · {BTC_YEARS} years", f"{fri._pct(derived['extension'], 1, True)} vs 200W")
         _btc_chart(panel, derived)
     with st.container(border=True, key="fri_turnover"):
         heading("Weekly turnover", "shares traded ÷ outstanding · 12 weeks")
@@ -619,12 +619,15 @@ def _macro_chart(rows, unit, reference) -> None:
     show(layers, height=170)
 
 
-def _btc_chart(panel, derived) -> None:
+BTC_YEARS = 4  # the web chart's window; the moving averages still use the full history
+
+
+def _btc_frame(panel, derived, years=BTC_YEARS):
+    """BTC, its 200W and 50W SMAs and realized price, weekly, over the last ``years``."""
     series = ((panel.get("trends") or {}).get("BTC") or {}).get("series") or []
     weekly = [row for row in series if row.get("close")]
     if len(weekly) < 10:
-        st.caption("History unavailable")
-        return
+        return None
     sma50 = dict(derived.get("sma50w_series") or [])
     realized = {day: value for day, value in derived.get("realized") or []}
     records = []
@@ -636,12 +639,32 @@ def _btc_chart(panel, derived) -> None:
                 records.append({"date": day, "series": name, "usd": value})
     frame = pd.DataFrame(records)
     frame["date"] = pd.to_datetime(frame["date"])
+    start = frame["date"].max() - pd.DateOffset(years=years)
+    return frame[frame["date"] >= start].reset_index(drop=True)
+
+
+def _log_ticks(low, high):
+    """A log axis on 1-2-5 steps: the domain snaps out to the nearest steps around
+    the data, and every step inside it is a tick."""
+    steps = [step * 10 ** exponent for exponent in range(0, 9) for step in (1, 2, 5)]
+    bottom = max((value for value in steps if value <= low), default=steps[0])
+    top = min((value for value in steps if value >= high), default=steps[-1])
+    return [bottom, top], [value for value in steps if bottom <= value <= top]
+
+
+def _btc_chart(panel, derived) -> None:
+    frame = _btc_frame(panel, derived)
+    if frame is None or frame.empty:
+        st.caption("History unavailable")
+        return
+    domain, ticks = _log_ticks(frame["usd"].min() * 0.95, frame["usd"].max() * 1.05)
     order = ["BTC", "200W SMA", "50W SMA", "Realized"]
     colors = alt.Scale(domain=order, range=[INK, AMBER, "#12A6C1", "#C43596"])
-    base = alt.Chart(frame).encode(x=alt.X("date:T", title=None, axis=alt.Axis(format="%Y", tickCount=8)))
+    base = alt.Chart(frame).encode(x=alt.X("date:T", title=None,
+                                           axis=alt.Axis(format="%Y", tickCount={"interval": "year", "step": 1})))
     lines = base.mark_line(strokeWidth=2).encode(
-        y=alt.Y("usd:Q", title="USD (log)", scale=alt.Scale(type="log"),
-                axis=alt.Axis(format="$~s", values=[100, 1_000, 10_000, 100_000, 1_000_000])),
+        y=alt.Y("usd:Q", title="USD (log)", scale=alt.Scale(type="log", domain=domain, nice=False),
+                axis=alt.Axis(format="$~s", values=ticks)),
         color=alt.Color("series:N", scale=colors, sort=order, title=None),
         strokeWidth=alt.condition("datum.series == 'BTC'", alt.value(2.2), alt.value(1.6)))
     hover = alt.selection_point(fields=["date"], nearest=True, on="pointerover", empty=False)
