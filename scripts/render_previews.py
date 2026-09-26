@@ -106,8 +106,10 @@ def main():
             png, missed = friday_preview.render_png(panel, derived, stale=tuple(extras["stale"]), theme=theme, extra=True)
             (args.out / name("friday", theme).replace(".png", "-extra.png")).write_bytes(png)
             overflows += missed
+    inputs = dataset.get("financial_inputs") or {}
     audit["panels"]["friday"] = {"overflows": overflows, "values": friday_preview.audit_rows(panel, derived),
-                                 "notes": friday_preview.notes(panel, derived, tuple(extras["stale"])), "demo_data": args.offline}
+                                 "notes": friday_preview.notes(panel, derived, tuple(extras["stale"])), "demo_data": args.offline,
+                                 "inputs": {key: inputs.get(key) for key in ("status", "notice", "error")}}
 
     _write(args.out, audit, chosen, chosen_layouts)
 

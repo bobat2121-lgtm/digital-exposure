@@ -93,9 +93,12 @@ def friday_report():
     derived = derive(panel, data, extras, _feed())
     png, overflows = render_png(panel, derived, stale=stale)
     week_end = panel["period"].get("end")
+    notices = [f"Week ended {week_end}. After 4:00 pm ET on Friday this becomes the current week."] if week_end else []
+    inputs = data.get("financial_inputs") or {}
+    if inputs.get("status") not in (None, "current") and inputs.get("notice"):
+        notices.append(f"Price/NAV: {inputs['notice']}")  # otherwise the tiles just show '—'
     return {"panel": panel, "derived": derived, "png": png, "overflows": overflows, "audit": audit_rows(panel, derived),
-            "notes": notes(panel, derived, stale, extra=True),
-            "notices": [f"Week ended {week_end}. After 4:00 pm ET on Friday this becomes the current week."] if week_end else []}
+            "notes": notes(panel, derived, stale, extra=True), "notices": notices}
 
 
 def _refresh():
