@@ -13,6 +13,8 @@ from datetime import date, datetime, timedelta
 import threading
 from zoneinfo import ZoneInfo
 
+from PIL import ImageColor
+
 from friday.export import display_rows, sma_segments
 from friday.series import SENTIMENT_BANDS, smooth_sentiment, year_start
 
@@ -63,6 +65,11 @@ def _zones():
     """ZONES in the theme's colors when it names its own (the HUD colorways)."""
     colors = THEME.friday.zones
     return tuple((upper, name, color) for (upper, name, _), color in zip(ZONES, colors)) if colors else ZONES
+
+
+def _luminance(color) -> float:
+    r, g, b = ImageColor.getrgb(color) if isinstance(color, str) else color[:3]
+    return (.2126 * r + .7152 * g + .0722 * b) / 255
 
 
 def zone(extension):
@@ -474,8 +481,7 @@ def _render(panel: dict, derived: dict, stale: tuple, extra: bool = False) -> tu
         draw.rectangle((0, 0, WIDTH, 8), fill=ORANGE)
     else:
         themes.background(canvas, THEME.friday, THEME, header_height=226, orbit_at=(1120, 104, .55))
-    canvas.text(M, 34, "DIGITAL CREDIT REPORT · FRIDAY", T_MIN, ORANGE, True)
-    canvas.text(WIDTH - M, 34, "MARKED FRI 4:00 PM ET", T_MIN, ORANGE, True, align="right")
+    themes.kicker(canvas, M, WIDTH - M, "DIGITAL CREDIT REPORT · FRIDAY", "MARKED FRI 4:00 PM ET", THEME.friday, THEME)
     if THEME.key == "classic":
         imprint(canvas, M, 146, TITLE, 76, ink=TEXT, muted="#aab3ba", dot=ORANGE)
     else:
@@ -497,9 +503,10 @@ def _render(panel: dict, derived: dict, stale: tuple, extra: bool = False) -> tu
     canvas.text(x0 + 24, top + 134, _pct(change, 2, True) + " week", T_BODY, _tone(change), True)
     if derived["zone"]:
         chip = mix({name: color for _, name, color in _zones()}.get(derived["zone"], derived["zone_color"]), CARD, .8)
-        light = (.2126 * chip[0] + .7152 * chip[1] + .0722 * chip[2]) / 255 > .45  # dark text on a bright chip
+        # The ink that stands out more against the chip (dark on a bright chip, light on a dark one).
+        ink = max((TEXT, BG), key=lambda c: abs(_luminance(c) - _luminance(chip)))
         canvas.pill(x0 + 24, top + 178, f"{derived['zone']} · {_pct(derived['extension'], 0, True)} vs 200W", T_MIN,
-                    BG if light else TEXT, chip, pad=(12, 4))
+                    ink, chip, pad=(12, 4))
     companies = header.get("companies") or {}
     treasury = {row.get("ticker"): row for row in panel.get("treasury", [])}
     for ticker, box in zip(("MSTR", "ASST"), boxes[1:]):
@@ -610,7 +617,10 @@ def _render(panel: dict, derived: dict, stale: tuple, extra: bool = False) -> tu
     canvas.text(x0 + 20, top + 52, f"{value:.0f}" if isinstance(value, (int, float)) else "—", T_VALUE, TEXT, True)
     if label:
         weeks_held = max(1, round((days or 0) / 7))
-        canvas.text(x0 + 20, top + 106, f"{label} · {weeks_held} wk", T_MIN, color or MUTED, True, max_width=fifth - 40)
+        tone = color or MUTED
+        if color and _luminance(BG) > .5:  # on paper, deepen the regime color so the label reads
+            tone = mix(color, TEXT, .45)
+        canvas.text(x0 + 20, top + 106, f"{label} · {weeks_held} wk", T_MIN, tone, True, max_width=fifth - 40)
     if isinstance(value, (int, float)):
         gx0, gx1, gy = x0 + 20, x0 + fifth - 20, top + 160
         draw.rounded_rectangle((gx0, gy, gx1, gy + 10), radius=5, fill=LINE)

@@ -9,9 +9,11 @@ glass    Aurora Glass: color blooms behind frosted cards; gradient titles.
 hud      Chamfer HUD: cut-corner panels with lit edges, tick rulers, a knockout slab.
 glitch   Signal Glitch: RGB-split title, signal streaks, hazard stripes.
 circuit  Circuit Trace: routed traces and nodes, chip-outline cards.
+terminal Bloomberg Terminal: amber data on black, a blue command bar, reversed title field.
+broadsheet  Broadsheet: newsprint, blackletter masthead, serif headline, double and column rules.
 
-Every look ends with a bloom pass (``bloom``): saturated, bright pixels (the
-neons) get a soft glow and white text stays crisp.
+The neon looks end with a bloom pass (``bloom``): saturated, bright pixels get a
+soft glow and white text stays crisp. Terminal and Broadsheet stay flat.
 """
 from __future__ import annotations
 
@@ -19,11 +21,13 @@ import math
 import random
 
 import numpy as np
-from PIL import Image, ImageChops, ImageColor, ImageDraw, ImageFilter
+from PIL import Image, ImageChops, ImageColor, ImageDraw, ImageFilter, ImageFont
 
 from .draw import Canvas, font
 
-DECORS = ("glass", "hud", "glitch", "circuit")
+DECORS = ("glass", "hud", "glitch", "circuit", "terminal", "broadsheet")
+KICKERS = ("terminal", "broadsheet")        # looks that draw their own report line
+TERMINAL_BLUE = "#1C3494"
 STRATEGY, STRIVE, VIOLET = "#22E3FF", "#FF3DCB", "#7B61FF"
 # The second stop of each day's title gradient (glass).
 GRADIENT_END = {"#22E3FF": VIOLET, "#FF3DCB": "#8F5BFF", "#FFC23D": "#FF5E3A"}
@@ -112,10 +116,13 @@ def _fit_face(text, size, room, bold=True):
 
 # ── background ──────────────────────────────────────────────────────────────
 def background(canvas: Canvas, p, theme, header_height=226):
-    {"glass": _bg_glass, "hud": _bg_hud, "glitch": _bg_glitch, "circuit": _bg_circuit}[theme.decor](canvas, p, header_height)
+    {"glass": _bg_glass, "hud": _bg_hud, "glitch": _bg_glitch, "circuit": _bg_circuit, "terminal": _bg_terminal,
+     "broadsheet": _bg_broadsheet}[theme.decor](canvas, p, header_height)
     if theme.decor == "circuit":
         canvas.finish = lambda image: bloom(_links(canvas, image, p), **BLOOM[theme.decor])
-    else:
+    elif theme.decor == "broadsheet":
+        canvas.finish = lambda image: _column_rules(canvas, image, p)
+    elif theme.decor in BLOOM:
         canvas.finish = lambda image: bloom(image, **BLOOM[theme.decor])
 
 
@@ -227,8 +234,8 @@ def _links(canvas: Canvas, image: Image.Image, p) -> Image.Image:
 
 # ── cards ───────────────────────────────────────────────────────────────────
 def card(canvas: Canvas, box, p, accent, theme, accent_height=4):
-    {"glass": _card_glass, "hud": _card_hud, "glitch": _card_glitch, "circuit": _card_circuit}[theme.decor](
-        canvas, box, p, accent, accent_height)
+    {"glass": _card_glass, "hud": _card_hud, "glitch": _card_glitch, "circuit": _card_circuit, "terminal": _card_terminal,
+     "broadsheet": _card_broadsheet}[theme.decor](canvas, box, p, accent, accent_height)
 
 
 def _rounded_mask(size, radius):
@@ -314,8 +321,8 @@ def _card_circuit(canvas: Canvas, box, p, accent, accent_height):
 
 # ── titles ──────────────────────────────────────────────────────────────────
 def title(canvas: Canvas, x, baseline, words, size, p, theme):
-    return {"glass": _title_glass, "hud": _title_hud, "glitch": _title_glitch, "circuit": _title_circuit}[theme.decor](
-        canvas, x, baseline, words, size, p)
+    return {"glass": _title_glass, "hud": _title_hud, "glitch": _title_glitch, "circuit": _title_circuit,
+            "terminal": _title_terminal, "broadsheet": _title_broadsheet}[theme.decor](canvas, x, baseline, words, size, p)
 
 
 def _title_glass(canvas, x, baseline, words, size, p):
@@ -422,3 +429,118 @@ def _title_circuit(canvas, x, baseline, words, size, p):
         draw.ellipse((right - 44, y - 42, right - 20, y - 18), outline=p.accent, width=3)
         draw.ellipse((end + 18, y - 6, end + 30, y + 6), fill=p.accent)
     return end
+
+
+# ── Bloomberg Terminal ──────────────────────────────────────────────────────
+def _bg_terminal(canvas: Canvas, p, header_height):
+    """Plain black: the terminal's look is its type and its bars."""
+
+
+def _card_terminal(canvas: Canvas, box, p, accent, accent_height):
+    x0, y0, x1, y1 = box
+    canvas.draw.rectangle(box, fill=p.card, outline=p.outline, width=2)
+    canvas.draw.rectangle((x0, y0, x1, y0 + 6), fill=accent or TERMINAL_BLUE)
+
+
+def _title_terminal(canvas, x, baseline, words, size, p):
+    """THE [ACCRETION] LEDGER <GO>: the key word as a reversed amber field."""
+    prefix, key, suffix = _title_words(words)
+    go = "<GO>"
+    face = _fit_face(prefix + key + suffix + " " + go, int(size * .84), canvas.image.width - 2 * x)
+    draw = canvas.draw
+    draw.text((x, baseline), prefix, font=face, anchor="ls", fill="#FFFFFF")
+    kx = x + face.getlength(prefix)
+    word = key.strip()
+    lead = face.getlength(" ") if key.startswith(" ") else 0
+    top = baseline + face.getbbox("H", anchor="ls")[1] - 10
+    kw = face.getlength(word)
+    draw.rectangle((kx + lead - 8, top, kx + lead + kw + 8, baseline + 12), fill=p.ink)
+    draw.text((kx + lead, baseline), word, font=face, anchor="ls", fill=p.bg)
+    end = kx + lead + kw + face.getlength(" ")
+    draw.text((end, baseline), suffix.strip(), font=face, anchor="ls", fill="#FFFFFF")
+    end += face.getlength(suffix.strip())
+    small = font(30, True, False)
+    draw.text((end + 18, baseline), go, font=small, anchor="ls", fill=p.soft)
+    return end
+
+
+def _kicker_terminal(canvas: Canvas, left_x, right_x, left, right, p):
+    """The command bar: [DCR] <GO> and the report line on terminal blue."""
+    w = canvas.image.width
+    canvas.draw.rectangle((0, 18, w, 70), fill=TERMINAL_BLUE)
+    face = font(28, True, False)
+    tag = "DCR"
+    tw = face.getlength(tag)
+    canvas.draw.rectangle((left_x - 6, 24, left_x + tw + 8, 64), fill=p.ink)
+    canvas.draw.text((left_x + 1, 44), tag, font=face, anchor="lm", fill=p.bg)
+    x = canvas.text(left_x + tw + 22, 30, "<GO>", 28, "#FFFFFF", True)
+    right_edge = right_x - (face.getlength(right) + 30 if right else 0)
+    canvas.text(x + 18, 30, left, 28, "#FFFFFF", False, max_width=right_edge - x - 18)
+    if right:
+        canvas.text(right_x, 30, right, 28, p.ink, True, align="right")
+
+
+# ── Broadsheet ──────────────────────────────────────────────────────────────
+MASTHEAD = "The Digital Credit Report"
+
+
+def _bg_broadsheet(canvas: Canvas, p, header_height):
+    """Newsprint, a touch darker toward the edges."""
+    w, h = canvas.image.size
+    yy, xx = np.mgrid[0:h:8, 0:w:8].astype(np.float32)
+    d = np.sqrt(((xx - w / 2) / (w * .75)) ** 2 + ((yy - h / 2) / (h * .75)) ** 2)
+    shade = np.clip((d - .45) * .10, 0, .06)[..., None]
+    paper = np.array(_rgb(p.bg), np.float32)
+    small = Image.fromarray((paper * (1 - shade) + np.array([96, 80, 50], np.float32) * shade).astype(np.uint8))
+    canvas.image.paste(small.resize((w, h), Image.BILINEAR))
+
+
+def _card_broadsheet(canvas: Canvas, box, p, accent, accent_height):
+    """A section, not a box: a heavy rule over a hairline, flagged in the company color."""
+    x0, y0, x1, y1 = box
+    canvas.draw.rectangle((x0, y0, x1, y0 + 3), fill=p.ink)
+    canvas.draw.rectangle((x0, y0 + 8, x1, y0 + 9), fill=p.ink)
+    if accent:
+        canvas.draw.rectangle((x0, y0 - 3, x0 + min(150, (x1 - x0) * .35), y0 + 3), fill=accent)
+    if not hasattr(canvas, "trial_cards"):
+        canvas.trial_cards = []
+    canvas.trial_cards.append((tuple(box), accent))
+
+
+def _column_rules(canvas: Canvas, image: Image.Image, p) -> Image.Image:
+    """Hairline column rules in the gutters between side-by-side sections."""
+    draw = ImageDraw.Draw(image)
+    cards = [box for box, _ in getattr(canvas, "trial_cards", [])]
+    for a in cards:
+        for b in cards:
+            gap = b[0] - a[2]
+            overlap = min(a[3], b[3]) - max(a[1], b[1])
+            if 0 < gap <= 48 and overlap > 80:
+                x = (a[2] + b[0]) / 2
+                draw.line((x, max(a[1], b[1]) + 16, x, min(a[3], b[3])), fill=_rgb(p.ink), width=1)
+    return image
+
+
+def _title_broadsheet(canvas, x, baseline, words, size, p):
+    """The headline in a heavy Didone-style serif, set in sentence case."""
+    text = "".join(words)
+    face = _fit_face(text, int(size * .9), canvas.image.width - 2 * x)
+    canvas.draw.text((x, baseline), text, font=face, anchor="ls", fill=p.ink)
+    return x + face.getlength(text)
+
+
+def _kicker_broadsheet(canvas: Canvas, left_x, right_x, left, right, p):
+    """The masthead, the edition line and the double rule under them."""
+    from .draw import ASSETS
+    mast = ImageFont.truetype(str(ASSETS / "unifrakturmaguntia.ttf"), 52)
+    canvas.draw.text((left_x, 64), MASTHEAD, font=mast, anchor="ls", fill=p.ink)
+    day = left.split("·")[-1].strip().title()
+    line = f"{day} edition" + (f" · {right}" if right else "")
+    canvas.text(right_x, 34, line.upper(), 28, p.ink, True, align="right",
+                max_width=right_x - left_x - mast.getlength(MASTHEAD) - 40)
+    canvas.draw.rectangle((left_x, 72, right_x, 76), fill=p.ink)
+    canvas.draw.rectangle((left_x, 81, right_x, 82), fill=p.ink)
+
+
+def kicker(canvas: Canvas, left_x, right_x, left, right, p, theme):
+    {"terminal": _kicker_terminal, "broadsheet": _kicker_broadsheet}[theme.decor](canvas, left_x, right_x, left, right, p)

@@ -89,6 +89,21 @@ every one keeps gains green (#3DFF9A) and losses red (#FF3B47). Blade Runner has
 further variants with company colors outside blue and pink: `br-vegas` (orange × violet),
 `br-tyrell` (gold × deep violet), `br-joi` (orange × gold) and `br-rain` (lavender × lemon).
 
+**Terminal and Broadsheet (not live).** Two looks built from the style studies, both with
+Joi's company colors (Strategy orange, Strive gold; deepened on paper):
+
+- `terminal` · Bloomberg Terminal: amber data on black, a blue command bar ("DCR <GO>"),
+  the title's key word as a reversed amber field, square cards with a colored top strip.
+  Text is Inconsolata at 90% width (monospace that fits the phone layout), titles IBM Plex
+  Mono Bold.
+- `broadsheet` · Broadsheet: newsprint, a blackletter masthead (UnifrakturMaguntia) with
+  the edition line, a Playfair Display headline, sections marked by a heavy rule over a
+  hairline with a company-color flag, and hairline column rules in the gutters. Text is
+  Libre Franklin.
+
+Both draw their own report line through `themes.kicker`, which leaves every other look's
+header unchanged.
+
 Themes live in `panels/themes.py`. Fonts are switched per render through a context
 variable (`panels.draw.fontset`), so concurrent sessions never share a style.
 

@@ -22,7 +22,7 @@ ASSETS = Path(__file__).resolve().parents[1] / "assets"
 T_MIN, T_LABEL, T_BODY, T_VALUE, T_BIG, T_HERO = 28, 30, 34, 44, 64, 92
 
 
-# Font sets per theme: (file, variable-font style or None). "key" is the
+# Font sets per theme: (file, variable-font style name, axis values or None). "key" is the
 # display face for a title's key word (serif in the classic Imprint style).
 FONT_SETS = {
     "classic": {"regular": ("report-regular.ttf", None), "bold": ("report-bold.ttf", None),
@@ -39,6 +39,11 @@ FONT_SETS = {
             "key": ("tektur-variable.ttf", "Black"), "key_regular": ("tektur-variable.ttf", "Medium")},
     "circuit": {"regular": ("chakrapetch-regular.ttf", None), "bold": ("chakrapetch-bold.ttf", None),
                 "key": ("michroma-regular.ttf", None), "key_regular": ("michroma-regular.ttf", None)},
+    # Inconsolata's width axis (weight, width) keeps the monospace text inside the phone layout.
+    "terminal": {"regular": ("inconsolata-variable.ttf", (500, 90)), "bold": ("inconsolata-variable.ttf", (700, 90)),
+                 "key": ("ibmplexmono-bold.ttf", None), "key_regular": ("ibmplexmono-semibold.ttf", None)},
+    "broadsheet": {"regular": ("librefranklin-variable.ttf", "Regular"), "bold": ("librefranklin-variable.ttf", "SemiBold"),
+                   "key": ("playfairdisplay-variable.ttf", "Black"), "key_regular": ("playfairdisplay-variable.ttf", "Bold")},
 }
 FONTSET: ContextVar[str] = ContextVar("panel_fontset", default="classic")
 
@@ -55,7 +60,9 @@ def fontset(name: str):
 @lru_cache(maxsize=256)
 def _face(name: str, style: str | None, size: int) -> ImageFont.FreeTypeFont:
     face = ImageFont.truetype(str(ASSETS / name), size)
-    if style:
+    if isinstance(style, tuple):
+        face.set_variation_by_axes(list(style))
+    elif style:
         face.set_variation_by_name(style)
     return face
 

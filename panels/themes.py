@@ -13,7 +13,7 @@ import random
 from PIL import Image, ImageDraw, ImageFilter
 
 from . import trial_styles
-from .draw import Canvas, font, imprint, mix, width
+from .draw import T_MIN, Canvas, font, imprint, mix, width
 
 
 @dataclass(frozen=True)
@@ -231,7 +231,41 @@ BR_RAIN = _hud_way(
 
 BR_WAYS = (BR_VEGAS, BR_TYRELL, BR_JOI, BR_RAIN)
 
-THEMES = {theme.key: theme for theme in (CLASSIC, NEON, ORBIT, GLASS, HUD, GLITCH, CIRCUIT, *HUD_WAYS, *BR_WAYS)}
+
+# ── Terminal and Broadsheet (trial, built from the style studies) ──────────
+# Company colors follow Joi (Strategy orange, Strive gold), deepened on paper.
+def _styled(key, label, fontset, decor, surface, *, accent, strategy, strive, lines, neutral, zones, up, down,
+            uppercase=True):
+    """``surface`` = (bg, card, tint, line, outline, ink, muted, soft); ``lines`` =
+    Friday's (50W, 20W/21W band, realized) chart colors."""
+    bg, card_fill, tint, line, outline, ink, muted, soft = surface
+    fifty, band, realized = lines
+
+    def day(base: Palette) -> Palette:
+        return replace(base, bg=bg, card=card_fill, tint=tint, line=line, outline=outline, ink=ink, muted=muted, soft=soft,
+                       radius=0, cash=tint, accent=accent, deep=accent, positive=up, negative=down, neutral=neutral,
+                       accent2=fifty, accent3=realized, band=band, strategy=strategy, strive=strive, zones=zones)
+    return Theme(key, label, fontset, day(NEON.monday), day(NEON.wednesday), day(NEON.friday),
+                 title_style=decor, decor=decor, uppercase_titles=uppercase)
+
+
+TERMINAL = _styled(
+    "terminal", "Bloomberg Terminal (amber on black)", "terminal", "terminal",
+    ("#000000", "#060606", "#121212", "#262626", "#2E2E2E", "#FFA028", "#C8C8C8", "#808080"),
+    accent="#FFFFFF", strategy="#FF8C1A", strive="#FFE14D", lines=("#6FA8FF", "#B8B8B8", "#FFE14D"),
+    neutral="#9A9A9A", zones=("#6FA8FF", "#9FC6FF", "#C8C8C8", "#FFB02E", "#FF7A45"), up="#4BE38B", down="#FF5050")
+
+BROADSHEET = _styled(
+    "broadsheet", "Broadsheet (newsprint)", "broadsheet", "broadsheet",
+    ("#F1ECDF", "#F1ECDF", "#E6DFCD", "#C9BFAB", "#1B1813", "#1B1813", "#5A544A", "#8A8272"),
+    accent="#1F3A5F", strategy="#D0620E", strive="#A57C00", lines=("#6F8FAF", "#9A8F7A", "#B07D2B"),
+    neutral="#8A8272", zones=("#3F5F7F", "#7F95A8", "#8A8272", "#B07D2B", "#A8452A"), up="#0B7F41", down="#B8232F",
+    uppercase=False)
+
+STUDY_WAYS = (TERMINAL, BROADSHEET)
+
+THEMES = {theme.key: theme for theme in (CLASSIC, NEON, ORBIT, GLASS, HUD, GLITCH, CIRCUIT, *HUD_WAYS, *BR_WAYS,
+                                                *STUDY_WAYS)}
 
 
 DEFAULT = NEON
@@ -292,6 +326,15 @@ def background(canvas: Canvas, p: Palette, theme: Theme, header_height=150, orbi
         canvas.draw.ellipse((cx - 30 * k, cy - 30 * k, cx + 30 * k, cy + 30 * k), fill=p.accent)
         canvas.draw.ellipse((cx + 180 * k, cy - 8 * k, cx + 196 * k, cy + 8 * k), fill="#F3F1EC")
         canvas.draw.rectangle((0, header_height, w, header_height + 6), fill=p.accent)
+
+
+def kicker(canvas: Canvas, left_x, right_x, left: str, right: str | None, p: Palette, theme: Theme):
+    """The report line above the title ("DIGITAL CREDIT REPORT · MONDAY" and the period)."""
+    if theme.decor in trial_styles.KICKERS:
+        return trial_styles.kicker(canvas, left_x, right_x, left, right, p, theme)
+    canvas.text(left_x, 34, left, T_MIN, p.accent, True)
+    if right:
+        canvas.text(right_x, 34, right, T_MIN, p.accent, True, align="right")
 
 
 def title(canvas: Canvas, x, baseline, words, size, p: Palette, theme: Theme, *, on_space=False):

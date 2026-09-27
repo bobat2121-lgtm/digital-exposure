@@ -645,13 +645,12 @@ def _flow(canvas, box, ledger, p, theme, lay=STANDARD):
 def _header(canvas, data, p, theme):
     on_space = theme.decor == "orbit"
     muted = "#AEB6D6" if on_space else p.muted
-    canvas.text(M, 34, "DIGITAL CREDIT REPORT · WEDNESDAY", T_MIN, p.accent, True)
-    stamp = data["stamp"]
+    stamp, right = data["stamp"], None
     if stamp:
         parsed = date.fromisoformat(stamp)
         closed = parsed < data["now"].date() or data["now"].hour >= 16
-        canvas.text(WIDTH - M, 34, f"{'CLOSE' if closed else 'INTRADAY'} {parsed:%a %b} {parsed.day}".upper(), T_MIN, p.accent,
-                    True, align="right")
+        right = f"{'CLOSE' if closed else 'INTRADAY'} {parsed:%a %b} {parsed.day}".upper()
+    themes.kicker(canvas, M, WIDTH - M, "DIGITAL CREDIT REPORT · WEDNESDAY", right, p, theme)
     themes.title(canvas, M, 146, TITLE, 76, p, theme, on_space=on_space)
     refs = "  ·  ".join(f"{SHORT[label]} {value:.2f}%" for label, (_, value) in data["references"] if value is not None)
     canvas.text(M, 176, refs, T_MIN, muted, max_width=WIDTH - 2 * M)

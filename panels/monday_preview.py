@@ -469,7 +469,9 @@ def _top_waterfall(canvas, e, L, R, y, p, stripe):
     else:
         steps.append(("BTC + DIVs", _money(level, signed=False), 0.0, level, stripe, p.ink))
     row_h, gap = 50, 12
-    label_w, value_w = 180, 146
+    # Wide enough for the widest label in the theme's face (180 px in Neon), capped.
+    label_w = min(220, max(180, max(width(step[0], T_MIN, True) for step in steps) + 14))
+    value_w = 146
     bx0, bx1 = L + label_w, R - value_w - 10
     points = [0.0] + [value for step in steps for value in step[2:4]]
     low, high = min(points), max(points)
@@ -621,8 +623,7 @@ def _header(canvas, preview, theme, p):
     on_space = theme.decor == "orbit"
     light = "#F3F1EC" if on_space else p.ink
     muted = "#AEB6D6" if on_space else p.muted
-    canvas.text(MARGIN, 34, "DIGITAL CREDIT REPORT · MONDAY", T_MIN, p.accent, True)
-    canvas.text(WIDTH - MARGIN, 34, preview.period.upper(), T_MIN, p.accent, True, align="right")
+    themes.kicker(canvas, MARGIN, WIDTH - MARGIN, "DIGITAL CREDIT REPORT · MONDAY", preview.period.upper(), p, theme)
     themes.title(canvas, MARGIN, 146, TITLE, 76, p, theme, on_space=on_space)
     canvas.text(MARGIN, 170, f"BTC {view.btc_price}", T_VALUE - 6, light, True)
     stamp = view.report_time.replace("Updated ", "", 1)
