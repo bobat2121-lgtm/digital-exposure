@@ -32,6 +32,13 @@ FONT_SETS = {
     "brutal": {"regular": ("spacegrotesk-variable.ttf", "Regular"), "bold": ("spacegrotesk-variable.ttf", "Bold"),
                "key": ("spacegrotesk-variable.ttf", "Bold"), "key_regular": ("spacemono-regular.ttf", None),
                "mono": ("spacemono-bold.ttf", None)},
+    # Trial styles (panels/trial_styles.py): Chakra Petch text, a new display face each.
+    "glass": {"regular": ("chakrapetch-regular.ttf", None), "bold": ("chakrapetch-bold.ttf", None),
+              "key": ("unbounded-variable.ttf", "Bold"), "key_regular": ("unbounded-variable.ttf", "Medium")},
+    "hud": {"regular": ("chakrapetch-regular.ttf", None), "bold": ("chakrapetch-bold.ttf", None),
+            "key": ("tektur-variable.ttf", "Black"), "key_regular": ("tektur-variable.ttf", "Medium")},
+    "circuit": {"regular": ("chakrapetch-regular.ttf", None), "bold": ("chakrapetch-bold.ttf", None),
+                "key": ("michroma-regular.ttf", None), "key_regular": ("michroma-regular.ttf", None)},
 }
 FONTSET: ContextVar[str] = ContextVar("panel_fontset", default="classic")
 
@@ -87,6 +94,7 @@ class Canvas:
         self.overflows: list[str] = []
         self.floor = floor          # text never shrinks below this size
         self.smallest: int | None = None  # smallest text size actually drawn
+        self.finish = None          # optional image → image pass run at save (trial styles' light)
 
     # ── text ────────────────────────────────────────────────────────────────
     def fit(self, text: str, size: int, max_width: float | None, bold=False, serif=False, minimum=12) -> tuple[str, int]:
@@ -230,6 +238,9 @@ class Canvas:
         info = PngInfo()
         for key, value in (metadata or {}).items():
             info.add_text(key, str(value))
+        if self.finish:
+            self.image = self.finish(self.image)
+            self.draw = ImageDraw.Draw(self.image)
         buffer = BytesIO()
         self.image.save(buffer, format="PNG", optimize=True, pnginfo=info, dpi=(144, 144))
         return buffer.getvalue()

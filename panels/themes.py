@@ -12,6 +12,7 @@ import random
 
 from PIL import Image, ImageDraw, ImageFilter
 
+from . import trial_styles
 from .draw import Canvas, font, imprint, mix, width
 
 
@@ -96,7 +97,31 @@ ORBIT = Theme(
     title_style="block", decor="orbit", uppercase_titles=True,
 )
 
-THEMES = {theme.key: theme for theme in (CLASSIC, NEON, ORBIT)}
+
+
+# ── trial looks (panels/trial_styles.py; not on the live page) ─────────────
+def _trial(key, label, fontset, surface, *, radius, title_style=None):
+    """Neon's day accents and company colors on a trial's own surfaces.
+    ``surface`` = (bg, card, tint, line, outline, ink, muted, soft)."""
+    bg, card_fill, tint, line, outline, ink, muted, soft = surface
+
+    def day(base: Palette) -> Palette:
+        return replace(base, bg=bg, card=card_fill, tint=tint, line=line, outline=outline, ink=ink, muted=muted, soft=soft,
+                       radius=radius, cash=tint)
+    return Theme(key, label, fontset, day(NEON.monday), day(NEON.wednesday), day(NEON.friday),
+                 title_style=title_style or key, decor=key, uppercase_titles=True)
+
+
+GLASS = _trial("glass", "Aurora Glass", "glass",
+               ("#05060C", "#0A0F1E", "#10172B", "#222C4A", "#26304F", "#EEF3FF", "#97A6CC", "#62709A"), radius=26)
+HUD = _trial("hud", "Chamfer HUD", "hud",
+             ("#020509", "#07101A", "#0B1826", "#153043", "#1D3A50", "#E6F6FF", "#86A7BE", "#557489"), radius=0)
+GLITCH = _trial("glitch", "Signal Glitch", "cyber",
+                ("#07070B", "#0E0E15", "#15151F", "#25253A", "#2A2A40", "#F4F4FF", "#A3A3C0", "#6C6C8C"), radius=6)
+CIRCUIT = _trial("circuit", "Circuit Trace", "circuit",
+                 ("#030811", "#08121F", "#0C1A2B", "#16304A", "#1A3552", "#E8F4FF", "#8AA9C9", "#56708F"), radius=14)
+
+THEMES = {theme.key: theme for theme in (CLASSIC, NEON, ORBIT, GLASS, HUD, GLITCH, CIRCUIT)}
 
 
 DEFAULT = NEON
@@ -108,6 +133,8 @@ def get(key: str | None) -> Theme:
 
 # ── shared themed drawing ───────────────────────────────────────────────────
 def card(canvas: Canvas, box, p: Palette, accent: str | None = None, theme: Theme = CLASSIC, accent_height=4):
+    if theme.decor in trial_styles.DECORS:
+        return trial_styles.card(canvas, box, p, accent, theme, accent_height)
     x0, y0, x1, y1 = box
     if theme.decor == "orbit":
         # Brutalist: hard offset shadow, square corners, heavy rule.
@@ -128,6 +155,8 @@ def card(canvas: Canvas, box, p: Palette, accent: str | None = None, theme: Them
 
 def background(canvas: Canvas, p: Palette, theme: Theme, header_height=150, orbit_at=(1190, 76, .8)):
     """``orbit_at`` = (x, y, scale) of the planet, placed in each header's free space."""
+    if theme.decor in trial_styles.DECORS:
+        return trial_styles.background(canvas, p, theme, header_height)
     w, h = canvas.image.size
     if theme.decor == "grid":
         # A faint 48-px grid and a soft glow behind the title.
@@ -157,6 +186,8 @@ def background(canvas: Canvas, p: Palette, theme: Theme, header_height=150, orbi
 
 def title(canvas: Canvas, x, baseline, words, size, p: Palette, theme: Theme, *, on_space=False):
     """Draw an edition title in the theme's style; returns the right edge."""
+    if theme.decor in trial_styles.DECORS:
+        return trial_styles.title(canvas, x, baseline, words, size, p, theme)
     if theme.title_style == "imprint":
         return imprint(canvas, x, baseline, words, size, ink=p.ink if not on_space else "#F3F1EC",
                        muted=mix(p.ink, p.bg, .72), dot=p.accent)

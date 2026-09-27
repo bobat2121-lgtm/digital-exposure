@@ -77,6 +77,14 @@ draw the same numbers. Only the palette, type and decoration change.
 | **Classic** (`classic`) | The house style: Lato, a Gelasio serif key word, orange dot | Lato, Gelasio |
 | **Brutal Orbit** (`orbit`) | Brutalism meets deep space. Concrete paper, 4 px black rules, square corners, hard offset shadows, a starfield header with an orbiting planet. The key word sits knocked out of a safety-orange slab | Space Grotesk, Space Mono |
 
+**Trial looks (not live).** Four looks that push Neon Ledger further are under review for
+the X images: Aurora Glass (`glass`), Chamfer HUD (`hud`), Signal Glitch (`glitch`) and
+Circuit Trace (`circuit`). They keep the layouts, numbers, type floor and company colors;
+only surfaces, cards, titles and light change (`panels/trial_styles.py`, display faces
+Unbounded, Tektur and Michroma under SIL OFL in `assets/`). Render them with
+`render_previews.py --themes glass,hud,glitch,circuit`. The page and the audit Action
+still use Neon Ledger.
+
 Themes live in `panels/themes.py`. Fonts are switched per render through a context
 variable (`panels.draw.fontset`), so concurrent sessions never share a style.
 
