@@ -42,7 +42,8 @@ FONT_SETS = {
     # Inconsolata's width axis (weight, width) keeps the monospace text inside the phone layout.
     "terminal": {"regular": ("inconsolata-variable.ttf", (500, 90)), "bold": ("inconsolata-variable.ttf", (700, 90)),
                  "key": ("ibmplexmono-bold.ttf", None), "key_regular": ("ibmplexmono-semibold.ttf", None)},
-    "broadsheet": {"regular": ("librefranklin-variable.ttf", "Regular"), "bold": ("librefranklin-variable.ttf", "SemiBold"),
+    # Archivo at 92% width: a newspaper grotesque whose figures fit the layout at full size.
+    "broadsheet": {"regular": ("archivo-variable.ttf", (400, 92)), "bold": ("archivo-variable.ttf", (600, 90)),
                    "key": ("playfairdisplay-variable.ttf", "Black"), "key_regular": ("playfairdisplay-variable.ttf", "Bold")},
 }
 FONTSET: ContextVar[str] = ContextVar("panel_fontset", default="classic")

@@ -82,18 +82,21 @@ class PanelsPageTests(TestCase):
         order = in_order(app.main)
         self.assertLess(order.index(("status", "Sources, notes and audit values")),
                         order.index(("download_button", "Download X image")))
-        # One style, one funding layout: no selectors or test toggles on the shared page.
-        self.assertEqual(len(app.segmented_control), 0)
+        # One switch for the style (Bloomberg or Broadsheet); no other selectors or test toggles.
+        self.assertEqual(len(app.segmented_control), 1)
+        self.assertEqual(list(app.segmented_control[0].options), ["Bloomberg", "Broadsheet"])
         self.assertEqual(len(app.toggle), 0)
 
     def test_default_opens_monday_only(self):
         app = self.app()
         self.assert_report(app)
         self.assertEqual([tab.label for tab in app.tabs], list(panels_page.TABS.values()))
-        self.calls["monday_report"].assert_called_once_with()
+        self.calls["monday_report"].assert_called_once_with("bloomberg")
         self.calls["wednesday_report"].assert_not_called()
         self.calls["friday_report"].assert_not_called()
         self.assertEqual(app.query_params["report"], ["monday"])
+        self.assertEqual(app.query_params["style"], ["bloomberg"])
+        self.assertEqual(app.segmented_control[0].value, "Bloomberg")
 
     def test_each_report_renders_its_web_layout(self):
         for report in ("wednesday", "friday"):
@@ -104,13 +107,28 @@ class PanelsPageTests(TestCase):
                 self.assertEqual(app.query_params["report"], [report])
         self.calls["monday_report"].assert_not_called()
 
-    def test_retired_options_leave_shared_links(self):
-        app = self.app({"report": "sunday", "theme": "vapor", "layout": "b", "extra": "1"})
+    def test_style_link_opens_broadsheet(self):
+        app = self.app({"style": "broadsheet", "report": "friday"})
         self.assert_report(app)
-        self.calls["monday_report"].assert_called_once_with()
+        self.calls["friday_report"].assert_called_once_with("broadsheet")
+        self.assertEqual(app.segmented_control[0].value, "Broadsheet")
+        self.assertEqual(app.query_params["style"], ["broadsheet"])
+
+    def test_switching_style_rerenders_in_that_style(self):
+        app = self.app()
+        app.segmented_control[0].set_value("Broadsheet").run()
+        self.assert_report(app)
+        self.calls["monday_report"].assert_called_with("broadsheet")
+        self.assertEqual(app.query_params["style"], ["broadsheet"])
+
+    def test_retired_options_leave_shared_links(self):
+        app = self.app({"report": "sunday", "theme": "vapor", "layout": "b", "extra": "1", "style": "neon"})
+        self.assert_report(app)
+        self.calls["monday_report"].assert_called_once_with("bloomberg")
         self.assertEqual(app.query_params["report"], ["monday"])
         for retired in ("theme", "layout", "extra"):
             self.assertNotIn(retired, app.query_params)
+        self.assertEqual(app.query_params["style"], ["bloomberg"])  # an unknown style falls back to the default
 
     def test_classic_link_keeps_the_detailed_reports(self):
         with patch("monday_page.render") as monday:

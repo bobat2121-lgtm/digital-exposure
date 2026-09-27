@@ -2,8 +2,8 @@
 
 The hosted app is at [digital-credit-report.streamlit.app](https://digital-credit-report.streamlit.app/).
 It opens on three posting panels: Monday · The Accretion Ledger, Wednesday · The
-Coupon Sheet and Friday · The Closing Mark, in three styles (Classic, Neon Ledger,
-Brutal Orbit). See [PANELS.md](PANELS.md). The detailed reports below are at
+Coupon Sheet and Friday · The Closing Mark, in two styles switched at the top
+(Bloomberg, the default, and Broadsheet). See [PANELS.md](PANELS.md). The detailed reports below are at
 [`?classic=1`](https://digital-credit-report.streamlit.app/?classic=1).
 
 The detailed page has switchable Monday and Friday reports.

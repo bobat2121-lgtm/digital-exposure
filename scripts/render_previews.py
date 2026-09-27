@@ -4,11 +4,11 @@ Examples:
   python scripts/render_previews.py --out previews
   python scripts/render_previews.py --out previews --save-extras   # refresh data/preview-extras.json
   python scripts/render_previews.py --out previews --offline       # saved inputs, demo Friday week
-  python scripts/render_previews.py --out previews --themes neon,classic,orbit --layouts a,b,c
+  python scripts/render_previews.py --out previews --themes terminal,broadsheet,neon --layouts a,b,c
 
-Writes monday.png, wednesday.png, friday.png and audit.json (every displayed
-key value with its source, plus the page footnotes) so a scheduled auditor can
-check them as text. Other styles are written as monday-<theme>.png, other
+Writes monday.png, wednesday.png, friday.png in the default style (Bloomberg)
+and audit.json (every displayed key value with its source, plus the page
+footnotes) so a scheduled auditor can check them as text. Other styles are written as monday-<theme>.png, other
 Monday layouts as monday-<layout>.png.
 """
 from argparse import ArgumentParser

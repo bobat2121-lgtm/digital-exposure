@@ -1,13 +1,13 @@
 """The public app: Monday, Wednesday and Friday reports.
 
-Each tab shows a web layout built for reading on a computer or a phone
-(``panels.web``), from the same data as the X image. The X image, the phone-first
-PNG, is the download at the bottom of each tab, after the formulas and sources.
-Each tab fetches fresh data when a browser session opens it (cached briefly
-across sessions), and only the open tab builds.
-``?report=monday|wednesday|friday`` deep-links a tab; the detailed Monday and
-Friday reports remain at ``?classic=1``. The page has one style (Neon Ledger) and
-one Monday funding layout (the waterfall), so every shared link looks the same.
+Two styles, chosen at the top of the page: Bloomberg (the default) and
+Broadsheet. Under the switch, each day's tab shows a web layout built for reading
+on a computer or a phone (``panels.web``), from the same data as the X image. The
+X image, the phone-first PNG in the chosen style, is the download at the bottom
+of each tab, after the formulas and sources. Each tab fetches fresh data when a
+browser session opens it (cached briefly across sessions), and only the open tab
+builds. ``?style=bloomberg|broadsheet`` and ``?report=monday|wednesday|friday``
+deep-link a view; the detailed Monday and Friday reports remain at ``?classic=1``.
 """
 from __future__ import annotations
 
@@ -63,27 +63,32 @@ def _monday():
     return build_preview(result.report, prices, feed, _extras()), result.notice, saved
 
 
+def _theme(style: str):
+    from panels import themes, web
+    return themes.get(web.LOOKS[style].key)
+
+
 @st.cache_data(ttl=300, show_spinner=False)
-def monday_report():
+def monday_report(style: str = "bloomberg"):
     from panels.monday_preview import audit_rows, notes, render_png
     preview, notice, saved = _monday()
-    png, overflows = render_png(preview)
+    png, overflows = render_png(preview, _theme(style))
     return {"preview": preview, "png": png, "overflows": overflows, "audit": audit_rows(preview), "notes": notes(preview),
             "notices": [line for line in (notice, "Saved quotes (price refresh unavailable)." if saved else "") if line]}
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def wednesday_report():
+def wednesday_report(style: str = "bloomberg"):
     from panels.wednesday import audit_rows, build, notes, render_png
     preview, _, _ = _monday()
     data = build(_extras(), _feed(), preview)
-    png, overflows = render_png(data)
+    png, overflows = render_png(data, _theme(style))
     return {"data": data, "png": png, "overflows": overflows, "audit": audit_rows(data), "notes": notes(data, extra=True),
             "notices": []}
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def friday_report():
+def friday_report(style: str = "bloomberg"):
     from friday import metrics
     from panels.friday_preview import audit_rows, derive, notes, render_png
     data = _friday_data()
@@ -91,7 +96,7 @@ def friday_report():
     extras = _extras()
     stale = tuple(extras.get("stale") or ())
     derived = derive(panel, data, extras, _feed())
-    png, overflows = render_png(panel, derived, stale=stale)
+    png, overflows = render_png(panel, derived, stale=stale, theme=_theme(style))
     week_end = panel["period"].get("end")
     return {"panel": panel, "derived": derived, "png": png, "overflows": overflows, "audit": audit_rows(panel, derived),
             "notes": notes(panel, derived, stale, extra=True),
@@ -102,10 +107,10 @@ def _refresh():
     st.cache_data.clear()
 
 
-def _download(name: str, report: dict):
-    """The X image: the phone-first PNG, offered as a download with a preview."""
+def _download(name: str, report: dict, style: str):
+    """The X image: the phone-first PNG in the chosen style, offered as a download with a preview."""
     with st.container(horizontal=True, gap="small", vertical_alignment="center"):
-        st.download_button("Download X image", data=report["png"], file_name=f"{name.lower()}.png", mime="image/png",
+        st.download_button("Download X image", data=report["png"], file_name=f"{name.lower()}-{style}.png", mime="image/png",
                            icon=":material/download:", on_click="ignore", key=f"download_{name}")
         with st.popover("Preview X image", icon=":material/image:"):
             st.image(report["png"], width="stretch")
@@ -113,21 +118,39 @@ def _download(name: str, report: dict):
         st.warning("Some text in the X image was shortened to fit: " + "; ".join(report["overflows"][:5]))
 
 
-def _footer(name: str, formulas, report: dict):
+def _footer(name: str, formulas, report: dict, style: str):
     """The end of every tab: formulas, sources, then the X image download."""
     from panels import web
     web.formulas(formulas)
     web.sources(report["notes"], report["audit"])
-    _download(name, report)
+    _download(name, report, style)
+
+
+STYLES = {"bloomberg": "Bloomberg", "broadsheet": "Broadsheet"}
+
+
+def _style() -> str:
+    """The chosen style: the switch, else ?style=, else Bloomberg."""
+    from panels import web
+    if "panel_style" not in st.session_state:
+        wanted = st.query_params.get("style")
+        st.session_state["panel_style"] = STYLES.get(wanted, STYLES[web.DEFAULT_LOOK])
+    chosen = st.session_state.get("panel_style") or STYLES[web.DEFAULT_LOOK]
+    return next(key for key, label in STYLES.items() if label == chosen)
 
 
 def render():
     from panels import web
-    web.style()
+    style = _style()
+    look = web.LOOKS[style]
+    web.use(look)
+    web.style(look)
     if "panel_tabs" not in st.session_state:
         st.session_state["panel_tabs"] = TABS.get(st.query_params.get("report"), TABS["monday"])
+    st.html(web.masthead(f"{datetime.now(ET):%A, %B} {datetime.now(ET).day}, {datetime.now(ET):%Y}"))
     with st.container(horizontal=True, vertical_alignment="center"):
-        st.html('<div class="dcr-kicker" style="color:#8FA2CC">The Digital Credit Report</div>')
+        st.segmented_control("Style", list(STYLES.values()), key="panel_style", label_visibility="collapsed",
+                             selection_mode="single", required=True)
         st.button("Refresh data", on_click=_refresh, key="panels_refresh", icon=":material/refresh:")
     extras = _extras()
     stale = [section for section in extras.get("stale") or ()]
@@ -137,27 +160,29 @@ def render():
     active = next((key for key, tab in zip(TABS, (monday, wednesday, friday)) if tab.open), "monday")
     if st.query_params.get("report") != active:
         st.query_params["report"] = active
-    for retired in ("theme", "layout", "extra"):  # options removed so every shared link looks the same
+    if st.query_params.get("style") != style:
+        st.query_params["style"] = style
+    for retired in ("theme", "layout", "extra"):  # retired options; ?style= picks the look now
         if retired in st.query_params:
             del st.query_params[retired]
     # Only the open tab fetches and renders.
     if active == "monday":
         with monday:
             with st.spinner("Building Monday…"):
-                report = monday_report()
+                report = monday_report(style)
             web.monday(report["preview"], notices=report["notices"])
-            _footer("Monday", web.MONDAY_FORMULAS, report)
+            _footer("Monday", web.MONDAY_FORMULAS, report, style)
     elif active == "wednesday":
         with wednesday:
             with st.spinner("Building Wednesday…"):
-                report = wednesday_report()
+                report = wednesday_report(style)
             web.wednesday(report["data"], notices=report["notices"])
-            _footer("Wednesday", web.WEDNESDAY_FORMULAS, report)
+            _footer("Wednesday", web.WEDNESDAY_FORMULAS, report, style)
     else:
         with friday:
             with st.spinner("Building Friday… (full price history, about 10 seconds)"):
-                report = friday_report()
+                report = friday_report(style)
             web.friday(report["panel"], report["derived"], notices=report["notices"])
-            _footer("Friday", web.FRIDAY_FORMULAS, report)
+            _footer("Friday", web.FRIDAY_FORMULAS, report, style)
     st.caption(f"Rendered {datetime.now(ET):%b %d, %Y · %I:%M %p ET} · "
                "[Detailed Monday and Friday reports](?classic=1)")

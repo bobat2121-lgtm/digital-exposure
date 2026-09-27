@@ -21,21 +21,36 @@ builds.
 | Wednesday | The **Coupon** Sheet | 1440 × 1920 (3:4) | after the 4:00 pm ET close |
 | Friday | The **Closing** Mark | 1440 × 1920 (3:4) | Friday 4:00 pm ET mark |
 
-The page has one style (Neon Ledger) and one Monday funding layout (the waterfall),
-so every shared link looks the same. Links:
+The page has two styles, switched at the top: **Bloomberg** (the default) and
+**Broadsheet**. The three day tabs sit under the switch, so every report comes in
+both styles, and the web report and the X image change together. There is one
+Monday funding layout (the waterfall). Links:
 
-- `?report=monday|wednesday|friday` opens a tab, e.g.
-  <https://digital-credit-report.streamlit.app/?report=wednesday>.
+- `?style=bloomberg|broadsheet` picks the style and `?report=monday|wednesday|friday`
+  opens a tab, e.g.
+  <https://digital-credit-report.streamlit.app/?style=broadsheet&report=wednesday>.
+  The address follows the switch, so a copied link opens the same view.
 - `?classic=1` opens the detailed Monday and Friday reports, which are unchanged.
 - The retired `?theme=`, `?layout=` and `?extra=` options are dropped from the
-  address when a link still carries them.
+  address when a link still carries them. An unknown `?style=` opens Bloomberg.
 
 ## The web report
 
 `panels/web.py` builds each tab from Streamlit elements, HTML tables and Altair
-charts in the Neon Ledger palette (Strategy #12A6C1, Strive #C43596, one neon per
-day). Chakra Petch and Orbitron are served from `static/` (Streamlit static
-serving, `.streamlit/config.toml`), so no font request leaves the app.
+charts. Each style is a `Look` (colors and fonts) set per browser session through
+a context variable, so two readers on different styles never share one:
+
+- **Bloomberg:** a blue command bar with the date, amber data on black, square
+  cards with a blue top strip, the title's key word as a reversed amber field.
+  Inconsolata text, IBM Plex Mono titles.
+- **Broadsheet:** newsprint paper, a blackletter masthead with the edition line
+  over a double rule, sections under a heavy rule and hairline, hairline column
+  rules. Archivo text, Playfair Display titles, UnifrakturMaguntia masthead.
+
+Both keep the X image's company colors (Strategy orange, Strive gold, deepened on
+paper), gains green with "+" and losses red with "−". The fonts are served from
+`static/` (Streamlit static serving, `.streamlit/config.toml`), so no font request
+leaves the app.
 
 - **Computer:** cards sit side by side (Strategy next to Strive, STRC next to SATA)
   and the tables show every column.
@@ -67,42 +82,36 @@ px, which is 0.27× of a 1440-px panel. So every panel follows these rules:
 
 ## Styles
 
-The page uses Neon Ledger only. Classic and Brutal Orbit remain in the renderer for
-`render_previews.py --themes` and are no longer offered on the page. All three styles
-draw the same numbers. Only the palette, type and decoration change.
+The page offers Bloomberg (`terminal`, the default) and Broadsheet (`broadsheet`). The
+default is also what `render_previews.py` writes as `monday.png`, `wednesday.png` and
+`friday.png`, so the Panel audit Action and anything else that reads those files gets
+Bloomberg. The other looks remain in the renderer for `render_previews.py --themes` and
+are not offered on the page. Every style draws the same numbers. Only the palette, type
+and decoration change.
 
 | Style | Look | Type (SIL OFL, in `assets/`) |
 | --- | --- | --- |
-| **Neon Ledger** (`neon`, default) | Cyberpunk trading terminal kept professional. Deep navy, faint grid, HUD corner brackets, glowing key word. One neon per day: cyan Monday, magenta Wednesday, amber Friday. Company colors hold on every sheet: Strategy cyan, Strive magenta | Chakra Petch, Orbitron |
+| **Bloomberg** (`terminal`, default) | Bloomberg Terminal: amber data on black, a blue command bar ("DCR <GO>"), the title's key word as a reversed amber field, square cards with a blue top strip, blue section rules, a dotted zero line on Monday's waterfall | Inconsolata at 90% width (monospace that fits the phone layout), IBM Plex Mono Bold |
+| **Broadsheet** (`broadsheet`) | Newsprint: a blackletter masthead with the edition line over a double rule, a Playfair Display headline, sections marked by a heavy rule over a hairline with a company-color flag, hairline column rules in the gutters | Archivo, Playfair Display, UnifrakturMaguntia |
+| **Neon Ledger** (`neon`) | Cyberpunk trading terminal kept professional. Deep navy, faint grid, glowing key word. One neon per day. Strategy cyan, Strive magenta | Chakra Petch, Orbitron |
 | **Classic** (`classic`) | The house style: Lato, a Gelasio serif key word, orange dot | Lato, Gelasio |
-| **Brutal Orbit** (`orbit`) | Brutalism meets deep space. Concrete paper, 4 px black rules, square corners, hard offset shadows, a starfield header with an orbiting planet. The key word sits knocked out of a safety-orange slab | Space Grotesk, Space Mono |
+| **Brutal Orbit** (`orbit`) | Brutalism meets deep space. Concrete paper, 4 px black rules, square corners, hard offset shadows, a starfield header with an orbiting planet | Space Grotesk, Space Mono |
+
+Bloomberg and Broadsheet use Joi's company colors (Strategy orange, Strive gold; deepened
+on paper so the two stay apart for colorblind readers). Gains stay green and losses red in
+both. They draw their own report line through `themes.kicker` and their inset boxes through
+`themes.inset`, which leave every other look unchanged.
 
 **Trial looks (not live).** Four looks that push Neon Ledger further are under review for
 the X images: Aurora Glass (`glass`), Chamfer HUD (`hud`), Signal Glitch (`glitch`) and
 Circuit Trace (`circuit`). They keep the layouts, numbers, type floor and company colors;
 only surfaces, cards, titles and light change (`panels/trial_styles.py`, display faces
 Unbounded, Tektur and Michroma under SIL OFL in `assets/`). Render them with
-`render_previews.py --themes glass,hud,glitch,circuit`. The page and the audit Action
-still use Neon Ledger. Chamfer HUD also comes in six colorways (`hud-nightcity`, `hud-tron`,
+`render_previews.py --themes glass,hud,glitch,circuit`. Chamfer HUD also comes in six colorways (`hud-nightcity`, `hud-tron`,
 `hud-laserline`, `hud-bladerunner`, `hud-synthwave`, `hud-tokyo`, from 2 colors to 5+);
 every one keeps gains green (#3DFF9A) and losses red (#FF3B47). Blade Runner has four
 further variants with company colors outside blue and pink: `br-vegas` (orange × violet),
 `br-tyrell` (gold × deep violet), `br-joi` (orange × gold) and `br-rain` (lavender × lemon).
-
-**Terminal and Broadsheet (not live).** Two looks built from the style studies, both with
-Joi's company colors (Strategy orange, Strive gold; deepened on paper):
-
-- `terminal` · Bloomberg Terminal: amber data on black, a blue command bar ("DCR <GO>"),
-  the title's key word as a reversed amber field, square cards with a colored top strip.
-  Text is Inconsolata at 90% width (monospace that fits the phone layout), titles IBM Plex
-  Mono Bold.
-- `broadsheet` · Broadsheet: newsprint, a blackletter masthead (UnifrakturMaguntia) with
-  the edition line, a Playfair Display headline, sections marked by a heavy rule over a
-  hairline with a company-color flag, and hairline column rules in the gutters. Text is
-  Libre Franklin.
-
-Both draw their own report line through `themes.kicker`, which leaves every other look's
-header unchanged.
 
 Themes live in `panels/themes.py`. Fonts are switched per render through a context
 variable (`panels.draw.fontset`), so concurrent sessions never share a style.
@@ -118,12 +127,13 @@ Without Streamlit:
 
 ```powershell
 .venv\Scripts\python scripts\render_previews.py --out previews
-.venv\Scripts\python scripts\render_previews.py --out previews --themes classic,neon,orbit
+.venv\Scripts\python scripts\render_previews.py --out previews --themes terminal,broadsheet
 .venv\Scripts\python scripts\render_previews.py --out previews --offline   # saved inputs, demo Friday week
 ```
 
-These commands write `monday.png`, `wednesday.png`, `friday.png` and `audit.json`.
-Non-classic styles are written as `monday-neon.png` and so on.
+These commands write `monday.png`, `wednesday.png`, `friday.png` (Bloomberg) and
+`audit.json`. Other styles are written as `monday-broadsheet.png` and so on. The page
+names its downloads by style: `monday-bloomberg.png`, `monday-broadsheet.png`.
 
 ## What each panel shows
 

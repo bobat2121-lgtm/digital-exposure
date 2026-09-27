@@ -23,7 +23,7 @@ import random
 import numpy as np
 from PIL import Image, ImageChops, ImageColor, ImageDraw, ImageFilter, ImageFont
 
-from .draw import Canvas, font
+from .draw import Canvas, cap_middle, font
 
 DECORS = ("glass", "hud", "glitch", "circuit", "terminal", "broadsheet")
 KICKERS = ("terminal", "broadsheet")        # looks that draw their own report line
@@ -479,13 +479,15 @@ def _kicker_terminal(canvas: Canvas, left_x, right_x, left, right, p):
     face = font(28, True, False)
     tag = "DCR"
     tw = face.getlength(tag)
+    # Every piece of the bar is centered on its capitals, on the bar's middle line (44).
+    y = 44 - cap_middle(28, True)
     canvas.draw.rectangle((left_x - 6, 24, left_x + tw + 8, 64), fill=p.ink)
-    canvas.draw.text((left_x + 1, 44), tag, font=face, anchor="lm", fill=p.bg)
-    x = canvas.text(left_x + tw + 22, 30, "<GO>", 28, "#FFFFFF", True)
+    canvas.draw.text((left_x + 1, y), tag, font=face, anchor="lt", fill=p.bg)
+    x = canvas.text(left_x + tw + 22, y, "<GO>", 28, "#FFFFFF", True)
     right_edge = right_x - (face.getlength(right) + 30 if right else 0)
-    canvas.text(x + 18, 30, left, 28, "#FFFFFF", False, max_width=right_edge - x - 18)
+    canvas.text(x + 18, 44 - cap_middle(28, False), left, 28, "#FFFFFF", False, max_width=right_edge - x - 18)
     if right:
-        canvas.text(right_x, 30, right, 28, p.ink, True, align="right")
+        canvas.text(right_x, y, right, 28, p.ink, True, align="right")
 
 
 # ── Broadsheet ──────────────────────────────────────────────────────────────
@@ -541,11 +543,14 @@ def _kicker_broadsheet(canvas: Canvas, left_x, right_x, left, right, p):
     """The masthead, the edition line and the double rule under them."""
     from .draw import ASSETS
     mast = ImageFont.truetype(str(ASSETS / "unifrakturmaguntia.ttf"), 52)
-    canvas.draw.text((left_x, 64), MASTHEAD, font=mast, anchor="ls", fill=p.ink)
+    # Baseline 56: the masthead's descenders (11 px) clear the rule at 72, and the
+    # edition line sits on the same baseline.
+    baseline = 56
+    canvas.draw.text((left_x, baseline), MASTHEAD, font=mast, anchor="ls", fill=p.ink)
     day = left.split("·")[-1].strip().title()
     line = f"{day} edition" + (f" · {right}" if right else "")
-    canvas.text(right_x, 34, line.upper(), 28, p.ink, True, align="right",
-                max_width=right_x - left_x - mast.getlength(MASTHEAD) - 40)
+    canvas.text(right_x, baseline, line.upper(), 28, p.ink, True, align="right",
+                max_width=right_x - left_x - mast.getlength(MASTHEAD) - 40, anchor_top=False)
     canvas.draw.rectangle((left_x, 72, right_x, 76), fill=p.ink)
     canvas.draw.rectangle((left_x, 81, right_x, 82), fill=p.ink)
 
