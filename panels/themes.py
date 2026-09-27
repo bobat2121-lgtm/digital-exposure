@@ -198,7 +198,40 @@ NEON_TOKYO = _hud_way(
 
 HUD_WAYS = (NIGHT_CITY, TRON, LASERLINE, BLADE_RUNNER, SYNTHWAVE, NEON_TOKYO)
 
-THEMES = {theme.key: theme for theme in (CLASSIC, NEON, ORBIT, GLASS, HUD, GLITCH, CIRCUIT, *HUD_WAYS)}
+# Blade Runner variants with company colors outside blue and pink: the warm
+# family (gold, orange, lemon) against violet, or warm against warm.
+BR_SURFACE = ("#0C0705", "#160E0A", "#21150F", "#3A2519", "#553624", "#FFF1E4", "#CDA88C", "#8C6D59")
+BR_ORANGE, BR_GOLD, BR_VIOLET = "#FF8C1A", "#FFD04D", "#A67CFF"
+BR_VEGAS = _hud_way(
+    "br-vegas", "Blade Runner · Vegas Haze (orange × violet, gold title)", BR_SURFACE,
+    strategy=BR_ORANGE, strive=BR_VIOLET, days=(BR_GOLD, BR_GOLD, BR_GOLD), lines=(BR_ORANGE, "#FFE6A8", BR_VIOLET),
+    neutral="#CDA88C", zones=(BR_VIOLET, "#CDB8FF", "#E9D8C8", BR_GOLD, BR_ORANGE))
+
+TY_GOLD, TY_VIOLET = "#FFCF3F", "#8E6BFF"
+BR_TYRELL = _hud_way(
+    "br-tyrell", "Blade Runner · Tyrell Gold (gold × deep violet, orange title)",
+    ("#090705", "#12100A", "#1C1810", "#332C1A", "#4A4024", "#FFF6E0", "#CDBB8C", "#8C7C58"),
+    strategy=TY_GOLD, strive=TY_VIOLET, days=(BR_ORANGE, BR_ORANGE, BR_ORANGE), lines=(TY_GOLD, "#FFC48A", TY_VIOLET),
+    neutral="#CDBB8C", zones=(TY_VIOLET, "#BBA6FF", "#E6DCC4", TY_GOLD, BR_ORANGE))
+
+JOI_GOLD = "#FFE14D"
+BR_JOI = _hud_way(
+    "br-joi", "Blade Runner · Joi (orange × gold, violet title)",
+    ("#0B070B", "#140C12", "#1E121B", "#35202F", "#4C2D43", "#FBEFF6", "#C4A6B8", "#86687A"),
+    strategy=BR_ORANGE, strive=JOI_GOLD, days=(BR_VIOLET, BR_VIOLET, BR_VIOLET), lines=(BR_ORANGE, "#FFF0A6", "#CDB8FF"),
+    neutral="#C4A6B8", zones=("#CDB8FF", BR_VIOLET, "#E6D6DE", JOI_GOLD, BR_ORANGE))
+
+RAIN_LAVENDER, RAIN_LEMON, RAIN_ORANGE = "#C7ABFF", "#F2EA4A", "#FF8A2A"
+BR_RAIN = _hud_way(
+    "br-rain", "Blade Runner · Rain (lavender × lemon, orange title)",
+    ("#0A0908", "#100E0D", "#191614", "#2E2925", "#433C36", "#F4EEE8", "#B9ADA2", "#7C736A"),
+    strategy=RAIN_LAVENDER, strive=RAIN_LEMON, days=(RAIN_ORANGE, RAIN_ORANGE, RAIN_ORANGE),
+    lines=(RAIN_LAVENDER, "#FFD2A8", RAIN_LEMON), neutral="#B9ADA2",
+    zones=(RAIN_LAVENDER, "#E0D2FF", "#E4DDD6", RAIN_LEMON, RAIN_ORANGE))
+
+BR_WAYS = (BR_VEGAS, BR_TYRELL, BR_JOI, BR_RAIN)
+
+THEMES = {theme.key: theme for theme in (CLASSIC, NEON, ORBIT, GLASS, HUD, GLITCH, CIRCUIT, *HUD_WAYS, *BR_WAYS)}
 
 
 DEFAULT = NEON
