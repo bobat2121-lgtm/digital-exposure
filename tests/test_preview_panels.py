@@ -174,6 +174,26 @@ class MondayPreviewTests(unittest.TestCase):
         self.assertTrue(any(line.startswith("BTC = the week's bitcoin purchase cost") for line in lines))
 
 
+class QuoteTests(unittest.TestCase):
+    """A strategy.com price is a current trade, an old quote, or a mark nobody traded (STRE)."""
+
+    def test_zero_volume_is_a_mark_and_old_quotes_are_stale(self):
+        from datetime import date
+        wednesday_ = date(2026, 9, 30)
+        stre = {"timeStamp": "09/21/2026 07:50 AM", "sharesVolume": 0, "dailyVolume": "0.0", "averageVolume": "0.0"}
+        self.assertEqual(wednesday._quote(stre, wednesday_), ("no_trades", "2026-09-21"))
+        fresh = {"timeStamp": "09/30/2026 12:25 PM", "sharesVolume": 19248.4, "dailyVolume": "2.0", "averageVolume": "6.9"}
+        self.assertEqual(wednesday._quote(fresh, wednesday_), ("live", "2026-09-30"))
+        self.assertEqual(wednesday._quote({**fresh, "timeStamp": "09/29/2026 04:00 PM"}, wednesday_)[0], "live")
+        self.assertEqual(wednesday._quote({**fresh, "timeStamp": "09/25/2026 04:00 PM"}, wednesday_), ("stale", "2026-09-25"))
+        # Monday looks back to Friday; no volume fields at all is not evidence of no trades.
+        self.assertEqual(wednesday._quote({"timeStamp": "09/25/2026 04:00 PM"}, date(2026, 9, 28))[0], "live")
+        item = wednesday.Ladder("STRF", 103.6, 10, 9.65, quote="stale", as_of="2026-09-25")
+        self.assertEqual(wednesday.quote_tag(item), "LAST SEP 25")
+        self.assertEqual(wednesday.quote_tag(wednesday.Ladder("STRE", 80, 10, 12.5, "EUR", "no_trades")), "NOT TRADED")
+        self.assertIsNone(wednesday.quote_tag(wednesday.Ladder("STRC", 98.4, 11.5, 11.7)))
+
+
 class WednesdayTests(unittest.TestCase):
     def test_ladder_sorted_and_panel_renders(self):
         prices = load_current_prices()
@@ -191,6 +211,11 @@ class WednesdayTests(unittest.TestCase):
         self.assertEqual(data["cover"]["MSTR"]["weeks"][0][0], "2026-07-05")
         strc = data["heroes"]["STRC"]
         self.assertAlmostEqual(strc["spreads"]["3M bill"], (strc["item"].effective - data["bill"]) * 100)
+        # STRE's €80 is strategy.com's zero-volume mark: yield kept, no spreads, labelled on image and page.
+        stre = next(row for row in data["rest"] if row["item"].ticker == "STRE")
+        self.assertEqual(stre["item"].quote, "no_trades")
+        self.assertTrue(all(value is None for value in stre["spreads"].values()))
+        self.assertIn("STRE: no reported trades", " ".join(wednesday.notes(data)))
         from panels import themes
         for theme in themes.THEMES.values():
             for extra in (False, True):

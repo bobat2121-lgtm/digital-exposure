@@ -633,7 +633,9 @@ def _ladder(data) -> str:
         currency = "€" if item.currency == "EUR" else "$"
         dot = Html(f'<span style="white-space:nowrap"><span class="dot" style="background:'
                    f'{C.strive if ticker == "SATA" else C.strategy}"></span>{ticker}</span>')
-        rows.append((dot, f"{currency}{item.price:,.2f}" if item.price else "—", wed._pct(item.rate), wed._pct(item.effective),
+        price = f"{currency}{item.price:,.2f}" if item.price else "—"
+        tag = wed.quote_tag(item)
+        rows.append((dot, value_with(price, tag.lower()) if tag else price, wed._pct(item.rate), wed._pct(item.effective),
                      *(wed._bp(spreads.get(label)).replace(" bp", "") for label, _ in wed.BENCHMARKS),
                      wed._money((liquidity.get(ticker) or {}).get("adv"), 0) if (liquidity.get(ticker) or {}).get("adv") else "—",
                      wed._money((liquidity.get(ticker) or {}).get("notional"))))

@@ -229,10 +229,25 @@ def audit_wednesday(data, extras, now):
     compare("wednesday", "STRC.eff_kpi", "STRC effective yield vs strategy.com effYield", strc.effective,
             number(kpi.get("effYield")), .02, source="strcKpiData.effYield")
     for series in wednesday.REST:
-        item = next(row["item"] for row in data["rest"] if row["item"].ticker == series)
-        row_kpi = strategy.get(series) or {}
-        compare("wednesday", f"{series}.eff", f"{series} effective yield vs strategy.com", item.effective,
-                number(row_kpi.get("effYield")), .02, source=f"{series.lower()}KpiData.effYield")
+        row = next(row for row in data["rest"] if row["item"].ticker == series)
+        item, row_kpi = row["item"], strategy.get(series) or {}
+        rate, price = number(row_kpi.get("currentDividend")), number(row_kpi.get("ufPrice"))
+        compare("wednesday", f"{series}.eff", f"{series} effective yield = rate ÷ price", item.effective,
+                rate * 100 / price if rate and price else None, .02, source=f"{series.lower()}KpiData currentDividend, ufPrice")
+    for item in data["ladder"]:  # a price that isn't a current trade must be labelled, never spread
+        if item.ticker == "SATA":
+            continue
+        spreads = (heroes.get(item.ticker) or next((r for r in data["rest"] if r["item"] is item), {})).get("spreads") or {}
+        shown = any(value is not None for value in spreads.values())
+        if item.quote == "live":
+            status, detail = "PASS", f"quoted {item.as_of}"
+        elif item.ticker in heroes or shown:
+            status, detail = "FAIL", f"{item.quote} ({item.as_of}) but shown with spreads"
+        else:  # STRE never trades (expected); a USD series going quiet is news
+            status = "PASS" if item.quote == "no_trades" else "WARN"
+            detail = f"{wednesday.quote_tag(item)}: labelled, spreads omitted"
+        check("wednesday", f"{item.ticker}.quote", f"{item.ticker} price is a current trade", status,
+              item.as_of, None, detail, "strategy.com timeStamp and volume")
     paid = sorted((row for row in strive.get("sata_dividends") or [] if row.get("status") == "paid"),
                   key=lambda row: row["payDate"])
     pending = sorted((row for row in strive.get("sata_dividends") or [] if row.get("status") != "paid"),

@@ -70,6 +70,37 @@ class Ladder:
     rate: float | None
     effective: float | None
     currency: str = "USD"
+    quote: str = "live"         # live · stale (no quote since before the last session) · no_trades
+    as_of: str | None = None    # the quote's date (strategy.com timeStamp, New York)
+
+
+def _quote(kpi: dict, today: date) -> tuple[str, str | None]:
+    """How current a strategy.com price is. STRE shows a weekly mark near its offering price
+    with zero volume (it lists only on Luxembourg's Euro MTF and rarely trades), so a series
+    with every volume field at zero is 'no_trades'; one quoted before the last completed
+    session is 'stale'."""
+    try:
+        as_of = datetime.strptime(kpi.get("timeStamp") or "", "%m/%d/%Y %I:%M %p").date()
+    except ValueError:
+        as_of = None
+    volumes = [number(kpi.get(key)) for key in ("sharesVolume", "dailyVolume", "averageVolume")]
+    reported = [volume for volume in volumes if volume is not None]
+    if reported and not any(reported):
+        return "no_trades", as_of and as_of.isoformat()
+    last_session = today - timedelta(days={0: 3, 6: 2}.get(today.weekday(), 1))  # weekdays; holidays not modelled
+    if as_of and as_of < last_session:
+        return "stale", as_of.isoformat()
+    return "live", as_of and as_of.isoformat()
+
+
+def quote_tag(item: Ladder) -> str | None:
+    """Short label for a price that is not a current trade, e.g. 'NOT TRADED' or 'LAST SEP 21'."""
+    if item.quote == "no_trades":
+        return "NOT TRADED"
+    if item.quote == "stale" and item.as_of:
+        day = date.fromisoformat(item.as_of)
+        return f"LAST {day:%b} {day.day}".upper()
+    return None
 
 
 def _rows(extras, symbol):
@@ -314,7 +345,8 @@ def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None)
         price = number(item.get("ufPrice"))
         rate = number(item.get("currentDividend"))
         effective = number(item.get("effYield")) or (rate * 100 / price if rate and price else None)
-        ladder.append(Ladder(series, price, rate, effective, "EUR" if series == "STRE" else "USD"))
+        quote, as_of = _quote(item, today)
+        ladder.append(Ladder(series, price, rate, effective, "EUR" if series == "STRE" else "USD", quote, as_of))
     sata_price = _latest_price(extras, "SATA")
     sata_rate = number(strive.get("sata_rate_pct"))
     ladder.append(Ladder("SATA", sata_price, sata_rate, sata_rate * 100 / sata_price if sata_rate and sata_price else None))
@@ -360,7 +392,9 @@ def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None)
         par = _par_stats(price_rows, today)
         heroes[ticker] = {"item": item, "spreads": spreads(item.effective), "history": history, "par": par,
                           "liquidity": liquidity[ticker]}
-    rest = [{"item": by_ticker[ticker], "spreads": spreads(by_ticker[ticker].effective), "liquidity": liquidity[ticker]}
+    # A spread needs a current trade: a mark or an old quote keeps its yield, but no spread.
+    rest = [{"item": by_ticker[ticker], "liquidity": liquidity[ticker],
+             "spreads": spreads(by_ticker[ticker].effective if by_ticker[ticker].quote == "live" else None)}
             for ticker in REST if ticker in by_ticker]
 
     ledger = _ledger(rows)
@@ -580,11 +614,17 @@ def _rest(canvas, box, rest, p, theme, headline, lay=STANDARD):
         item = row["item"]
         y = y0 + 116 + index * lay.ladder_row
         currency = "€" if item.currency == "EUR" else "$"
-        canvas.text(L, y, item.ticker, T_BODY, p.ink, True)
+        tag = quote_tag(item)
+        ink = p.muted if tag else p.ink  # a mark or an old quote, not a current trade
+        canvas.text(L, y, item.ticker, T_BODY, ink, True)
         values = (f"{currency}{item.price:,.2f}" if item.price else "—", _pct(item.effective),
                   _bp(row["spreads"].get(headline)).replace(" bp", ""), _bp(row["spreads"].get("HY corp")).replace(" bp", ""))
         for n, ((_, x), value) in enumerate(zip(columns, values)):
-            canvas.text(x, y, value, T_BODY, p.ink, n in (1, 2), align="right")
+            if tag and n >= 2:  # no spreads: say why across both spread columns
+                canvas.text(R, y + (T_BODY - T_MIN) // 2, tag, T_MIN, p.muted, True, align="right",
+                            max_width=R - columns[1][1] - 40)
+                break
+            canvas.text(x, y, value, T_BODY, ink, n in (1, 2), align="right")
 
 
 def _calendar(canvas, box, data, p, theme, lay=STANDARD):
@@ -692,6 +732,22 @@ def render_png(data: dict, theme: themes.Theme = themes.DEFAULT, extra: bool = F
     return png, canvas.overflows
 
 
+def _quote_note(data: dict) -> str:
+    """Why a ladder row has a price and yield but no spreads."""
+    parts = []
+    for item in data["ladder"]:
+        if item.quote == "live" or not item.price:
+            continue
+        currency = "€" if item.currency == "EUR" else "$"
+        day = f" {_short(item.as_of)}" if item.as_of else ""
+        if item.quote == "no_trades":
+            parts.append(f"{item.ticker}: no reported trades; strategy.com shows a mark of {currency}{item.price:,.2f}"
+                         f"{day} with zero volume")
+        else:
+            parts.append(f"{item.ticker}: no quote since{day} ({currency}{item.price:,.2f})")
+    return ("; ".join(parts) + ". Its yield is at that price and its spreads are omitted.") if parts else ""
+
+
 def _cut_note(data: dict) -> str:
     par = (data["heroes"].get("SATA") or {}).get("par") or {}
     if not par.get("prior_avg"):
@@ -717,6 +773,7 @@ def notes(data: dict, extra: bool = False) -> list[str]:
         "Before the 4:00 pm ET close the preferred prices are intraday; the benchmarks post after the close "
         "(SOFR, IG and HY a day later), so at midday they are the prior day's.",
         "26-week history uses each day's close, the stated rate in effect that day and the benchmark that day.",
+        _quote_note(data),
         _cut_note(data),
         "USD cover: Strategy (USD Reserve + USD Cash) ÷ current monthly dividends against its 12-month floor, each week's "
         "balances from its 8-K (USD Cash began Aug 23, 2026; earlier weeks are the USD Reserve alone); Strive's dashboard "
