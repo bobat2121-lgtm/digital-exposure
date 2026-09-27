@@ -42,6 +42,8 @@ class Palette:
     zones: tuple | None = None    # the five 200W-zone colors (Friday), cheap → expensive
     cycle: tuple | None = None    # colors handed to cards that carry no accent of their own
     slab2: str | None = None      # second stop of a gradient title slab (HUD)
+    rule: str | None = None       # the divider under a card's header (None: line)
+    dotted_axis: bool = False     # Monday waterfall: a dotted zero line and no funding/uses rule
 
     def company(self, ticker: str) -> str:
         if ticker in ("MSTR", "STRC", "STRF", "STRK", "STRD", "STRE"):
@@ -256,9 +258,10 @@ TERMINAL = _styled(
     accent="#FFFFFF", strategy="#FF8C1A", strive="#FFE14D", lines=("#6FA8FF", "#B8B8B8", "#FFE14D"),
     neutral="#9A9A9A", zones=("#6FA8FF", "#9FC6FF", "#C8C8C8", "#FFB02E", "#FF7A45"), up="#4BE38B", down="#FF5050")
 
-# Monday's two cards both carry company strips, so its dividers run in terminal blue
-# (Wednesday and Friday show the blue on their section strips).
-TERMINAL = replace(TERMINAL, monday=replace(TERMINAL.monday, line=TERMINAL_RULE))
+# Monday's two cards both carry company strips, so the divider under each header runs
+# in terminal blue (Wednesday and Friday show the blue on their section strips). Its
+# waterfall keeps a dotted zero line, like the connectors, and no funding/uses rule.
+TERMINAL = replace(TERMINAL, monday=replace(TERMINAL.monday, rule=TERMINAL_RULE, dotted_axis=True))
 
 BROADSHEET = _styled(
     "broadsheet", "Broadsheet (newsprint)", "broadsheet", "broadsheet",

@@ -478,8 +478,11 @@ def _top_waterfall(canvas, e, L, R, y, p, stripe):
     span = (high - low) or 1
     px = lambda v: bx0 + (v - low) / span * (bx1 - bx0)
     rows_y = [y + 2 + n * row_h + (gap if n >= 3 else 0) for n in range(len(steps))]
-    canvas.draw.line((px(0), rows_y[0] + 2, px(0), rows_y[-1] + 48), fill=p.line, width=2)
-    canvas.draw.line((L, rows_y[3] - gap / 2 - 1, R, rows_y[3] - gap / 2 - 1), fill=p.line, width=2)
+    if p.dotted_axis:
+        canvas.line([(px(0), rows_y[0] + 2), (px(0), rows_y[-1] + 48)], p.soft, 2, dashed=True, dash=(4, 4))
+    else:
+        canvas.draw.line((px(0), rows_y[0] + 2, px(0), rows_y[-1] + 48), fill=p.line, width=2)
+        canvas.draw.line((L, rows_y[3] - gap / 2 - 1, R, rows_y[3] - gap / 2 - 1), fill=p.line, width=2)
     for n, (label, text, a, b, color, tone) in enumerate(steps):
         ry = rows_y[n]
         x0, x1 = sorted((px(a), px(b)))
@@ -544,7 +547,7 @@ def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, report_company, i
     canvas.text(R, top + 22, c.stock_price, T_VALUE, p.ink, True, align="right")
     canvas.text(L, top + 102, f"{c.ticker} · balance {_short(report_company.balance_date)}", T_MIN, p.muted)
     canvas.text(R, top + 96, f"{_clean(c.price_to_nav)} NAV", T_BODY, stripe, True, align="right")
-    canvas.draw.line((L, top + 146, R, top + 146), fill=p.line, width=2)
+    canvas.draw.line((L, top + 146, R, top + 146), fill=p.rule or p.line, width=2)
 
     # Bitcoin bought — the point of the week — then how it was funded.
     y = top + 168
