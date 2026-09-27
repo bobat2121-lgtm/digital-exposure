@@ -24,6 +24,24 @@ precedence, and any source failure leaves the week missing, so the last complete
 edition stays up. `DCR_AUTO_RECONCILE=0` turns this off. `scripts/auto_reconcile.py`
 prints the derived entries; add `--write` to freeze them for review.
 
+**An automatically reconciled edition publishes (owner's decision, Sep 27, 2026).**
+`publication_check` accepts it and returns the label as `review`;
+`render_previews.py` leaves `monday_notice` empty (only a notice that keeps the
+last edition up, or leaves inputs pending, holds publication) and writes the
+label to `monday_review`; `audit_panels.py` adds a "Monday edition review" WARN.
+The X Control Panel posts on that basis and shows the WARN as a heads-up in its
+Discord ping.
+
+Fallbacks that keep the image complete when the 8-K parser misses a figure:
+
+- **Strive VWAP:** Yahoo 1-minute bars, else 5-minute bars for the same sessions,
+  else the five-session window.
+- **Strategy cost basis:** the 8-K's totals, else `data/strategy-weekly-8k.json`,
+  else the prior week's filed basis plus this week's BTC cost (labelled as such).
+- **Comparison marks:** EDGAR first lists a new filing's acceptance time as New
+  York time marked "Z"; `auto_reconcile.released_at` reads it as New York time when
+  that lands just before the worker first saw the filing.
+
 The procedure below is now optional review. Running it replaces the automatic
 estimates with checked figures and resets the roll-forward.
 

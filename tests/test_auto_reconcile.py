@@ -9,6 +9,7 @@ from unittest.mock import patch
 from report import auto_reconcile as ar
 from report import live_report as lr
 from report.current_prices import load_current_prices
+from report.publication_check import publication_check
 
 DATA = Path(__file__).resolve().parents[1] / "data"
 FILINGS = json.loads((DATA / "latest-report-filings.json").read_text())
@@ -157,9 +158,15 @@ class AutomaticEditionTests(unittest.TestCase):
                 patch.object(ar, "vwap_estimate", lambda filed: vwap):
             prices = load_current_prices()
             result = lr.resolve_complete_report(prices, feed)
+            summary, _, _ = publication_check(prices, feed)
         self.assertIn("Strategy Sep 27", result.report.subtitle)
         self.assertIn("Strive Sep 25", result.report.subtitle)
         self.assertIn("Automatically reconciled", result.notice)
+        # It publishes (owner's choice): the label is a review note, not a hold.
+        self.assertEqual(result.review, result.notice)
+        self.assertIsNone(result.blocking_notice)
+        self.assertEqual(summary["status"], "complete")
+        self.assertIn("review pending", summary["review"])
         strategy = result.report.companies[0]
         self.assertEqual(strategy.current.effective_common_shares, 420_507_000)
         self.assertIsNotNone(strategy.current.preferred_claims)

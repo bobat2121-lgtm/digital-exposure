@@ -61,7 +61,9 @@ def main():
     audit = {"rendered_at": datetime.now().astimezone().isoformat(), "stale_sections": extras["stale"],
              "errors": extras.get("errors", []), "panels": {}}
     result = resolve_complete_report(prices, feed)
-    audit["monday_notice"] = result.notice
+    # monday_notice holds publication (the X Control Panel waits on it); an automatically
+    # reconciled edition publishes with its label in monday_review.
+    audit["monday_notice"], audit["monday_review"] = result.blocking_notice, result.review
     monday = monday_preview.build_preview(result.report, prices, feed, extras)
     overflows = []
     for theme in chosen:

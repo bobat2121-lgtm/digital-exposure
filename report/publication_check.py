@@ -1,4 +1,8 @@
-"""Admission check for scheduled Monday publication; never accepts fallback data."""
+"""Admission check for scheduled Monday publication; never accepts fallback data.
+
+An automatically reconciled edition is complete and publishes; its label rides
+along as ``review`` so the posting agent can flag it.
+"""
 from dataclasses import asdict
 from datetime import date
 from io import BytesIO
@@ -15,8 +19,8 @@ from .public_page import public_stylesheet, render_public_report
 def publication_check(prices: dict, feed: dict):
     result = resolve_live_report(prices, feed)
     report = result.report
-    if result.notice:
-        raise ValueError(result.notice)
+    if result.blocking_notice:
+        raise ValueError(result.blocking_notice)
     if not _complete_panel_inputs(report, prices):
         raise ValueError("Latest filing pair has incomplete NAV, capital, comparison or period-growth inputs")
     view = build_report_view(report, prices=prices)
@@ -28,7 +32,7 @@ def publication_check(prices: dict, feed: dict):
     with Image.open(BytesIO(png)) as rendered:
         rendered.verify()
     summary = {
-        "status": "complete", "version": result.version, "subtitle": report.subtitle,
+        "status": "complete", "version": result.version, "subtitle": report.subtitle, "review": result.review,
         "price_fetched_at": prices["fetched_at"],
         "companies": {company.ticker: {
             "balance_date": company.balance_date,

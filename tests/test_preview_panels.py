@@ -107,6 +107,23 @@ class MondayPreviewTests(unittest.TestCase):
         self.assertEqual(cost, 10 * 150.0)
         self.assertTrue(source.startswith("estimate"))
 
+    def test_unextracted_cost_basis_rolls_the_prior_filing_forward(self):
+        # Sep 27 has no 8-K totals yet: Sep 20's filed $63.80B plus the week's $75.7m, over BTC held.
+        from dataclasses import replace
+        company = next(c for c in self.report.companies if c.ticker == "MSTR")
+        later = replace(company, balance_date="2026-09-27", prior_balance_date="2026-09-20")
+        basis, average, source = monday_preview._cost_basis("MSTR", later, {}, offline_extras(),
+                                                            (75_700_000, "SEC 8-K aggregate purchase price"))
+        self.assertEqual(basis, 63_800_000_000 + 75_700_000)
+        self.assertAlmostEqual(average, basis / company.current.btc_holdings)
+        self.assertEqual(source, "prior 8-K cost basis + this week's BTC cost")
+        _, _, estimated = monday_preview._cost_basis("MSTR", later, {}, offline_extras(), (1.0, "estimate: BTC bought × average"))
+        self.assertIn("estimated", estimated)
+        # A sale, or no prior filed basis, leaves the box blank rather than guess.
+        self.assertEqual(monday_preview._cost_basis("MSTR", later, {"weekly_btc_sales": 5}, offline_extras(), (1.0, "x"))[0], None)
+        gap = replace(company, balance_date="2099-01-04", prior_balance_date="2098-12-28")
+        self.assertEqual(monday_preview._cost_basis("MSTR", gap, {}, offline_extras(), (1.0, "x"))[0], None)
+
     def test_warrant_flag_disappears_after_the_deadline(self):
         from datetime import datetime
         from zoneinfo import ZoneInfo

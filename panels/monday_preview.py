@@ -217,7 +217,7 @@ def _btc_cost(ticker, company, facts, extras, btc_price):
     return None, ""
 
 
-def _cost_basis(ticker, company, facts, extras):
+def _cost_basis(ticker, company, facts, extras, week_cost=(None, "")):
     """Aggregate and average BTC purchase cost at the balance date (test copy)."""
     if ticker == "MSTR":
         basis, average = _n(facts.get("btc_cost_basis_usd")), _n(facts.get("btc_average_cost_usd"))
@@ -226,6 +226,16 @@ def _cost_basis(ticker, company, facts, extras):
         week = strategy_weeks().get(company.balance_date) or {}
         if week.get("btc_cost_basis_usd") and week.get("btc_average_cost_usd"):
             return week["btc_cost_basis_usd"], week["btc_average_cost_usd"], "SEC 8-K (data/strategy-weekly-8k.json)"
+        # Neither the feed nor the history has this week's totals: roll the prior filed basis
+        # forward by this week's BTC cost (matches the filed totals to their $0.01B rounding).
+        prior = strategy_weeks().get(company.prior_balance_date or "") or {}
+        cost, source = week_cost
+        held = company.current.btc_holdings
+        sold = _n(facts.get("weekly_btc_sales"))  # a sale removes its cost, not its proceeds: no roll-forward
+        if prior.get("btc_cost_basis_usd") and cost is not None and held and not sold:
+            basis = prior["btc_cost_basis_usd"] + cost
+            estimated = "estimated " if source.startswith("estimate") else ""
+            return basis, basis / held, f"prior 8-K cost basis + this week's {estimated}BTC cost"
         return None, None, ""
     rows = sorted((row for row in (extras.get("strive") or {}).get("transactions") or []
                    if (row.get("transaction_date") or "") <= (company.balance_date or "")
@@ -310,7 +320,7 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
         else:
             change = _n(facts.get("net_sata_shares_change"))
             note = f"SATA {change / 1e3:+,.0f}k sh" if change is not None else "SATA"
-        cost_basis, average_cost, basis_source = _cost_basis(ticker, company, facts, extras)
+        cost_basis, average_cost, basis_source = _cost_basis(ticker, company, facts, extras, (btc_cost, cost_source))
         result[ticker] = CompanyExtras(
             ticker=ticker, amplification_pct=amp,
             amplification_x=amp_x, amplification_change_x=amp_change_x, amplification_source=amp_source,

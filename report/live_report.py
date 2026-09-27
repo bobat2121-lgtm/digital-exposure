@@ -51,6 +51,21 @@ class LiveReportResult:
     notice: str | None
     version: str
 
+    @property
+    def review(self) -> str | None:
+        """The automatic-reconciliation label: a complete edition awaiting review."""
+        return self.notice if self.notice and self.notice.startswith(AUTO_RECONCILED) else None
+
+    @property
+    def blocking_notice(self) -> str | None:
+        """A notice that holds publication (last edition kept, inputs pending, and so on).
+        An automatically reconciled edition publishes (owner's choice, Sep 27, 2026)
+        and carries its label as a review note instead."""
+        return None if self.review else self.notice
+
+
+AUTO_RECONCILED = "Automatically reconciled from the filings and public data"
+
 
 def _number(value, *, signed=False):
     if isinstance(value, bool) or not isinstance(value, (int, float)):
@@ -396,7 +411,7 @@ def resolve_live_report(prices: dict, feed: dict, *, through_date: str | None = 
     automatic = [f"{c.name} {_short(c.balance_date)}" for c in companies
                  if supplements.get("balances", {}).get(c.ticker, {}).get(c.balance_date, {}).get("auto_reconciled")]
     if automatic and not missing:
-        notice = "Automatically reconciled from the filings and public data · " + " · ".join(automatic) + " · review pending."
+        notice = AUTO_RECONCILED + " · " + " · ".join(automatic) + " · review pending."
     if max(groups, default=start) > start:
         notice = "One newer filing received · awaiting its matching weekly report. " + report.subtitle
     newest_release = max(row["filedDate"] for row in chosen.values())
