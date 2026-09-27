@@ -28,6 +28,8 @@ from .draw import Canvas, cap_middle, font
 DECORS = ("glass", "hud", "glitch", "circuit", "terminal", "broadsheet")
 KICKERS = ("terminal", "broadsheet")        # looks that draw their own report line
 INSETS = ("terminal",)                      # looks that draw their own shaded boxes
+SIGNED = ("terminal", "broadsheet")         # looks that carry the X handle on the title row
+HANDLE = "@WallyXIX"                        # the X account the panels are posted from
 TERMINAL_BLUE = "#1C3494"
 STRATEGY, STRIVE, VIOLET = "#22E3FF", "#FF3DCB", "#7B61FF"
 # The second stop of each day's title gradient (glass).
@@ -322,8 +324,22 @@ def _card_circuit(canvas: Canvas, box, p, accent, accent_height):
 
 # ── titles ──────────────────────────────────────────────────────────────────
 def title(canvas: Canvas, x, baseline, words, size, p, theme):
-    return {"glass": _title_glass, "hud": _title_hud, "glitch": _title_glitch, "circuit": _title_circuit,
-            "terminal": _title_terminal, "broadsheet": _title_broadsheet}[theme.decor](canvas, x, baseline, words, size, p)
+    end = {"glass": _title_glass, "hud": _title_hud, "glitch": _title_glitch, "circuit": _title_circuit,
+           "terminal": _title_terminal, "broadsheet": _title_broadsheet}[theme.decor](canvas, x, baseline, words, size, p)
+    if theme.decor in SIGNED:
+        left = _handle(canvas, canvas.image.width - x, baseline, p, theme.decor)
+        if end + 32 > left:
+            canvas.overflows.append(f"title runs into the handle: {''.join(words)}")
+    return end
+
+
+def _handle(canvas: Canvas, right_x, baseline, p, decor):
+    """The X handle, stark, on the title's baseline under the report line's right end.
+    Returns its left edge."""
+    face = font(46, True, True)    # IBM Plex Mono Bold / Playfair Display Black
+    ink = "#FFFFFF" if decor == "terminal" else p.ink
+    canvas.draw.text((right_x, baseline), HANDLE, font=face, anchor="rs", fill=ink)
+    return right_x - face.getlength(HANDLE)
 
 
 def _title_glass(canvas, x, baseline, words, size, p):

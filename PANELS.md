@@ -76,6 +76,9 @@ px, which is 0.27× of a 1440-px panel. So every panel follows these rules:
 - **Type.** No text is smaller than 28 px (about 7.6 CSS px on a phone). Key
   figures are 44–92 px (`panels/draw.py`, `T_*`). The canvas flags any smaller text
   as an overflow, and the tests require zero overflows in every style and layout.
+- **Signed.** Bloomberg and Broadsheet put the X handle **@WallyXIX** at the top
+  right, on the title's line under the report line's right end (`HANDLE` in
+  `panels/trial_styles.py`). A title long enough to reach it counts as an overflow.
 - **No footnotes in the image.** Methods, sources and definitions appear in the
   Formulas and Sources sections of the web page and in `audit.json`, never in the
   downloaded PNG.

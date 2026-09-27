@@ -125,6 +125,14 @@ class MondayPreviewTests(unittest.TestCase):
                     self.assertEqual(overflows, [])
                     assert_phone_ready(self, png)
 
+    def test_live_styles_sign_the_x_image(self):
+        from panels import themes, trial_styles
+        self.assertEqual(trial_styles.HANDLE, "@WallyXIX")
+        for key, signed in (("terminal", True), ("broadsheet", True), ("neon", False)):
+            with self.subTest(theme=key), patch.object(trial_styles, "_handle", wraps=trial_styles._handle) as handle:
+                monday_preview.render_png(self.preview, themes.get(key))
+                self.assertEqual(handle.called, signed)
+
     def test_bitcoin_cost_box_uses_filed_cost_basis(self):
         strategy, strive = self.preview.extras["MSTR"], self.preview.extras["ASST"]
         # Sep 20 8-K: 846,000 BTC for $63.80B, $75,416 each; Strive's dashboard cost basis.
