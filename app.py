@@ -10,7 +10,10 @@ friday_source = ROOT / "sources" / "friday"
 if str(friday_source) not in sys.path:
     sys.path.insert(0, str(friday_source))
 
-st.set_page_config(page_title="Weekly Reports | Digital Credit", page_icon="₿", layout="wide")
+# The bookmark icon: a bond coupon paying a yield, as 16x16 pixel art (a bare "₿" is not an
+# emoji to Streamlit, so it never showed as a favicon).
+st.set_page_config(page_title="Weekly Reports | Digital Credit",
+                   page_icon=str(ROOT / "assets" / "favicon.png"), layout="wide")
 
 # The three panels are the default page; ?classic=1 opens the detailed reports.
 if st.query_params.get("classic") != "1":
