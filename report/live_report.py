@@ -412,6 +412,10 @@ def resolve_live_report(prices: dict, feed: dict, *, through_date: str | None = 
                  if supplements.get("balances", {}).get(c.ticker, {}).get(c.balance_date, {}).get("auto_reconciled")]
     if automatic and not missing:
         notice = AUTO_RECONCILED + " · " + " · ".join(automatic) + " · review pending."
+        changes = [supplements["balances"][c.ticker][c.balance_date]["debt_change"] for c in companies
+                   if supplements.get("balances", {}).get(c.ticker, {}).get(c.balance_date, {}).get("debt_change")]
+        if changes:
+            notice += " " + "; ".join(changes) + "."
     if max(groups, default=start) > start:
         notice = "One newer filing received · awaiting its matching weekly report. " + report.subtitle
     newest_release = max(row["filedDate"] for row in chosen.values())

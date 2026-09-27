@@ -3,6 +3,13 @@ from .models import Report
 from .calculations import liquid_assets
 from .presentation import number
 
+
+def _reviewed_debt():
+    """Strategy's reviewed debt principal (the June 30 figure), from the latest reconciliation."""
+    from .auto_reconcile import _seed
+    return ((_seed() or {}).get("debt") or {}).get("total_usd")
+
+
 PUBLIC_METHODOLOGY = """
 **Shares & NAV.** Per-share figures use split-adjusted Class A + B common shares.
 NAV is BTC value + cash/securities − debt principal − preferred liquidation
@@ -202,7 +209,7 @@ def input_rows(report: Report) -> list[dict[str, str]]:
                     if field == "preferred_claims" and c.preferred_claims_estimated:
                         display = "≈" + display
                     elif field == "debt_principal" and c.ticker == "MSTR":
-                        display += " (June 30 carryforward)"
+                        display += " (June 30 carryforward)" if value == _reviewed_debt() else " (strategy.com note list)"
                     elif field == "liquid_assets" and snapshot.combined_liquid_assets is not None:
                         display += " (designated liquidity)"
                 row[f"{c.name} {edition}"] = display

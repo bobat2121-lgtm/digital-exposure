@@ -13,7 +13,11 @@ Strategy (rolled forward from the latest reviewed reconciliation file):
 - preferred claims: max($100, ten-close mean before the balance business day)
   per USD series (STRE EUR 100) plus ordinary 30/360 accrual since the last
   scheduled payment (STRC semi-monthly from strategy.com; others quarterly);
-- debt: last reviewed principal carried forward.
+- debt: last reviewed principal carried forward, unless strategy.com's list of
+  convertible notes (/btc/credit) no longer matches the reviewed convertible
+  principal: then reviewed other debt plus the listed notes, flagged in the
+  review label. The weekly 8-K never reports debt; new notes and repurchases
+  come in separate 8-Ks, and the list changes around settlement.
 
 Strive: SATA shares from the filing at max($100, ten-close mean, prior close)
 (the conservative certificate branch), daily dividends paid through Friday,
@@ -84,6 +88,36 @@ def _yahoo(symbol, interval, span):
 
 def _strc_dividends():
     return _cached(("strc",), lambda: _get_json("https://api.strategy.com/btc/strcKpiData")[0])
+
+
+CREDIT_URL = "https://api.strategy.com/btc/credit"
+DEBT_TOLERANCE = 5_000_000  # the list rounds; a real tranche is hundreds of millions
+
+
+def _convertibles() -> float:
+    """Principal of the convertible notes strategy.com lists (its credit page, non-preferred rows)."""
+    def fetch():
+        rows = [row for row in _get_json(CREDIT_URL) if isinstance(row, dict) and row.get("isPreferred") is False]
+        notional = [float(row["notional"]) for row in rows]
+        if not notional or any(value <= 0 for value in notional):
+            raise ValueError("strategy.com credit list has no convertible notes")
+        return sum(notional)
+    return _cached(("credit",), fetch)
+
+
+def _debt(reviewed: float, split: dict | None) -> tuple[float, str | None]:
+    """(debt principal, change note) for an automatic Strategy entry."""
+    if not split:
+        return reviewed, None
+    try:
+        listed = _convertibles()
+    except Exception:  # a source outage never moves debt
+        return reviewed, None
+    if abs(listed - split["convertible_notes_usd"]) <= DEBT_TOLERANCE:
+        return reviewed, None
+    debt = split["other_debt_usd"] + listed
+    return debt, (f"Strategy debt ${reviewed / 1e9:.2f}B → ${debt / 1e9:.2f}B: strategy.com lists "
+                  f"${listed / 1e9:.2f}B of convertible notes, reviewed ${split['convertible_notes_usd'] / 1e9:.2f}B")
 
 
 def days360(start: date, end: date) -> int:
@@ -175,7 +209,8 @@ def _seed():
         shares, claims = record.get("strategy_shares") or {}, record.get("strategy_claims") or {}
         if shares.get("balance_date") and shares.get("basic_shares") and claims:
             return {"date": shares["balance_date"], "common": shares["basic_shares"],
-                    "series": {series: row["shares"] for series, row in claims.items()}, "source": path.name}
+                    "series": {series: row["shares"] for series, row in claims.items()}, "source": path.name,
+                    "debt": record.get("strategy_debt")}
     return None
 
 
@@ -218,6 +253,7 @@ def augment(rows: list, supplements: dict, *, now: datetime | None = None) -> tu
     if seed and any(day > seed["date"] and day not in reviewed for day in mstr):
         common, series = seed["common"], dict(seed["series"])
         debt = (reviewed.get(seed["date"]) or {}).get("debt_principal")
+        split = seed.get("debt") if (seed.get("debt") or {}).get("total_usd") == debt else None
         for day in sorted(mstr):
             if day <= seed["date"]:
                 continue
@@ -232,12 +268,18 @@ def augment(rows: list, supplements: dict, *, now: datetime | None = None) -> tu
             if existing and existing.get("effective_common_shares") and existing.get("preferred_claims_usd") is not None:
                 # A reviewed count resets the roll-forward.
                 common = existing["effective_common_shares"]
-                debt = existing.get("debt_principal", debt)
+                debt, split = existing.get("debt_principal", debt), None  # the split was for the seed's debt
                 continue
             if debt is None:
                 break
             try:
-                reviewed[day] = _strategy_entry(date.fromisoformat(day), common, series, debt, facts)
+                entry_debt, change = _debt(debt, split)
+                entry = _strategy_entry(date.fromisoformat(day), common, series, entry_debt, facts)
+                if change:
+                    entry["debt_change"] = change
+                    entry["limitations"] += f" {change} (the list's current total, applied to this balance date)."
+                    entry["sources"].append(CREDIT_URL)
+                reviewed[day] = entry
                 notes.append(f"Strategy {day}")
             except Exception as exc:  # network or source validation
                 notes.append(f"Strategy {day} unavailable ({type(exc).__name__})")

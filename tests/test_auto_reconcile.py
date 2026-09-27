@@ -80,6 +80,34 @@ class ReleaseTimeTests(unittest.TestCase):
         self.assertIsNone(ar.released_at({}))
 
 
+class DebtTests(unittest.TestCase):
+    """The weekly 8-K carries no debt: strategy.com's note list is the automatic check."""
+    SPLIT = {"balance_date": "2026-09-20", "convertible_notes_usd": 6_713_659_000,
+             "other_debt_usd": 40_044_000, "total_usd": 6_753_703_000}
+
+    def test_matching_list_carries_the_reviewed_debt(self):
+        with patch.object(ar, "_convertibles", lambda: 6_713_750_000):  # the list rounds
+            self.assertEqual(ar._debt(6_753_703_000, self.SPLIT), (6_753_703_000, None))
+
+    def test_a_new_tranche_moves_debt_and_says_so(self):
+        with patch.object(ar, "_convertibles", lambda: 8_713_750_000):
+            debt, change = ar._debt(6_753_703_000, self.SPLIT)
+        self.assertEqual(debt, 40_044_000 + 8_713_750_000)
+        self.assertEqual(change, "Strategy debt $6.75B → $8.75B: strategy.com lists $8.71B of convertible notes, reviewed $6.71B")
+
+    def test_outage_or_no_split_never_moves_debt(self):
+        def down():
+            raise OSError("offline")
+        with patch.object(ar, "_convertibles", down):
+            self.assertEqual(ar._debt(6_753_703_000, self.SPLIT), (6_753_703_000, None))
+        self.assertEqual(ar._debt(6_753_703_000, None), (6_753_703_000, None))
+
+    def test_seed_carries_the_reviewed_split(self):
+        seed = ar._seed()
+        self.assertEqual(seed["debt"]["total_usd"], 6_753_703_000)
+        self.assertEqual(seed["debt"]["convertible_notes_usd"] + seed["debt"]["other_debt_usd"], seed["debt"]["total_usd"])
+
+
 class AutoReconcileTests(unittest.TestCase):
     def setUp(self):
         for target, value in (("_yahoo", fake_yahoo), ("_strc_dividends", lambda: STRC_KPI)):
@@ -130,6 +158,29 @@ class AutomaticEditionTests(unittest.TestCase):
     """A new filing pair with no reviewed inputs publishes a complete edition."""
 
     def test_next_week_is_complete_and_labelled(self):
+        result, summary = self._next_week(listed=6_713_750_000)
+        self.assertIn("Strategy Sep 27", result.report.subtitle)
+        self.assertIn("Strive Sep 25", result.report.subtitle)
+        self.assertIn("Automatically reconciled", result.notice)
+        # It publishes (owner's choice): the label is a review note, not a hold.
+        self.assertEqual(result.review, result.notice)
+        self.assertIsNone(result.blocking_notice)
+        self.assertEqual(summary["status"], "complete")
+        self.assertIn("review pending", summary["review"])
+        self.assertNotIn("Strategy debt", result.notice)
+        strategy = result.report.companies[0]
+        self.assertEqual(strategy.current.effective_common_shares, 420_507_000)
+        self.assertEqual(strategy.current.debt_principal, 6_753_703_000)
+        self.assertIsNotNone(strategy.current.preferred_claims)
+
+    def test_a_new_tranche_reaches_the_edition_and_its_label(self):
+        result, summary = self._next_week(listed=8_713_750_000)
+        self.assertEqual(result.report.companies[0].current.debt_principal, 40_044_000 + 8_713_750_000)
+        self.assertIn("Strategy debt $6.75B → $8.75B", result.notice)
+        self.assertEqual(summary["status"], "complete")  # still posts, with the change in the heads-up
+        self.assertIn("Strategy debt", summary["review"])
+
+    def _next_week(self, listed):
         feed = deepcopy(FILINGS)
         for row in [r for r in FILINGS["filings"] if r["filedDate"] == "2026-09-21"]:
             new = deepcopy(row)
@@ -155,21 +206,11 @@ class AutomaticEditionTests(unittest.TestCase):
             feed["filings"].append(new)
         vwap = {"value": 29.5, "method": "hlc3_5m", "session_start": "2026-09-21", "session_end": "2026-09-25"}
         with patch.object(ar, "_yahoo", fake_yahoo), patch.object(ar, "_strc_dividends", lambda: STRC_KPI), \
-                patch.object(ar, "vwap_estimate", lambda filed: vwap):
+                patch.object(ar, "vwap_estimate", lambda filed: vwap), patch.object(ar, "_convertibles", lambda: listed):
             prices = load_current_prices()
             result = lr.resolve_complete_report(prices, feed)
             summary, _, _ = publication_check(prices, feed)
-        self.assertIn("Strategy Sep 27", result.report.subtitle)
-        self.assertIn("Strive Sep 25", result.report.subtitle)
-        self.assertIn("Automatically reconciled", result.notice)
-        # It publishes (owner's choice): the label is a review note, not a hold.
-        self.assertEqual(result.review, result.notice)
-        self.assertIsNone(result.blocking_notice)
-        self.assertEqual(summary["status"], "complete")
-        self.assertIn("review pending", summary["review"])
-        strategy = result.report.companies[0]
-        self.assertEqual(strategy.current.effective_common_shares, 420_507_000)
-        self.assertIsNotNone(strategy.current.preferred_claims)
+        return result, summary
 
 
 if __name__ == "__main__":

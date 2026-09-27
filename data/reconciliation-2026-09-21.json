@@ -133,6 +133,13 @@
     "basic_shares": 420507000,
     "basis": "Issuer dated table in thousands; Class A plus Class B. Not diluted shares or inferred from zero ATM issuance."
   },
+  "strategy_debt": {
+    "balance_date": "2026-09-20",
+    "total_usd": 6753703000,
+    "convertible_notes_usd": 6713659000,
+    "other_debt_usd": 40044000,
+    "basis": "The reconciled June 30 principal carried forward (see strategy_assumptions); the split lets the automatic reconciliation compare strategy.com's convertible-note list (api.strategy.com/btc/credit, $6,713.75M on Sep 27, 2026) and catch a new tranche or repurchase."
+  },
   "preferred_price_windows": {
     "STRF": {
       "source": "https://query1.finance.yahoo.com/v8/finance/chart/STRF?period1=1787270400&period2=1789948800&interval=1d&includePrePost=false&includeAdjustedClose=false&events=div%2Csplits",
