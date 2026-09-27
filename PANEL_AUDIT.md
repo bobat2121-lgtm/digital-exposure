@@ -49,6 +49,20 @@ Nasdaq estimates; the weekly task replaces them with confirmed dates.
 - **Extra data** from section 3 is on the web report; the X images leave it out.
   Test copies of the X images (`render_previews.py --extra`) still carry it; see PANELS.md.
 
+### Third round (Sep 26, 2026): 96 PASS, 2 WARN, 0 FAIL
+
+- **Blank Friday tiles now fail.** The scheduled run at 8:07 pm ET on Sep 25 drew "—" for MSTR and ASST
+  price/NAV and left all four turnover tiles empty, yet reported 0 FAIL: turnover only warned, and price/NAV
+  wasn't checked. The Friday balance inputs had failed to load, and `fetch_financial_inputs` swallowed the
+  exception, so nothing said why.
+  - `friday.live_inputs` now keeps the exception as `error` next to its notice.
+  - New checks: `friday.inputs` (Monday balance inputs loaded for Friday: FAIL when unavailable, WARN on a
+    saved edition, with the notice and error), and `MSTR.price_nav` / `ASST.price_nav` (drawn on the image).
+    The four turnover checks now FAIL instead of WARN, with the reason.
+  - `audit.json` records the Friday inputs' status, notice and error. The web report shows the notice when
+    price/NAV couldn't load.
+- The cause of the Sep 25 failure isn't known yet. The next occurrence records it in `checks.json`.
+
 ## 1. Does everything update automatically?
 
 Yes, except the items in the last table below. Every source is fetched when a page

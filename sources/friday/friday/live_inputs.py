@@ -16,13 +16,19 @@ def nav_price_store():
     return PriceStore()
 
 
-def _retained(previous, message, checked_at):
+def _describe(exc):
+    """The swallowed exception, kept so an unavailable Friday tile can say why."""
+    return f"{type(exc).__name__}: {exc}"[:300]
+
+
+def _retained(previous, message, checked_at, error=None):
     old = previous.get("financial_inputs") or {}
-    return {
-        "financial_inputs": {**deepcopy(old), "status": "retained" if old.get("companies") else "unavailable",
-                             "notice": message, "checked_at": checked_at},
-        "nav_prices": deepcopy(previous.get("nav_prices")),
-    }
+    inputs = {**deepcopy(old), "status": "retained" if old.get("companies") else "unavailable",
+              "notice": message, "checked_at": checked_at}
+    inputs.pop("error", None)
+    if error:
+        inputs["error"] = error
+    return {"financial_inputs": inputs, "nav_prices": deepcopy(previous.get("nav_prices"))}
 
 
 def would_regress(candidate, previous):
@@ -68,13 +74,15 @@ def fetch_financial_inputs(previous=None, *, refresh_prices=True):
             raise ValueError("SEC monitor unavailable")
         try:
             _, feed = read_shared_monitor(origin, force=refresh_prices)
-        except (OSError, ValueError, TypeError, KeyError, HTTPException):
+        except (OSError, ValueError, TypeError, KeyError, HTTPException) as exc:
             if (previous.get("financial_inputs") or {}).get("companies"):
-                return _retained(previous, "Monday filing check unavailable · retaining the last validated balance inputs.", checked_at)
+                return _retained(previous, "Monday filing check unavailable · retaining the last validated balance inputs.",
+                                 checked_at, _describe(exc))
             # The same committed checkpoint used by Monday permits a first visit
             # during a feed outage. It is explicitly identified as a checkpoint.
             result = resolve_friday_inputs(prices, {"schemaVersion": 1, "filings": []})
-            result.update(status="checkpoint", notice="Monday filing feed unavailable · showing the verified saved filing edition.")
+            result.update(status="checkpoint", notice="Monday filing feed unavailable · showing the verified saved filing edition.",
+                          error=_describe(exc))
         else:
             result = resolve_friday_inputs(prices, feed)
             result["status"] = "current"
@@ -84,8 +92,9 @@ def fetch_financial_inputs(previous=None, *, refresh_prices=True):
         if saved_marks:
             result["notice"] = " ".join(filter(None, (result.get("notice"), "NAV valuation marks use the last complete saved quote snapshot.")))
         return {"financial_inputs": result, "nav_prices": deepcopy(prices)}
-    except (OSError, ValueError, TypeError, KeyError, HTTPException):
-        return _retained(previous, "Monday balance inputs could not be validated · retaining the last complete edition where available.", checked_at)
+    except (OSError, ValueError, TypeError, KeyError, HTTPException) as exc:
+        return _retained(previous, "Monday balance inputs could not be validated · retaining the last complete edition where available.",
+                         checked_at, _describe(exc))
 
 
 def financial_key(result):

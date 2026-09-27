@@ -152,6 +152,31 @@ class FridayLiveInputsTests(TestCase):
         self.assertTrue(all(item["nav_per_share"] is not None for item in self.base_panel["treasury"]))
         self.store_factory.assert_not_called()
 
+    def test_a_failed_input_load_records_why_instead_of_drawing_silent_blanks(self):
+        # Sep 25, 8:07 pm ET on a GitHub runner: price/NAV drew '—' and nothing said why.
+        self.store.refresh.side_effect = OSError("quote host down")
+        result = live_inputs.fetch_financial_inputs({})
+        inputs = result["financial_inputs"]
+        self.assertEqual(inputs["status"], "unavailable")
+        self.assertIn("could not be validated", inputs["notice"])
+        self.assertEqual(inputs["error"], "OSError: quote host down")
+
+    def test_a_failed_filing_check_keeps_the_edition_and_the_reason(self):
+        self.worker.side_effect = ValueError("feed schema changed")
+        result = live_inputs.fetch_financial_inputs(deepcopy(self.base_data))
+        self.assertEqual(result["financial_inputs"]["status"], "retained")
+        self.assertEqual(result["financial_inputs"]["error"], "ValueError: feed schema changed")
+        first_visit = live_inputs.fetch_financial_inputs({})
+        self.assertEqual(first_visit["financial_inputs"]["status"], "checkpoint")
+        self.assertEqual(first_visit["financial_inputs"]["error"], "ValueError: feed schema changed")
+
+    def test_a_good_load_carries_no_stale_error(self):
+        previous = deepcopy(self.base_data)
+        previous["financial_inputs"]["error"] = "OSError: an earlier outage"
+        result = live_inputs.fetch_financial_inputs(previous)
+        self.assertEqual(result["financial_inputs"]["status"], "current")
+        self.assertNotIn("error", result["financial_inputs"])
+
     def test_older_pair_cannot_regress_a_newer_publication(self):
         previous = deepcopy(self.base_data)
         for company in previous["financial_inputs"]["companies"].values():

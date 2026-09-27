@@ -327,8 +327,28 @@ def audit_friday(panel, derived, dataset, extras, now):
                   "Yahoo" if key != "gap" else "FRED DFF, DGS2")
     for ticker, weeks in derived["turnover"].items():
         latest = weeks[-1]["pct"] if weeks else None
-        check("friday", f"turnover.{ticker}", f"{ticker} weekly turnover available", "PASS" if latest is not None else "WARN",
-              round(latest, 2) if latest is not None else None, None, "", "Yahoo volume ÷ shares")
+        # A missing value leaves a blank tile on the X image, so it fails like any other broken figure.
+        why = "" if latest is not None else ("no share count (Monday balance inputs missing)"
+                                             if not (derived.get("shares") or {}).get(ticker) else "no weekly volume")
+        check("friday", f"turnover.{ticker}", f"{ticker} weekly turnover available", "PASS" if latest is not None else "FAIL",
+              round(latest, 2) if latest is not None else None, None, why, "Yahoo volume ÷ shares")
+
+
+def audit_friday_inputs(dataset, rows):
+    """Friday's price/NAV tiles depend on Monday's balances. When those fail to load, the image draws '—'
+    and the reason used to be swallowed; fail loudly and say why."""
+    inputs = dataset.get("financial_inputs") or {}
+    status = inputs.get("status")
+    why = " · ".join(part for part in (inputs.get("notice"), inputs.get("error")) if part)
+    check("friday", "inputs", "Monday balance inputs loaded for Friday",
+          "PASS" if status == "current" else "WARN" if status in ("checkpoint", "retained") else "FAIL",
+          status, "current", why, "friday.live_inputs")
+    values = {row["metric"]: row["value"] for row in rows}
+    for company in ("MSTR", "ASST"):
+        value = values.get(f"{company} price / NAV")
+        drawn = bool(value) and value != "—"
+        check("friday", f"{company}.price_nav", f"{company} price / NAV drawn on the image", "PASS" if drawn else "FAIL",
+              value, None, "" if drawn else "blank tile: " + (why or "no NAV inputs"), "derived")
 
 
 def audit_sources(extras, now):
@@ -394,7 +414,9 @@ def main():
     def friday_step():
         dataset = fetch_snapshot()
         panel = metrics.compute_panel(dataset)
-        audit_friday(panel, friday_preview.derive(panel, dataset, extras, feed), dataset, extras, now)
+        derived = friday_preview.derive(panel, dataset, extras, feed)
+        audit_friday(panel, derived, dataset, extras, now)
+        audit_friday_inputs(dataset, friday_preview.audit_rows(panel, derived))
     guarded("friday", friday_step)
 
     summary = {status: sum(1 for item in CHECKS if item["status"] == status) for status in ("PASS", "WARN", "FAIL")}
