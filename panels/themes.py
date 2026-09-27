@@ -39,6 +39,9 @@ class Palette:
     cash: str = "#EAF1F6"   # fill that marks cash as a balance, not capital raised
     strategy: str | None = None   # company colors, kept the same on every sheet
     strive: str | None = None
+    zones: tuple | None = None    # the five 200W-zone colors (Friday), cheap → expensive
+    cycle: tuple | None = None    # colors handed to cards that carry no accent of their own
+    slab2: str | None = None      # second stop of a gradient title slab (HUD)
 
     def company(self, ticker: str) -> str:
         if ticker in ("MSTR", "STRC", "STRF", "STRK", "STRD", "STRE"):
@@ -121,7 +124,81 @@ GLITCH = _trial("glitch", "Signal Glitch", "cyber",
 CIRCUIT = _trial("circuit", "Circuit Trace", "circuit",
                  ("#030811", "#08121F", "#0C1A2B", "#16304A", "#1A3552", "#E8F4FF", "#8AA9C9", "#56708F"), radius=14)
 
-THEMES = {theme.key: theme for theme in (CLASSIC, NEON, ORBIT, GLASS, HUD, GLITCH, CIRCUIT)}
+
+
+# ── Chamfer HUD colorways (trial) ───────────────────────────────────────────
+# Gains stay green and losses red in every colorway (+ #3DFF9A, − #FF3B47).
+# Company pairs and green/red were checked with the data-viz palette validator
+# on each card surface; company names always label their colors.
+UP, DOWN = "#3DFF9A", "#FF3B47"
+
+
+def _hud_way(key, label, surface, *, strategy, strive, days, lines, neutral, zones, cycle=None, slabs=(None, None, None)):
+    """``surface`` = (bg, card, tint, line, outline, ink, muted, soft); ``days`` = the
+    Monday, Wednesday and Friday accents; ``lines`` = Friday's (50W, 20W/21W band,
+    realized) chart colors."""
+    bg, card_fill, tint, line, outline, ink, muted, soft = surface
+    fifty, band, realized = lines
+
+    def day(base: Palette, accent, slab2) -> Palette:
+        return replace(base, bg=bg, card=card_fill, tint=tint, line=line, outline=outline, ink=ink, muted=muted, soft=soft,
+                       radius=0, cash=tint, accent=accent, deep=accent, positive=UP, negative=DOWN, neutral=neutral,
+                       accent2=fifty, accent3=realized, band=band, strategy=strategy, strive=strive, zones=zones,
+                       cycle=cycle, slab2=slab2)
+    mon, wed, fri = days
+    return Theme(key, label, "hud", day(NEON.monday, mon, slabs[0]), day(NEON.wednesday, wed, slabs[1]),
+                 day(NEON.friday, fri, slabs[2]), title_style="hud", decor="hud", uppercase_titles=True)
+
+
+YELLOW, CYAN = "#FCEE0A", "#00E5FF"
+NIGHT_CITY = _hud_way(
+    "hud-nightcity", "Chamfer HUD · Night City (yellow + cyan)",
+    ("#0A0A05", "#12120A", "#1B1A0F", "#2F2D17", "#45421D", "#F7F5E3", "#BAB58F", "#7E7A58"),
+    strategy=CYAN, strive=YELLOW, days=(YELLOW, YELLOW, YELLOW), lines=(CYAN, "#FFF7A6", "#A6F6FF"),
+    neutral="#BAB58F", zones=(CYAN, "#7FF2FF", "#D9D6BE", "#FFF27A", YELLOW))
+
+TRON_CYAN, TRON_ORANGE = "#00E1FF", "#FF8A00"
+TRON = _hud_way(
+    "hud-tron", "Chamfer HUD · Tron (cyan + orange)",
+    ("#01060A", "#041019", "#071A2A", "#0E2B42", "#134063", "#E8FDFF", "#80B6CA", "#4F7C91"),
+    strategy=TRON_CYAN, strive=TRON_ORANGE, days=(TRON_CYAN, TRON_ORANGE, TRON_CYAN),
+    lines=(TRON_ORANGE, "#8CF3FF", "#FFC27A"), neutral="#80B6CA",
+    zones=(TRON_CYAN, "#8CF3FF", "#D5E7EE", "#FFC27A", TRON_ORANGE))
+
+LASER_BLUE, LASER_MAGENTA = "#4D8DFF", "#FF2BD6"
+LASERLINE = _hud_way(
+    "hud-laserline", "Chamfer HUD · Laserline (blue + magenta)",
+    ("#05040E", "#0B0A1A", "#121128", "#22204A", "#2F2C66", "#F2F0FF", "#A8A6D8", "#6C6A9C"),
+    strategy=LASER_BLUE, strive=LASER_MAGENTA, days=(LASER_BLUE, LASER_MAGENTA, LASER_BLUE),
+    lines=(LASER_MAGENTA, "#A9C8FF", "#FF9BEB"), neutral="#A8A6D8",
+    zones=(LASER_BLUE, "#A9C8FF", "#D8D6F0", "#FF9BEB", LASER_MAGENTA))
+
+AMBER, HOLO_CYAN, HOLO_MAGENTA = "#FFA726", "#2BD9E8", "#FF3DCB"
+BLADE_RUNNER = _hud_way(
+    "hud-bladerunner", "Chamfer HUD · Blade Runner (amber + cyan + magenta)",
+    ("#0C0705", "#160E0A", "#21150F", "#3A2519", "#553624", "#FFF1E4", "#CDA88C", "#8C6D59"),
+    strategy=HOLO_CYAN, strive=HOLO_MAGENTA, days=(AMBER, AMBER, AMBER), lines=(HOLO_CYAN, "#FFD39A", HOLO_MAGENTA),
+    neutral="#CDA88C", zones=(HOLO_CYAN, "#9DEFF6", "#E9D8C8", AMBER, HOLO_MAGENTA))
+
+SW_CYAN, SW_MAGENTA, SW_VIOLET, SW_AMBER = "#2DE2FF", "#FF2BD6", "#A56BFF", "#FFB13D"
+SYNTHWAVE = _hud_way(
+    "hud-synthwave", "Chamfer HUD · Synthwave (cyan, magenta, violet, amber)",
+    ("#0B0419", "#140A28", "#1E1038", "#341D5A", "#4A2B80", "#FFF0FF", "#C6A9E8", "#876BAA"),
+    strategy=SW_CYAN, strive=SW_MAGENTA, days=(SW_VIOLET, SW_MAGENTA, SW_AMBER), lines=(SW_CYAN, SW_VIOLET, SW_MAGENTA),
+    neutral="#C6A9E8", zones=(SW_VIOLET, SW_CYAN, "#D6C8F0", SW_AMBER, SW_MAGENTA),
+    cycle=(SW_VIOLET, SW_AMBER, SW_CYAN, SW_MAGENTA), slabs=(SW_MAGENTA, SW_AMBER, SW_MAGENTA))
+
+TK_CYAN, TK_MAGENTA, TK_YELLOW, TK_VIOLET, TK_ORANGE = "#00F0FF", "#FF2BD6", "#FFE600", "#9D5CFF", "#FF9A1A"
+NEON_TOKYO = _hud_way(
+    "hud-tokyo", "Chamfer HUD · Neon Tokyo (full spectrum)",
+    ("#05030D", "#0B0818", "#120E24", "#251E40", "#352C5C", "#F4F2FF", "#ABA5D3", "#6F6A98"),
+    strategy=TK_CYAN, strive=TK_MAGENTA, days=(TK_YELLOW, TK_VIOLET, TK_ORANGE), lines=(TK_CYAN, TK_VIOLET, TK_YELLOW),
+    neutral=TK_YELLOW, zones=(TK_VIOLET, TK_CYAN, TK_YELLOW, TK_ORANGE, TK_MAGENTA),
+    cycle=(TK_VIOLET, TK_YELLOW, TK_ORANGE, TK_CYAN, TK_MAGENTA), slabs=(TK_ORANGE, TK_MAGENTA, TK_YELLOW))
+
+HUD_WAYS = (NIGHT_CITY, TRON, LASERLINE, BLADE_RUNNER, SYNTHWAVE, NEON_TOKYO)
+
+THEMES = {theme.key: theme for theme in (CLASSIC, NEON, ORBIT, GLASS, HUD, GLITCH, CIRCUIT, *HUD_WAYS)}
 
 
 DEFAULT = NEON

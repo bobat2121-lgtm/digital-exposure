@@ -83,7 +83,9 @@ Circuit Trace (`circuit`). They keep the layouts, numbers, type floor and compan
 only surfaces, cards, titles and light change (`panels/trial_styles.py`, display faces
 Unbounded, Tektur and Michroma under SIL OFL in `assets/`). Render them with
 `render_previews.py --themes glass,hud,glitch,circuit`. The page and the audit Action
-still use Neon Ledger.
+still use Neon Ledger. Chamfer HUD also comes in six colorways (`hud-nightcity`, `hud-tron`,
+`hud-laserline`, `hud-bladerunner`, `hud-synthwave`, `hud-tokyo`, from 2 colors to 5+);
+every one keeps gains green (#3DFF9A) and losses red (#FF3B47).
 
 Themes live in `panels/themes.py`. Fonts are switched per render through a context
 variable (`panels.draw.fontset`), so concurrent sessions never share a style.

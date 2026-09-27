@@ -148,9 +148,9 @@ def _bg_hud(canvas: Canvas, p, header_height):
             draw.point((x, y), fill=dot)
             draw.point((x + 1, y), fill=dot)
     draw.rectangle((0, 0, w, 2), fill=p.accent)
-    tick = mix(p.accent, p.bg, .55)
     for x in range(0, w, 16):
-        draw.line((x, 3, x, 3 + (10 if x % 160 == 0 else 5)), fill=tick, width=1)
+        color = p.cycle[(x // 160) % len(p.cycle)] if p.cycle else p.accent
+        draw.line((x, 3, x, 3 + (10 if x % 160 == 0 else 5)), fill=mix(color, p.bg, .55), width=1)
     corner = mix(p.accent, p.bg, .7)
     for cx, cy, dx, dy in ((12, h - 12, 1, -1), (w - 13, h - 12, -1, -1)):
         draw.line((cx, cy, cx + 28 * dx, cy), fill=corner, width=3)
@@ -269,6 +269,10 @@ def _card_hud(canvas: Canvas, box, p, accent, accent_height):
     points = _chamfer(box, cut)
     canvas.draw.polygon(points, fill=p.card)
     canvas.draw.line(points + [points[0]], fill=p.outline, width=2, joint="curve")
+    if accent is None and p.cycle:
+        count = getattr(canvas, "trial_cycle", 0)
+        canvas.trial_cycle = count + 1
+        accent = p.cycle[count % len(p.cycle)]
     lit = accent or mix(p.accent, p.card, .55)
     # Lit corner: along the top edge, down the cut, a little way down the side.
     canvas.draw.line([(x1 - cut - 150, y0), (x1 - cut, y0), (x1, y0 + cut), (x1, y0 + cut + 46)], fill=lit, width=3, joint="curve")
@@ -334,7 +338,18 @@ def _title_hud(canvas, x, baseline, words, size, p):
     lead = face.getlength(" ") if key.startswith(" ") else 0
     top, bottom = baseline + face.getbbox("H", anchor="ls")[1] - 12, baseline + 10
     slab = (kx + lead - 14, top, kx + lead + kw + 14, bottom)
-    draw.polygon(_chamfer(slab, 14), fill=p.accent)
+    if p.slab2:
+        mask = Image.new("L", canvas.image.size, 0)
+        ImageDraw.Draw(mask).polygon(_chamfer(slab, 14), fill=255)
+        ramp = Image.new("RGB", canvas.image.size, _rgb(p.accent))
+        span = int(slab[2] - slab[0])
+        a, b = np.array(_rgb(p.accent), np.float32), np.array(_rgb(p.slab2), np.float32)
+        t = np.linspace(0, 1, span, dtype=np.float32)[:, None]
+        strip = Image.fromarray((a * (1 - t) + b * t).astype(np.uint8)[None, :, :].repeat(int(bottom - top) + 2, 0))
+        ramp.paste(strip, (int(slab[0]), int(top)))
+        canvas.image.paste(ramp, (0, 0), mask)
+    else:
+        draw.polygon(_chamfer(slab, 14), fill=p.accent)
     draw.text((kx + lead, baseline), key.strip(), font=face, anchor="ls", fill=p.bg)
     end = kx + lead + kw + 14 + face.getlength(" ") * .6
     draw.text((end, baseline), suffix.strip(), font=face, anchor="ls", fill=p.ink)

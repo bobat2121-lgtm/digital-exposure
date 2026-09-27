@@ -59,6 +59,12 @@ def _card(canvas, box, accent=None, accent_height=4):
         themes.card(canvas, box, THEME.friday, accent, THEME, accent_height)
 
 
+def _zones():
+    """ZONES in the theme's colors when it names its own (the HUD colorways)."""
+    colors = THEME.friday.zones
+    return tuple((upper, name, color) for (upper, name, _), color in zip(ZONES, colors)) if colors else ZONES
+
+
 def zone(extension):
     if extension is None:
         return None, MUTED
@@ -387,7 +393,7 @@ def _btc_chart(canvas, box, panel, derived):
     # Named zones between multiples of the 200W SMA.
     multiples = (0, 1, 1.5, 2, 2.5, 99)
     segment = [row for row in rows if row.get("sma_200w")]
-    for index, (_, name, color) in enumerate(ZONES):
+    for index, (_, name, color) in enumerate(_zones()):
         lower, upper = multiples[index], multiples[index + 1]
         top = [xy(row["date"], min(high, row["sma_200w"] * upper) if upper < 99 else high) for row in segment]
         bottom = [xy(row["date"], max(low, row["sma_200w"] * lower) if lower else low) for row in segment]
@@ -398,7 +404,7 @@ def _btc_chart(canvas, box, panel, derived):
     # Zone labels on the right edge, at each band's midpoint on the last SMA.
     last_sma = segment[-1]["sma_200w"] if segment else None
     if last_sma:
-        for index, (_, name, color) in enumerate(ZONES):
+        for index, (_, name, color) in enumerate(_zones()):
             lower, upper = multiples[index], min(multiples[index + 1], high / last_sma)
             mid = last_sma * (lower + upper) / 2 if index else (low + last_sma) / 2
             y = xy(rows[-1]["date"], mid)[1]
@@ -490,8 +496,10 @@ def _render(panel: dict, derived: dict, stale: tuple, extra: bool = False) -> tu
     change = btc.get("weekly_return_pct")
     canvas.text(x0 + 24, top + 134, _pct(change, 2, True) + " week", T_BODY, _tone(change), True)
     if derived["zone"]:
+        chip = mix({name: color for _, name, color in _zones()}.get(derived["zone"], derived["zone_color"]), CARD, .8)
+        light = (.2126 * chip[0] + .7152 * chip[1] + .0722 * chip[2]) / 255 > .45  # dark text on a bright chip
         canvas.pill(x0 + 24, top + 178, f"{derived['zone']} · {_pct(derived['extension'], 0, True)} vs 200W", T_MIN,
-                    TEXT, mix(derived["zone_color"], CARD, .8), pad=(12, 4))
+                    BG if light else TEXT, chip, pad=(12, 4))
     companies = header.get("companies") or {}
     treasury = {row.get("ticker"): row for row in panel.get("treasury", [])}
     for ticker, box in zip(("MSTR", "ASST"), boxes[1:]):
