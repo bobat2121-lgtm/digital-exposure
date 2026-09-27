@@ -168,13 +168,21 @@ def _fetch_window(symbol, sessions, interval="1m"):
             with urlopen(request, timeout=15) as response:
                 payloads.append(json.load(response))
         except Exception as exc:
-            raise ValueError(f"Historical 1-minute data unavailable ({type(exc).__name__}); no estimate produced.") from exc
+            raise ValueError(f"Historical {interval} data unavailable ({type(exc).__name__}); no estimate produced.") from exc
         urls.append(url)
     return payloads, urls
 
 
+INTERVALS = ("1m", "5m")  # 5-minute bars when a 1-minute series has an empty minute
+
+
 def pull_estimate(symbol: str, edition_date: date, window: str = "auto") -> dict:
-    """Fetch prior-week data, or an explicitly labeled five-session fallback."""
+    """Fetch prior-week data, or an explicitly labeled five-session fallback.
+
+    Each window tries 1-minute bars, then 5-minute bars over the same sessions:
+    Yahoo's 1-minute history for a thinly traded stock often has a minute with
+    no price, which the parser refuses rather than fill.
+    """
     if window not in ("auto", "prior_week", "five_sessions"):
         raise ValueError("Window must be auto, prior_week, or five_sessions.")
     if not symbol or not isinstance(edition_date, date):
@@ -187,13 +195,14 @@ def pull_estimate(symbol: str, edition_date: date, window: str = "auto") -> dict
         if dates == previous_dates:
             raise ValueError(f"{failure} Five-session fallback is the same window; missing data cannot be filled.")
         previous_dates = dates
-        try:
-            payloads, urls = _fetch_window(symbol, sessions)
-            result = parse_estimate(payloads, sessions, symbol=symbol, edition_date=edition_date,
-                                    window=actual_window, request_urls=urls)
-            if failure:
-                result["fallback_reason"] = failure
-            return result
-        except ValueError as exc:
-            failure = str(exc)
+        for interval in INTERVALS:
+            try:
+                payloads, urls = _fetch_window(symbol, sessions, interval)
+                result = parse_estimate(payloads, sessions, symbol=symbol, edition_date=edition_date,
+                                        window=actual_window, request_urls=urls, interval=interval)
+                if failure:
+                    result["fallback_reason"] = failure
+                return result
+            except ValueError as exc:
+                failure = str(exc)
     raise ValueError(failure or "Historical VWAP estimate unavailable.")

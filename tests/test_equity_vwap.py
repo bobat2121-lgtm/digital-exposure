@@ -89,13 +89,30 @@ class EquityVwapTests(unittest.TestCase):
              patch("report.equity_vwap._fetch_window", side_effect=ValueError("Missing data")) as fetch:
             with self.assertRaisesRegex(ValueError, "same window"):
                 pull_estimate("ASST", date(2026, 8, 31))
-            self.assertEqual(fetch.call_count, 1)
+            # One window, tried once at each bar size.
+            self.assertEqual([call.args[2] for call in fetch.call_args_list], ["1m", "5m"])
+
+    def test_five_minute_bars_stand_in_when_a_minute_is_empty(self):
+        # Sep 28, 2026: Yahoo's 1-minute ASST series had an empty minute; 5-minute bars covered the week.
+        session = [{"date": "2026-08-28", "open": "2026-08-28T13:30:00+00:00",
+                    "close": "2026-08-28T13:40:00+00:00"}]
+        five = payload(stamps=[START, START + 300])
+        five["chart"]["result"][0]["meta"]["dataGranularity"] = "5m"
+        with patch("report.equity_vwap.select_sessions", return_value=session), \
+             patch("report.equity_vwap._fetch_window",
+                   side_effect=[ValueError("Missing or nonfinite price/volume in an eligible minute."),
+                                ([five], ["https://example.test/5m"])]) as fetch:
+            result = pull_estimate("ASST", date(2026, 8, 31))
+        self.assertEqual([call.args[2] for call in fetch.call_args_list], ["1m", "5m"])
+        self.assertEqual((result["method"], result["window"], result["value"]), ("hlc3_5m", "prior_week", 17.5))
+        self.assertIn("eligible minute", result["fallback_reason"])
 
     def test_distinct_fallback_preserves_actual_window_and_reason(self):
         prior = [{"date": "2026-08-27", "open": "2026-08-27T13:30:00+00:00",
                   "close": "2026-08-27T13:32:00+00:00"}]
         with patch("report.equity_vwap.select_sessions", side_effect=[prior, SESSIONS]), \
-             patch("report.equity_vwap._fetch_window", side_effect=[ValueError("History unavailable"), ([payload()], ["https://example.test/data"])]):
+             patch("report.equity_vwap._fetch_window", side_effect=[ValueError("No 1m history"), ValueError("History unavailable"),
+                                                                    ([payload()], ["https://example.test/data"])]):
             result = pull_estimate("ASST", date(2026, 8, 31))
         self.assertEqual(result["window"], "five_sessions")
         self.assertEqual(result["fallback_reason"], "History unavailable")

@@ -1,4 +1,4 @@
-"""Pull and archive a labeled one-minute equity VWAP estimate for an edition."""
+"""Pull and archive a labeled equity VWAP estimate (1-minute, else 5-minute bars) for an edition."""
 from argparse import ArgumentParser
 from datetime import date
 

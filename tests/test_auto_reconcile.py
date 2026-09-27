@@ -57,6 +57,28 @@ def seed_sep13():
             "series": {name: row["shares"] for name, row in record["strategy_claims"].items()}, "source": "test"}
 
 
+class ReleaseTimeTests(unittest.TestCase):
+    def test_edgar_new_york_stamp_marked_z_is_corrected(self):
+        # Feed rows as the worker stored them; EDGAR's filing pages say accepted 08:00:13 and 07:59:48 ET.
+        mstr = {"acceptedAt": "2026-09-21T08:00:13.000Z", "firstSeenAt": "2026-09-21T12:01:29.207Z"}
+        asst = {"acceptedAt": "2026-09-21T07:59:48.000Z", "firstSeenAt": "2026-09-21T12:00:59.339Z"}
+        self.assertEqual(ar.released_at(mstr), datetime(2026, 9, 21, 12, 0, 13, tzinfo=UTC))
+        self.assertEqual(ar.released_at(asst), datetime(2026, 9, 21, 11, 59, 48, tzinfo=UTC))
+        # Winter: New York is UTC-5.
+        winter = {"acceptedAt": "2026-12-07T08:00:10Z", "firstSeenAt": "2026-12-07T13:00:40Z"}
+        self.assertEqual(ar.released_at(winter), datetime(2026, 12, 7, 13, 0, 10, tzinfo=UTC))
+
+    def test_real_utc_stamps_are_kept(self):
+        # Accepted 20:55:37 ET Sep 14, first seen at the next polling window six days later.
+        late = {"acceptedAt": "2026-09-15T00:55:37.000Z", "firstSeenAt": "2026-09-21T10:45:28.119Z"}
+        self.assertEqual(ar.released_at(late), datetime(2026, 9, 15, 0, 55, 37, tzinfo=UTC))
+        # Seen within a minute of a correct stamp, or no first-sight record.
+        prompt = {"acceptedAt": "2026-09-28T12:00:00Z", "firstSeenAt": "2026-09-28T12:00:40Z"}
+        self.assertEqual(ar.released_at(prompt), datetime(2026, 9, 28, 12, 0, tzinfo=UTC))
+        self.assertEqual(ar.released_at({"acceptedAt": "2026-09-21T08:00:13Z"}), datetime(2026, 9, 21, 8, 0, 13, tzinfo=UTC))
+        self.assertIsNone(ar.released_at({}))
+
+
 class AutoReconcileTests(unittest.TestCase):
     def setUp(self):
         for target, value in (("_yahoo", fake_yahoo), ("_strc_dividends", lambda: STRC_KPI)):

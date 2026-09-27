@@ -20,7 +20,8 @@ Strive: SATA shares from the filing at max($100, ten-close mean, prior close)
 debt from the Strive dashboard (zero when absent).
 
 Comparison marks: BTC and EUR/USD at the prior filing's SEC acceptance hour
-(Yahoo hourly), STRC as the prior Strive filing's fair value ÷ held shares.
+(Yahoo hourly; ``released_at`` corrects EDGAR's early stamps), STRC as the
+prior Strive filing's fair value ÷ held shares.
 Strive's common-capital VWAP uses report.equity_vwap for the filing week.
 
 Every generated entry is flagged ``auto_reconciled`` with its basis, so the
@@ -38,8 +39,10 @@ from threading import Lock
 from time import monotonic
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
+from zoneinfo import ZoneInfo
 
 DATA = Path(__file__).resolve().parents[1] / "data"
+NEW_YORK = ZoneInfo("America/New_York")
 DEFAULT_SUPPLEMENTS = DATA / "report-supplements.json"
 TTL = 1800
 USD_SERIES = ("STRC", "STRF", "STRK", "STRD")
@@ -108,6 +111,30 @@ def _base(symbol, balance: date, *, prior_close=False):
         raise ValueError(f"{symbol}: fewer than ten closes before {balance}")
     candidates = [100.0, sum(closes) / len(closes)] + ([closes[-1]] if prior_close else [])
     return round(max(candidates), 3), closes
+
+
+def released_at(row) -> datetime | None:
+    """When the filing became public, as an aware instant.
+
+    EDGAR's submissions API first lists a new filing's acceptanceDateTime as
+    New York wall time marked "Z" and corrects it to UTC later; the filing
+    worker keeps the first value (Sep 21, 2026: 08:00:13Z listed, 12:00:13Z
+    actual). Read as New York time, such a stamp lands just before the worker
+    first saw the filing. A real UTC stamp cannot: the worker sees a filing
+    within a minute during its 06:45-09:30 ET polls or at the next window's
+    start, so four to five hours earlier would be the night, when EDGAR is closed.
+    """
+    accepted = row.get("acceptedAt")
+    if not accepted:
+        return None
+    instant = datetime.fromisoformat(accepted.replace("Z", "+00:00"))
+    seen = row.get("firstSeenAt")
+    if accepted.endswith("Z") and seen:
+        seen_at = datetime.fromisoformat(seen.replace("Z", "+00:00"))
+        eastern = instant.replace(tzinfo=NEW_YORK)
+        if seen_at - instant > timedelta(hours=2) and timedelta(0) <= seen_at - eastern <= timedelta(hours=1):
+            return eastern.astimezone(UTC)
+    return instant
 
 
 def _hour_mark(symbol, instant: datetime):
@@ -248,9 +275,8 @@ def augment(rows: list, supplements: dict, *, now: datetime | None = None) -> tu
     for day, row in ((day, mstr[day]) for day in ordered[:-1]):
         if day <= newest_reviewed_mark or (day in btc and "EURUSD=X" in marks.get(day, {})):
             continue
-        accepted = row.get("acceptedAt")
         try:
-            instant = datetime.fromisoformat(accepted.replace("Z", "+00:00")) if accepted else None
+            instant = released_at(row)
             if instant is None:
                 continue
             if day not in btc:
