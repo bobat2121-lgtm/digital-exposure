@@ -394,7 +394,7 @@ COST_BOX_H = 104   # test copy: the bitcoin cost box
 def _cash_box(canvas, e, L, R, y, p, headline=None):
     """The cash balance and what it is made of (Strive: cash + STRC held)."""
     box = (L, y, R, y + CASH_BOX_H)
-    canvas.draw.rounded_rectangle(box, radius=min(10, p.radius + 4), fill=p.cash)
+    themes.inset(canvas, box, p.cash, min(10, p.radius + 4), p)
     canvas.cells(box, [[(headline or _cash_line(e), T_LABEL, p.ink, False), (e.liquid_detail, T_MIN, p.muted, False)]],
                  inset=36)
 
@@ -411,7 +411,7 @@ def _top_headline(canvas, e, L, R, y, p, stripe):
     for n, (label, value, note) in enumerate((("COMMON ATM", e.common_capital, _common_note(e)),
                                              ("PREFERRED ATM", e.preferred_capital, e.preferred_note))):
         x = L + n * (half + 20)
-        canvas.draw.rounded_rectangle((x, y, x + half, y + 210), radius=min(10, p.radius + 4), fill=p.tint)
+        themes.inset(canvas, (x, y, x + half, y + 210), p.tint, min(10, p.radius + 4), p)
         canvas.text(x + 18, y + 18, label, T_MIN, stripe, True, max_width=half - 36)
         text = _money(value)
         canvas.text(x + 18, y + 62, text, T_BIG - 4, _tone_text(text, p), True, max_width=half - 36)
@@ -580,7 +580,7 @@ def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, report_company, i
     # Coverage against each issuer's own target.
     box_h = 132
     radius = min(12, p.radius)
-    canvas.draw.rounded_rectangle((L - 12, y, R + 12, y + box_h), radius=radius, fill=p.tint)
+    themes.inset(canvas, (L - 12, y, R + 12, y + box_h), p.tint, radius, p)
     on_target = e.reserve_months and e.target_months and e.reserve_months >= e.target_months - .5
     # Every cell carries a short note so the three stacks share one centered grid.
     cells = (("USD COVER", f"{e.reserve_months:.0f} mo" if e.reserve_months else "—", _cover_note(e),
@@ -594,7 +594,7 @@ def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, report_company, i
 
     # What the bitcoin cost, and where the price sits against it.
     gain = btc_price / e.average_cost * 100 - 100 if btc_price and e.average_cost else None
-    canvas.draw.rounded_rectangle((L - 12, y, R + 12, y + COST_BOX_H), radius=radius, fill=p.tint)
+    themes.inset(canvas, (L - 12, y, R + 12, y + COST_BOX_H), p.tint, radius, p)
     cells = (("AVG COST", f"${e.average_cost:,.0f}" if e.average_cost else "—", p.ink),
              ("VS COST", _pct(gain, 1, True), _tone_text(_pct(gain, 1, True), p)),
              ("COST BASIS", _money(e.cost_basis, False), p.ink))
@@ -609,7 +609,7 @@ def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, report_company, i
     columns += [(period.period, _one_decimal(period.btc_growth), _one_decimal(period.nav_growth)) for period in c.periods[:2]]
     box_h = min(186, bottom - 28 - y)
     box = (L - 12, y, R + 12, y + box_h)
-    canvas.draw.rounded_rectangle(box, radius=radius, fill=p.tint)
+    themes.inset(canvas, box, p.tint, radius, p)
     table = [[("GROWTH", T_MIN, p.muted, True), ("BTC / share", T_BODY - 2, p.ink, True), ("NAV / share", T_BODY - 2, p.ink, True)]]
     table += [[(label, T_MIN, p.muted, True), (btc, T_BODY + 2, _tone_text(btc, p), True), (nav, T_BODY + 2, _tone_text(nav, p), True)]
               for label, btc, nav in columns]
@@ -634,6 +634,7 @@ def render_png(preview: MondayPreview, theme: themes.Theme = themes.DEFAULT, var
     p = theme.monday
     with fontset(theme.fontset):
         canvas = Canvas((WIDTH, HEIGHT), p.bg, floor=T_MIN)
+        canvas.theme = theme
         themes.background(canvas, p, theme, header_height=226, orbit_at=(1060, 92, .6))
         if theme.decor == "none":
             canvas.draw.rectangle((0, 0, WIDTH, 8), fill=p.accent)

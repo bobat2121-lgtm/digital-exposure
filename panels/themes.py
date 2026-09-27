@@ -249,11 +249,16 @@ def _styled(key, label, fontset, decor, surface, *, accent, strategy, strive, li
                  title_style=decor, decor=decor, uppercase_titles=uppercase)
 
 
+TERMINAL_RULE = "#2A48B8"   # terminal blue, a step brighter so 2-px rules read on black
 TERMINAL = _styled(
     "terminal", "Bloomberg Terminal (amber on black)", "terminal", "terminal",
     ("#000000", "#060606", "#121212", "#262626", "#2E2E2E", "#FFA028", "#C8C8C8", "#808080"),
     accent="#FFFFFF", strategy="#FF8C1A", strive="#FFE14D", lines=("#6FA8FF", "#B8B8B8", "#FFE14D"),
     neutral="#9A9A9A", zones=("#6FA8FF", "#9FC6FF", "#C8C8C8", "#FFB02E", "#FF7A45"), up="#4BE38B", down="#FF5050")
+
+# Monday's two cards both carry company strips, so its dividers run in terminal blue
+# (Wednesday and Friday show the blue on their section strips).
+TERMINAL = replace(TERMINAL, monday=replace(TERMINAL.monday, line=TERMINAL_RULE))
 
 BROADSHEET = _styled(
     "broadsheet", "Broadsheet (newsprint)", "broadsheet", "broadsheet",
@@ -326,6 +331,15 @@ def background(canvas: Canvas, p: Palette, theme: Theme, header_height=150, orbi
         canvas.draw.ellipse((cx - 30 * k, cy - 30 * k, cx + 30 * k, cy + 30 * k), fill=p.accent)
         canvas.draw.ellipse((cx + 180 * k, cy - 8 * k, cx + 196 * k, cy + 8 * k), fill="#F3F1EC")
         canvas.draw.rectangle((0, header_height, w, header_height + 6), fill=p.accent)
+
+
+def inset(canvas: Canvas, box, fill, radius, p: Palette):
+    """A shaded box inside a card (cash, coverage, cost, growth). The theme comes from
+    the canvas, which the renderer tags."""
+    theme = getattr(canvas, "theme", None)
+    if theme is not None and theme.decor in trial_styles.INSETS:
+        return trial_styles.inset(canvas, box, fill, radius, p, theme)
+    canvas.draw.rounded_rectangle(box, radius=radius, fill=fill)
 
 
 def kicker(canvas: Canvas, left_x, right_x, left: str, right: str | None, p: Palette, theme: Theme):

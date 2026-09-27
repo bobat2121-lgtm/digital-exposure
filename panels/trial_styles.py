@@ -27,6 +27,7 @@ from .draw import Canvas, font
 
 DECORS = ("glass", "hud", "glitch", "circuit", "terminal", "broadsheet")
 KICKERS = ("terminal", "broadsheet")        # looks that draw their own report line
+INSETS = ("terminal",)                      # looks that draw their own shaded boxes
 TERMINAL_BLUE = "#1C3494"
 STRATEGY, STRIVE, VIOLET = "#22E3FF", "#FF3DCB", "#7B61FF"
 # The second stop of each day's title gradient (glass).
@@ -440,6 +441,13 @@ def _card_terminal(canvas: Canvas, box, p, accent, accent_height):
     x0, y0, x1, y1 = box
     canvas.draw.rectangle(box, fill=p.card, outline=p.outline, width=2)
     canvas.draw.rectangle((x0, y0, x1, y0 + 6), fill=accent or TERMINAL_BLUE)
+
+
+def inset(canvas: Canvas, box, fill, radius, p, theme):
+    """Terminal: a square shaded box under a blue strip, like the sections on Wed/Fri."""
+    x0, y0, x1, y1 = box
+    canvas.draw.rectangle(box, fill=fill)
+    canvas.draw.rectangle((x0, y0, x1, y0 + 5), fill=TERMINAL_BLUE)
 
 
 def _title_terminal(canvas, x, baseline, words, size, p):
