@@ -18,7 +18,7 @@ builds.
 | Day | Title | X image size | Posting time |
 | --- | --- | --- | --- |
 | Monday | The **Accretion** Ledger | 1440 × 1884 | after both 8-Ks |
-| Wednesday | The **Coupon** Sheet | 1440 × 1920 (3:4) | after the 4:00 pm ET close |
+| Wednesday | The **Coupon** Sheet | 1440 × 1920 (3:4) | midday, intraday prices (X Control Panel from 12:31 pm ET) |
 | Friday | The **Closing** Mark | 1440 × 1920 (3:4) | Friday 4:00 pm ET mark |
 
 The page has two styles, switched at the top: **Bloomberg** (the default) and
@@ -190,6 +190,10 @@ then what it did per share.
   filings for both companies. QTD and YTD restart automatically at each quarter.
 
 ### Wednesday — The Coupon Sheet
+
+Posted midday on purpose, so the image reads **INTRADAY** with that day's preferred
+prices (after 4:00 pm ET it reads CLOSE). The benchmarks post after the close (SOFR, IG
+and HY a day later), so at midday they are the prior day's; the page footnote dates each one.
 
 STRC and SATA carry the two treasuries, so they are the heroes. Each gets a card with:
 

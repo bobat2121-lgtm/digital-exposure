@@ -529,10 +529,10 @@ MONDAY_FORMULAS = (
 
 # ── Wednesday ───────────────────────────────────────────────────────────────
 def wednesday(data, *, notices=()) -> None:
-    stamp = data.get("stamp")
+    stamped = wed.price_stamp(data)
     refs = " · ".join(f"{label} <b>{wed._pct(value)}</b>" for label, (_, value) in data["references"])
-    header("wednesday", "Digital Credit Report · Wednesday", ("The ", "Coupon", " Sheet"),
-           f"{refs}{' · closes through ' + escape(wed._short(stamp)) if stamp else ''}")
+    when = (" · " + ("closes through " if stamped[0] else "intraday prices ") + escape(stamped[1])) if stamped else ""
+    header("wednesday", "Digital Credit Report · Wednesday", ("The ", "Coupon", " Sheet"), refs + when)
     for notice in notices:
         st.caption(notice)
     columns = st.columns(2, gap="medium")

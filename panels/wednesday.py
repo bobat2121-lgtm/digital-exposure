@@ -642,14 +642,21 @@ def _flow(canvas, box, ledger, p, theme, lay=STANDARD):
     canvas.text(centers[5], y + 6, "MSTR · ASST", T_MIN, p.soft, align="center")
 
 
+def price_stamp(data) -> tuple[bool, str] | None:
+    """(closed, 'Wed Sep 30') for the newest price: a close, or intraday before 4:00 pm ET that day.
+    The Coupon Sheet posts midday, so its image normally reads INTRADAY."""
+    stamp = data.get("stamp")
+    if not stamp:
+        return None
+    parsed = date.fromisoformat(stamp)
+    return parsed < data["now"].date() or data["now"].hour >= 16, f"{parsed:%a %b} {parsed.day}"
+
+
 def _header(canvas, data, p, theme):
     on_space = theme.decor == "orbit"
     muted = "#AEB6D6" if on_space else p.muted
-    stamp, right = data["stamp"], None
-    if stamp:
-        parsed = date.fromisoformat(stamp)
-        closed = parsed < data["now"].date() or data["now"].hour >= 16
-        right = f"{'CLOSE' if closed else 'INTRADAY'} {parsed:%a %b} {parsed.day}".upper()
+    stamped = price_stamp(data)
+    right = f"{'CLOSE' if stamped[0] else 'INTRADAY'} {stamped[1]}".upper() if stamped else None
     themes.kicker(canvas, M, WIDTH - M, "DIGITAL CREDIT REPORT · WEDNESDAY", right, p, theme)
     themes.title(canvas, M, 146, TITLE, 76, p, theme, on_space=on_space)
     refs = "  ·  ".join(f"{SHORT[label]} {value:.2f}%" for label, (_, value) in data["references"] if value is not None)
@@ -705,7 +712,10 @@ def notes(data: dict, extra: bool = False) -> list[str]:
         f"Spreads = effective yield − benchmark, in basis points. Headline benchmark: {headline} — Strategy's stated "
         "risk-free rate and the bill Jeff Walton compares digital credit to; both preferreds reset monthly around $100 par.",
         "Benchmarks from FRED: SOFR, DGS3MO (3M bill), DGS10 (10Y), ICE BofA US Corporate (IG) and "
-        f"High Yield effective yields, as of {_short(data['references'][0][1][0])}.",
+        "High Yield effective yields, each at its latest posting: "
+        + " · ".join(f"{SHORT[label]} {_short(day)}" for label, (day, value) in data["references"] if day) + ". "
+        "Before the 4:00 pm ET close the preferred prices are intraday; the benchmarks post after the close "
+        "(SOFR, IG and HY a day later), so at midday they are the prior day's.",
         "26-week history uses each day's close, the stated rate in effect that day and the benchmark that day.",
         _cut_note(data),
         "USD cover: Strategy (USD Reserve + USD Cash) ÷ current monthly dividends against its 12-month floor, each week's "
