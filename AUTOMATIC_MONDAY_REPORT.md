@@ -11,26 +11,25 @@ reconciles a new week by itself (`report/auto_reconcile.py`) whenever
 | Strategy basic shares | latest reviewed count + 8-K ATM shares sold − repurchased |
 | Strategy preferred shares | latest reviewed count per series + 8-K issued − repurchased |
 | Strategy preferred claims | max($100, ten-close mean before the balance business day) per USD series, €100 STRE, plus 30/360 accrual since the last scheduled payment (STRC dates and rate from strategy.com) |
-| Strategy debt | latest reviewed principal carried forward; if strategy.com's convertible-note list (`api.strategy.com/btc/credit`) differs from the reviewed convertibles by more than $5M, reviewed other debt plus the listed notes, named in the review label (the weekly 8-K never reports debt) |
+| Strategy debt | latest reviewed principal carried forward; if strategy.com's convertible-note list (`api.strategy.com/btc/credit`) differs from the reviewed convertibles by more than $5M, reviewed other debt plus the listed notes, passed on as a heads-up (the weekly 8-K never reports debt) |
 | Strive SATA claims | filing share count × max($100, ten-close mean, prior close) |
 | Comparison marks | BTC and EUR/USD at the prior filing's SEC acceptance hour; STRC from the prior Strive filing |
 | Strive common-capital VWAP | `report.equity_vwap` for the filing week (1-minute, else 5-minute) |
 
 Checked against the reviewed September 20 edition, the roll-forward reproduced the
 preferred claims to the cent, debt and SATA claims exactly, and basic shares within
-10,000 (employee issuance the 8-K does not show). The page labels such weeks:
-"Automatically reconciled … review pending". Reviewed entries always take
+10,000 (employee issuance the 8-K does not show). Reviewed entries always take
 precedence, and any source failure leaves the week missing, so the last complete
 edition stays up. `DCR_AUTO_RECONCILE=0` turns this off. `scripts/auto_reconcile.py`
 prints the derived entries; add `--write` to freeze them for review.
 
-**An automatically reconciled edition publishes (owner's decision, Sep 27, 2026).**
-`publication_check` accepts it and returns the label as `review`;
-`render_previews.py` leaves `monday_notice` empty (only a notice that keeps the
-last edition up, or leaves inputs pending, holds publication) and writes the
-label to `monday_review`; `audit_panels.py` adds a "Monday edition review" WARN.
-The X Control Panel posts on that basis and shows the WARN as a heads-up in its
-Discord ping.
+**An automatically reconciled edition publishes, unlabelled (owner's decisions,
+Sep 27 and 28, 2026).** `publication_check` accepts it, `render_previews.py` leaves
+`monday_notice` empty (only a notice that keeps the last edition up, or leaves
+inputs pending, holds publication), and the X Control Panel pings Discord as soon
+as it is ready. The one thing passed on is a debt change the reconciliation made:
+`LiveReportResult.heads_up`, `monday_heads_up` in `audit.json`, and a "Strategy debt
+changed" WARN from `audit_panels.py`, which the X Control Panel shows as a heads-up.
 
 Fallbacks that keep the image complete when the 8-K parser misses a figure:
 

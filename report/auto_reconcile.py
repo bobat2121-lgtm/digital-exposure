@@ -15,8 +15,8 @@ Strategy (rolled forward from the latest reviewed reconciliation file):
   scheduled payment (STRC semi-monthly from strategy.com; others quarterly);
 - debt: last reviewed principal carried forward, unless strategy.com's list of
   convertible notes (/btc/credit) no longer matches the reviewed convertible
-  principal: then reviewed other debt plus the listed notes, flagged in the
-  review label. The weekly 8-K never reports debt; new notes and repurchases
+  principal: then reviewed other debt plus the listed notes, passed on as a
+  heads-up. The weekly 8-K never reports debt; new notes and repurchases
   come in separate 8-Ks, and the list changes around settlement.
 
 Strive: SATA shares from the filing at max($100, ten-close mean, prior close)

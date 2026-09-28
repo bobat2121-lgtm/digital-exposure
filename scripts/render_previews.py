@@ -62,8 +62,8 @@ def main():
              "errors": extras.get("errors", []), "panels": {}}
     result = resolve_complete_report(prices, feed)
     # monday_notice holds publication (the X Control Panel waits on it); an automatically
-    # reconciled edition publishes with its label in monday_review.
-    audit["monday_notice"], audit["monday_review"] = result.blocking_notice, result.review
+    # reconciled edition has none, and a debt change it made goes to monday_heads_up.
+    audit["monday_notice"], audit["monday_heads_up"] = result.notice, list(result.heads_up)
     monday = monday_preview.build_preview(result.report, prices, feed, extras)
     overflows = []
     for theme in chosen:

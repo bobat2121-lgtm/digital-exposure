@@ -416,8 +416,8 @@ def main():
     rows = _merged_filings(feed, _load(CHECKPOINT))
     monday = monday_preview.build_preview(report, prices, feed, extras)
     audit_sources(extras, now)
-    if result.review:  # publishes; the WARN rides into the X Control Panel's heads-up
-        check("monday", "review", "Monday edition review", "WARN", None, None, result.review, "automatic reconciliation")
+    for change in result.heads_up:  # publishes; the WARN rides into the X Control Panel's heads-up
+        check("monday", "MSTR.debt_change", "Strategy debt changed", "WARN", None, None, change, "api.strategy.com/btc/credit")
 
     def guarded(panel, step):
         try:
@@ -437,8 +437,8 @@ def main():
     guarded("friday", friday_step)
 
     summary = {status: sum(1 for item in CHECKS if item["status"] == status) for status in ("PASS", "WARN", "FAIL")}
-    payload = {"generated_at": now.isoformat(), "summary": summary, "monday_notice": result.blocking_notice,
-               "monday_review": result.review, "checks": CHECKS}
+    payload = {"generated_at": now.isoformat(), "summary": summary, "monday_notice": result.notice,
+               "monday_heads_up": list(result.heads_up), "checks": CHECKS}
     (args.out / "checks.json").write_text(json.dumps(payload, indent=1, default=str), encoding="utf-8")
     width = max(len(item["label"]) for item in CHECKS)
     for item in CHECKS:

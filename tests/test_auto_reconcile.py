@@ -157,28 +157,26 @@ class AutoReconcileTests(unittest.TestCase):
 class AutomaticEditionTests(unittest.TestCase):
     """A new filing pair with no reviewed inputs publishes a complete edition."""
 
-    def test_next_week_is_complete_and_labelled(self):
+    def test_next_week_is_complete_and_unlabelled(self):
         result, summary = self._next_week(listed=6_713_750_000)
         self.assertIn("Strategy Sep 27", result.report.subtitle)
         self.assertIn("Strive Sep 25", result.report.subtitle)
-        self.assertIn("Automatically reconciled", result.notice)
-        # It publishes (owner's choice): the label is a review note, not a hold.
-        self.assertEqual(result.review, result.notice)
-        self.assertIsNone(result.blocking_notice)
-        self.assertEqual(summary["status"], "complete")
-        self.assertIn("review pending", summary["review"])
-        self.assertNotIn("Strategy debt", result.notice)
+        # It publishes with no label (owner's choice, Sep 28, 2026).
+        self.assertIsNone(result.notice)
+        self.assertEqual(result.heads_up, ())
+        self.assertEqual((summary["status"], summary["heads_up"]), ("complete", []))
         strategy = result.report.companies[0]
         self.assertEqual(strategy.current.effective_common_shares, 420_507_000)
         self.assertEqual(strategy.current.debt_principal, 6_753_703_000)
         self.assertIsNotNone(strategy.current.preferred_claims)
 
-    def test_a_new_tranche_reaches_the_edition_and_its_label(self):
+    def test_a_new_tranche_reaches_the_edition_and_the_heads_up(self):
         result, summary = self._next_week(listed=8_713_750_000)
         self.assertEqual(result.report.companies[0].current.debt_principal, 40_044_000 + 8_713_750_000)
-        self.assertIn("Strategy debt $6.75B → $8.75B", result.notice)
-        self.assertEqual(summary["status"], "complete")  # still posts, with the change in the heads-up
-        self.assertIn("Strategy debt", summary["review"])
+        self.assertIsNone(result.notice)  # still posts
+        self.assertTrue(result.heads_up[0].startswith("Strategy debt $6.75B → $8.75B"))
+        self.assertEqual(summary["status"], "complete")
+        self.assertEqual(summary["heads_up"], list(result.heads_up))
 
     def _next_week(self, listed):
         feed = deepcopy(FILINGS)

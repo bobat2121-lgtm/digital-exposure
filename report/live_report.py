@@ -48,23 +48,9 @@ def _preferred_rows(securities):
 @dataclass(frozen=True)
 class LiveReportResult:
     report: Report
-    notice: str | None
+    notice: str | None           # holds publication: last edition kept, inputs pending, validation
     version: str
-
-    @property
-    def review(self) -> str | None:
-        """The automatic-reconciliation label: a complete edition awaiting review."""
-        return self.notice if self.notice and self.notice.startswith(AUTO_RECONCILED) else None
-
-    @property
-    def blocking_notice(self) -> str | None:
-        """A notice that holds publication (last edition kept, inputs pending, and so on).
-        An automatically reconciled edition publishes (owner's choice, Sep 27, 2026)
-        and carries its label as a review note instead."""
-        return None if self.review else self.notice
-
-
-AUTO_RECONCILED = "Automatically reconciled from the filings and public data"
+    heads_up: tuple = ()         # publishes, flagged to the posting agent (an automatic Strategy debt change)
 
 
 def _number(value, *, signed=False):
@@ -408,14 +394,10 @@ def resolve_live_report(prices: dict, feed: dict, *, through_date: str | None = 
         (c.current.btc_holdings, c.current.effective_common_shares, c.current.debt_principal, c.current.preferred_claims))
         or (c.current.combined_liquid_assets is None and (c.current.cash is None or c.current.marketable_securities is None))]
     notice = ("New filings loaded · " + ", ".join(missing) + " NAV inputs pending; unavailable figures are not carried forward.") if missing else None
-    automatic = [f"{c.name} {_short(c.balance_date)}" for c in companies
-                 if supplements.get("balances", {}).get(c.ticker, {}).get(c.balance_date, {}).get("auto_reconciled")]
-    if automatic and not missing:
-        notice = AUTO_RECONCILED + " · " + " · ".join(automatic) + " · review pending."
-        changes = [supplements["balances"][c.ticker][c.balance_date]["debt_change"] for c in companies
-                   if supplements.get("balances", {}).get(c.ticker, {}).get(c.balance_date, {}).get("debt_change")]
-        if changes:
-            notice += " " + "; ".join(changes) + "."
+    # An automatically reconciled edition publishes unlabelled (owner's choice, Sep 28, 2026);
+    # only a debt change it made is passed on, as a heads-up for the posting agent.
+    heads_up = tuple(supplements["balances"][c.ticker][c.balance_date]["debt_change"] for c in companies
+                     if supplements.get("balances", {}).get(c.ticker, {}).get(c.balance_date, {}).get("debt_change"))
     if max(groups, default=start) > start:
         notice = "One newer filing received · awaiting its matching weekly report. " + report.subtitle
     newest_release = max(row["filedDate"] for row in chosen.values())
@@ -430,7 +412,7 @@ def resolve_live_report(prices: dict, feed: dict, *, through_date: str | None = 
                         for ticker in chosen}
     version = hashlib.sha256(json.dumps([version_data, supplements.get("revision"), automatic_inputs],
                                         sort_keys=True, default=str).encode()).hexdigest()[:16]
-    return LiveReportResult(report, notice, version)
+    return LiveReportResult(report, notice, version, heads_up)
 
 
 def _complete_panel_inputs(report, prices):
