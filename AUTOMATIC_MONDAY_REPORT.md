@@ -1,10 +1,86 @@
 # Automatic Monday report publication
 
-## Fully automatic mode (default)
+## Publication: the Monday publish Action (since Sep 28, 2026)
 
-The SEC collector runs in Cloudflare and parses each weekly 8-K. The report now
+`.github/workflows/monday-publish.yml` publishes each Monday edition with no one
+involved (owner's decisions, Sep 28, 2026). It replaced the ChatGPT/Codex Monday
+task (see [Retired](#retired-the-chatgptcodex-monday-task)).
+
+1. **Schedule.** Every 10 minutes, 7:50–10:30 am New York time, Mondays and
+   Tuesdays, in daylight and standard time (cron `3,13,…,53 11-15 * * 1,2` UTC).
+   `scripts/monday_publish.py` exits quietly outside that window.
+2. **Gate.** It reads the Worker's feed (`load_monitor_snapshot(force=True)`) and goes
+   ahead only when both MSTR and ASST have validated weekly 8-Ks, with balance
+   dates newer than the newest in `data/report-supplements.json`, accepted in the
+   last three days, and no filing still awaiting validation. Otherwise it prints
+   `waiting` or `already published` and exits 0. No holiday calendar is needed: when
+   EDGAR is closed on a Monday the NYSE trades (Columbus Day, Mon Oct 12, 2026), the
+   8-Ks come Tuesday and the Tuesday runs publish them.
+3. **Freeze.** It saves the entries the page derives in memory, through
+   `auto_reconcile.derive_entries` (shared with `scripts/auto_reconcile.py`), in the
+   formats of the reviewed update c3bb16f:
+   - `data/report-supplements.json`: the new weeks' balances, still marked
+     `"auto_reconciled": true`, with the comparison marks the edition compares
+     against (`comparison_btc_prices`, `comparison_release_dates`, `balance_marks`),
+     and `revision` bumped (`2026-10-05.1`; a redo becomes `.2`);
+   - `data/latest-report-filings.json`: the verified pair, merged at the top;
+   - `data/asst-vwap-YYYY-MM-DD.json`: Strive's VWAP, through `report.vwap_store`
+     (a saved estimate is kept);
+   - `data/release-prices/YYYY-MM-DD.json`: the prices at publication. This is an
+     archive: no code reads it.
+
+   It never writes `data/reconciliation-*.json`. Those remain the reviewed starting
+   point: `auto_reconcile._seed()` rolls Strategy's shares forward from the newest
+   one. A note saying "unavailable", or any missing figure, fails the run and
+   writes nothing.
+4. **Check.** `scripts/check_monday_publication.py --live` must pass with the
+   in-memory reconciliation off (`DCR_AUTO_RECONCILE=0`), so the saved files alone
+   make the edition complete. If it fails, every file is restored.
+5. **Publish.** It runs the full test suite, commits "Publish automatic Monday
+   edition YYYY-MM-DD" as github-actions[bot], runs `git pull --rebase` and pushes
+   to `main` (never forced).
+6. **Verify and ping.** `scripts/live_check.mjs --expect "MSTR=Oct 4,ASST=Oct 2"`
+   reloads the public page for up to 12 minutes until both company cards read the
+   new balance dates. Only then does one Discord message go out: "📘 Accretion
+   Ledger updated", with the balance dates, bitcoin bought, money in / money out,
+   Strategy's debt heads-up (if any) and links to the page and the commit. It
+   uses the repository secret `DISCORD_WEBHOOK_URL` and mentions no one.
+
+**When it fails**, nothing goes to Discord; GitHub emails the failed run. The page
+keeps showing the week from memory, or last week's edition if a live source is
+down, and the next scheduled run tries again. Manual fallback, from a clean
+checkout of `main`:
+
+```powershell
+.venv\Scripts\python scripts\monday_publish.py --ignore-window
+```
+
+Then run the tests and push the `data/` changes. Or use **Actions → Monday publish →
+Run workflow**, with these inputs:
+
+- `dry_run`: everything except writing files;
+- `force`: redo the newest week's automatic entries;
+- `replay`: `YYYY-MM-DD` replays a saved edition;
+- `ping_test`: sends only the labelled Discord setup test.
+
+`--replay 2026-09-28` removes that week's saved entries in memory, derives them again
+from the reconciliation before it, and prints the differences from the reviewed
+figures. On Sep 28, 2026 it reproduced:
+
+- preferred claims to the cent;
+- debt and Strive's claims exactly;
+- Strive's VWAP exactly;
+- Strategy's shares within 1,835 (employee issuance the 8-K does not show).
+
+The comparison BTC mark differs by design. The Action uses the hour the prior 8-K
+was accepted ($85,319.09); the reviewed update used its 9:13 am release snapshot
+($85,149.67).
+
+## Fully automatic reconciliation (in memory)
+
+The SEC collector runs in Cloudflare and parses each weekly 8-K. The report
 reconciles a new week by itself (`report/auto_reconcile.py`) whenever
-`data/report-supplements.json` has no reviewed entry for that balance date:
+`data/report-supplements.json` has no entry for that balance date:
 
 | Input | Automatic source |
 | --- | --- |
@@ -16,12 +92,15 @@ reconciles a new week by itself (`report/auto_reconcile.py`) whenever
 | Comparison marks | BTC and EUR/USD at the prior filing's SEC acceptance hour; STRC from the prior Strive filing |
 | Strive common-capital VWAP | `report.equity_vwap` for the filing week (1-minute, else 5-minute) |
 
-Checked against the reviewed September 20 edition, the roll-forward reproduced the
-preferred claims to the cent, debt and SATA claims exactly, and basic shares within
-10,000 (employee issuance the 8-K does not show). Reviewed entries always take
-precedence, and any source failure leaves the week missing, so the last complete
+Checked against the reviewed September 20 and 28 editions, the roll-forward
+reproduced the preferred claims to the cent, debt and SATA claims exactly, and basic
+shares within 10,000 (employee issuance the 8-K does not show). Saved entries always
+take precedence; a reviewed count restarts Strategy's share roll-forward, while a
+saved automatic week keeps comparing strategy.com's note list with the reviewed
+convertibles. Any source failure leaves the week missing, so the last complete
 edition stays up. `DCR_AUTO_RECONCILE=0` turns this off. `scripts/auto_reconcile.py`
-prints the derived entries; add `--write` to freeze them for review.
+prints the derived entries (`--write` saves only the supplements); the Monday
+publish Action saves the whole week.
 
 **An automatically reconciled edition publishes, unlabelled (owner's decisions,
 Sep 27 and 28, 2026).** `publication_check` accepts it, `render_previews.py` leaves
@@ -41,15 +120,21 @@ Fallbacks that keep the image complete when the 8-K parser misses a figure:
   York time marked "Z"; `auto_reconcile.released_at` reads it as New York time when
   that lands just before the worker first saw the filing.
 
-The procedure below is now optional review. Running it replaces the automatic
-estimates with checked figures and resets the roll-forward.
+## Retired: the ChatGPT/Codex Monday task
 
-## Optional review procedure
+Until Sep 28, 2026 a scheduled ChatGPT/Codex task reconciled each Monday edition
+and pushed it to `main` (its last run was c3bb16f, "Reconcile September 28 Monday
+report and pin historical fixtures"). The owner retired it on Sep 28, 2026; the
+Monday publish Action above replaces it. The Friday ChatGPT audit
+([CHATGPT_AUDIT_TASK.md](CHATGPT_AUDIT_TASK.md)) is separate and still runs.
 
-A recurring Codex task can still perform the financial reconciliation and publish
-tested updates to this repository's `main` branch, which deploys the Streamlit
-application. The scheduled task needs its host computer awake with Codex running
-and its existing GitHub/network access available. No new API subscription is required.
+## Manual review (fallback)
+
+Nothing requires a review any more. To replace `auto_reconciled` entries with
+checked figures, follow the procedure below by hand: it writes reviewed entries
+(without `auto_reconciled`) and a dated `data/reconciliation-YYYY-MM-DD.json`, which
+becomes the new starting point of Strategy's roll-forward. Reviewed entries always
+win over automatic ones, and `monday_publish.py --force` never replaces them.
 
 ## Run procedure
 
@@ -151,9 +236,10 @@ and its existing GitHub/network access available. No new API subscription is req
 ## Scope and failure behavior
 
 The existing Cloudflare filing notifications and their schedule remain in place.
-This process publishes the Streamlit report and its source repository; it does
-not authorize new email, Discord, or social-media messages. Source outages,
-unpublished financial inputs, unavailable credentials or permission blocks can
-prevent a new edition. The scheduled task should explain the specific blocker,
-preserve the last complete edition, and retry without asking the user to repeat
-the normal Monday upload procedure.
+The Monday publish Action adds one Discord message per published edition (owner's
+decision, Sep 28, 2026), through the repository secret `DISCORD_WEBHOOK_URL`, and
+nothing else: no email beyond GitHub's own failed-run notice, and no social-media
+posts (the X Agent in bobat2121-lgtm/x-control-panel renders and announces the X
+image on its own schedule). Source outages, unpublished financial inputs or
+permission blocks can prevent a new edition; the run then fails, keeps the last
+complete edition and retries at the next scheduled run.

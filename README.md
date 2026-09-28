@@ -20,7 +20,9 @@ checks both issuers every 30 seconds on Mondays, 06:45–09:30 Eastern. Its
 appears under **Latest SEC filings** and refreshes every 15 seconds while
 the report session is open. New filings and parsed facts update there;
 **the financial cards retain their verified figures until all required NAV
-inputs and supplemental balances are reconciled**. See
+inputs and supplemental balances are reconciled**, which now happens automatically
+from the 8-Ks; the Monday publish Action saves each week to `main`
+([AUTOMATIC_MONDAY_REPORT.md](AUTOMATIC_MONDAY_REPORT.md)). See
 [LIVE_UPDATES.md](LIVE_UPDATES.md) for timing, parser coverage and limitations,
 and [DEPLOYMENT.md](DEPLOYMENT.md) for the deployed services.
 
