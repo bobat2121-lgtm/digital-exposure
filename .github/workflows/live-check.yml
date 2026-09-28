@@ -1,0 +1,36 @@
+# Opens the public page in a real browser, as a visitor would, and reports time to content,
+# any Streamlit exception and console errors per view, with screenshots as an artifact.
+# Runs after each push to main (once Streamlit Cloud has had time to redeploy) and on demand.
+name: Live page check
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: live-check
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright's Chromium
+        run: npm install --no-save --no-package-lock playwright@1.55.0 && npx playwright install --with-deps chromium
+      - name: Let Streamlit Cloud pick up the push
+        if: github.event_name == 'push'
+        run: sleep 150
+      - name: Load the page
+        run: node scripts/live_check.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-check
+          path: live-check/
+          retention-days: 14
