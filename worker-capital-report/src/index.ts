@@ -7,6 +7,7 @@ import { initialState, ISSUERS, type Filing, type PollState, type Ticker } from 
 import { LEGACY_SETUP_TEST_ID, SETUP_TEST_ID } from "./notifications";
 import { awareTime, eligiblePublication, publishedFeed, recentMondays, type PublicationEvent } from "./feed";
 export { ReportNotifier } from "./notifications";
+import { DISPATCH_CRON, kickPanel } from "./dispatch";
 
 const tickers = Object.keys(ISSUERS) as Ticker[];
 function errorMessage(error: unknown): string { return error instanceof Error ? error.message : "Unexpected poll failure"; }
@@ -348,7 +349,9 @@ export default {
       return json({ error: "Request failed" }, env, 500, false);
     }
   },
-  async scheduled(_controller, env, ctx): Promise<void> {
+  async scheduled(controller, env, ctx): Promise<void> {
+    // The X Control Panel's clock: start its GitHub workflows on time (see src/dispatch.ts).
+    if (controller.cron === DISPATCH_CRON) { ctx.waitUntil(kickPanel(controller.scheduledTime, env as Env & { GH_DISPATCH_TOKEN?: string })); return; }
     if (!inPollingWindow(Date.now())) return;
     ctx.waitUntil((async () => {
       for (const ticker of tickers) await env.ISSUER_POLLER.getByName(ticker).poll(ticker);

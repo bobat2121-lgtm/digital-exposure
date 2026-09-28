@@ -75,6 +75,19 @@ Discord 429 responses honor the `Retry-After` header and JSON `retry_after`; tim
 
 `POST /api/admin/notifications` shows publication checks, issuer outboxes and delivery state. `POST /api/admin/discord-test` uses the stable new `test:discord-unattended-v1` key, sends a clearly labelled setup message once, and leaves the old `test:discord-setup-v1` receipt intact. These routes require the existing admin Bearer token. Terminal failed deliveries require operator recovery; repeated acknowledgements or page views cannot reset them.
 
+## X Control Panel clock
+
+GitHub starts scheduled workflows late (sometimes by hours) and drops some, so this Worker also keeps time for
+`bobat2121-lgtm/X-Control-Panel`. A second trigger (`*/5 * * * *`) runs `src/dispatch.ts`, which asks GitHub to
+start the panel's workflows on New York time: the desk runs (07:05, 11:20, 12:50, Friday 16:10), the nightly and
+weekly jobs, the Accretion Ledger / Coupon Sheet / Closing Mark windows with backup starts, the Sun/Tue/Thu
+preflight, and the news monitor every 15 minutes. The workflows decide what's actually due, so a repeat start does
+nothing. The 8-K polling above is untouched.
+
+It needs one more secret, `GH_DISPATCH_TOKEN`: a fine-grained GitHub token for that repository only, with
+**Actions: Read and write**. Add it in the Cloudflare dashboard (Worker → Settings → Variables and Secrets) or with
+`npx wrangler secret put GH_DISPATCH_TOKEN`. Without it the clock logs `panel_kick_skipped` and does nothing.
+
 ## Deploy to the existing Worker
 
 Install dependencies with `npm ci`. Generate bindings with `npm run types`. Then run `npm run check`, `npm test`, and `npm run dry-run`.
