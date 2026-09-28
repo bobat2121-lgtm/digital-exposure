@@ -59,9 +59,9 @@ def number(value):
     return result if math.isfinite(result) else None
 
 
-def _get(url: str, accept: str = "application/json") -> bytes:
+def _get(url: str, accept: str = "application/json", timeout: float = 20) -> bytes:
     request = Request(url, headers={"User-Agent": USER_AGENT, "Accept": accept})
-    with urlopen(request, timeout=20) as response:
+    with urlopen(request, timeout=timeout) as response:
         raw = response.read(MAX_BYTES + 1)
     if len(raw) > MAX_BYTES:
         raise ValueError("Response exceeds the size limit")
@@ -210,8 +210,21 @@ def sata_rate_from_daily(daily: float, year: int, month: int) -> float:
 
 
 # ── FRED ────────────────────────────────────────────────────────────────────
+FRED_TIMEOUT = 8        # FRED's CSV service stalls for long stretches; nothing waits on it longer
+FRED_DAYS = 800         # enough history for 420 business days, instead of each series since the 1950s
+
+
+class Partial(Exception):
+    """A section that is fresh except for some parts, which come from the snapshot."""
+
+    def __init__(self, value, missing):
+        super().__init__("from the snapshot: " + ", ".join(missing))
+        self.value, self.missing = value, missing
+
+
 def fetch_fred_series(series: str, keep: int = 420) -> list[list]:
-    text = _get(FRED + urlencode({"id": series}), "text/csv").decode("utf-8")
+    start = (datetime.now(UTC).date() - timedelta(days=FRED_DAYS)).isoformat()
+    text = _get(FRED + urlencode({"id": series, "cosd": start}), "text/csv", FRED_TIMEOUT).decode("utf-8")
     rows = []
     for row in csv.reader(io.StringIO(text)):
         if len(row) != 2 or row[0] in ("DATE", "observation_date"):
@@ -225,16 +238,34 @@ def fetch_fred_series(series: str, keep: int = 420) -> list[list]:
 
 
 def fetch_fred() -> dict:
+    """Each FRED series on its own: one that fails falls back to the snapshot, then the same-day
+    official sources extend it (Treasury: 3M bill, 2Y, 10Y; New York Fed: SOFR, fed funds). A series
+    those don't cover (the ICE BofA IG and HY yields) stays on the snapshot and marks FRED stale."""
+    saved = load_snapshot().get("fred") or {}
+    result, failed = {}, []
     with ThreadPoolExecutor(max_workers=len(FRED_SERIES)) as pool:
         jobs = {series: pool.submit(fetch_fred_series, series) for series in FRED_SERIES}
-        result = {series: job.result() for series, job in jobs.items()}
+        for series, job in jobs.items():
+            try:
+                result[series] = job.result()
+            except Exception:  # FRED down or slow
+                failed.append(series)
+                result[series] = [list(row) for row in saved.get(series) or []]
+    if len(failed) == len(FRED_SERIES) and not saved:
+        raise ValueError("FRED unavailable and no snapshot")
     # FRED republishes these a day or two late; overlay the same-day official
-    # sources when they are newer. An overlay failure keeps the FRED series.
+    # sources when they are newer. An overlay failure keeps what FRED gave.
+    covered = set()
     for overlay in (fetch_treasury_curve, fetch_nyfed_rates):
         try:
-            _overlay(result, overlay())
-        except Exception:  # network or format change: FRED alone is still valid
+            newer = overlay()
+            _overlay(result, newer)
+            covered.update(series for series, rows in newer.items() if rows)
+        except Exception:  # network or format change
             pass
+    missing = [series for series in failed if series not in covered]
+    if missing:
+        raise Partial(result, missing)
     return result
 
 
@@ -467,6 +498,10 @@ def load_extras(sections=SECTIONS, *, offline: bool = False) -> dict:
         for section, job in jobs.items():
             try:
                 result[section] = job.result()
+            except Partial as exc:  # mostly fresh: keep it, but say the section isn't wholly live
+                result["errors"].append(f"{section}: {exc}")
+                result[section] = exc.value
+                result["stale"].append(section)
             except Exception as exc:  # network, provider or validation failure
                 result["errors"].append(f"{section}: {type(exc).__name__}")
                 result[section] = saved.get(section)

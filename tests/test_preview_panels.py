@@ -45,6 +45,29 @@ class ExtrasTests(unittest.TestCase):
         self.assertEqual(extras["stale"], ["fred"])
         self.assertEqual(extras["fred"], extras_module.load_snapshot()["fred"])
 
+    def test_fred_series_fall_back_one_by_one_and_official_sources_extend_them(self):
+        # FRED stalls: the rates come from Treasury and the NY Fed on top of the snapshot; IG/HY stay saved.
+        def fred(series, keep=420):
+            raise TimeoutError("FRED stalled")
+        treasury = {"DGS3MO": [("2099-01-02", 4.1)], "DGS2": [("2099-01-02", 3.9)], "DGS10": [("2099-01-02", 4.4)]}
+        nyfed = {"SOFR": [("2099-01-02", 4.0)], "DFF": [("2099-01-02", 4.05)]}
+        with patch.object(extras_module, "fetch_fred_series", fred), \
+             patch.object(extras_module, "fetch_treasury_curve", lambda: treasury), \
+             patch.object(extras_module, "fetch_nyfed_rates", lambda: nyfed):
+            extras = extras_module.load_extras(("fred",))
+        self.assertEqual(extras["stale"], ["fred"])
+        self.assertIn("BAMLH0A0HYM2EY", extras["errors"][0])
+        self.assertEqual(extras["fred"]["DGS3MO"][-1], ["2099-01-02", 4.1])
+        self.assertEqual(extras["fred"]["SOFR"][-1], ["2099-01-02", 4.0])
+        saved = extras_module.load_snapshot()["fred"]
+        self.assertEqual(extras["fred"]["BAMLC0A0CMEY"], saved["BAMLC0A0CMEY"])
+        # FRED back up: no fallback, and an overlay outage changes nothing.
+        def down():
+            raise OSError("offline")
+        with patch.object(extras_module, "fetch_fred_series", lambda series, keep=420: [["2099-01-02", 1.0]]), \
+             patch.object(extras_module, "fetch_treasury_curve", down), patch.object(extras_module, "fetch_nyfed_rates", down):
+            self.assertEqual(extras_module.fetch_fred()["DGS10"], [["2099-01-02", 1.0]])
+
     def test_number_rejects_non_numeric(self):
         self.assertIsNone(extras_module.number(True))
         self.assertIsNone(extras_module.number("nan"))

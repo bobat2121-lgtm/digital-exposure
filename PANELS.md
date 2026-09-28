@@ -7,13 +7,22 @@ forms built from the same data:
   reflows for a phone, and carries more than the X image: every hero figure as a
   tile, the charts with hover values, and full tables.
 - **The X image** is the phone-first PNG for posting on X. **Download X image**
-  saves it; **Preview X image** shows it first.
+  draws and saves it at the click, with prices as of that moment; **Preview X image**
+  draws it in a dialog.
 
 At the bottom of every tab, two collapsed sections list **Formulas** (every figure's
 definition) and **Sources, notes and audit values**; the X image download and preview
-come last. Each tab fetches fresh data
-when a browser session opens it and offers **Refresh data**. Only the open tab
-builds.
+come last. Only the open tab builds, and **Refresh data** re-fetches everything.
+
+**Speed.** The data sources refresh in the background (`panels/live.py`): each keeps its
+latest good copy, a view gets it at once, and a copy past its time (15 minutes; prices
+and the filing feed 2 minutes) refreshes behind the scenes, so no view waits on a slow
+provider. Only the first view after a restart waits (at most about 12 seconds, then the
+saved snapshot, marked stale). FRED gets 8 seconds and falls back series by series: the
+Treasury curve and the New York Fed fill in the bill, 2Y, 10Y, SOFR and fed funds, and
+only the ICE BofA IG and HY yields stay on the snapshot. The X image is drawn only when
+downloaded or previewed. `app.py` re-imports the app's modules when a deploy changes
+them, because Streamlit's own watcher only reloads sessions that were open at the time.
 
 | Day | Title | X image size | Posting time |
 | --- | --- | --- | --- |

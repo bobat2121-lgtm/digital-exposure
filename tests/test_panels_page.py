@@ -49,13 +49,13 @@ def offline_reports():
     demo = friday_data.load_demo()
     panel = metrics.compute_panel(demo)
     derived = friday_preview.derive(panel, demo, extras, feed)
-    common = {"png": tiny_png(), "overflows": [], "notices": []}
+    common = {"notices": []}
     return {
         "_extras": {"stale": []},
         "monday_report": {**common, "preview": preview, "audit": monday_preview.audit_rows(preview),
                           "notes": monday_preview.notes(preview)},
         "wednesday_report": {**common, "data": data, "audit": wednesday.audit_rows(data), "notes": wednesday.notes(data, True)},
-        "friday_report": {**common, "panel": panel, "derived": derived, "audit": friday_preview.audit_rows(panel, derived),
+        "friday_report": {**common, "panel": panel, "derived": derived, "stale": (), "audit": friday_preview.audit_rows(panel, derived),
                           "notes": friday_preview.notes(panel, derived, (), True)},
     }
 
@@ -91,7 +91,7 @@ class PanelsPageTests(TestCase):
         app = self.app()
         self.assert_report(app)
         self.assertEqual([tab.label for tab in app.tabs], list(panels_page.TABS.values()))
-        self.calls["monday_report"].assert_called_once_with("bloomberg")
+        self.calls["monday_report"].assert_called_once_with()
         self.calls["wednesday_report"].assert_not_called()
         self.calls["friday_report"].assert_not_called()
         self.assertEqual(app.query_params["report"], ["monday"])
@@ -110,7 +110,7 @@ class PanelsPageTests(TestCase):
     def test_style_link_opens_broadsheet(self):
         app = self.app({"style": "broadsheet", "report": "friday"})
         self.assert_report(app)
-        self.calls["friday_report"].assert_called_once_with("broadsheet")
+        self.calls["friday_report"].assert_called_once_with()
         self.assertEqual(app.segmented_control[0].value, "Broadsheet")
         self.assertEqual(app.query_params["style"], ["broadsheet"])
 
@@ -118,13 +118,14 @@ class PanelsPageTests(TestCase):
         app = self.app()
         app.segmented_control[0].set_value("Broadsheet").run()
         self.assert_report(app)
-        self.calls["monday_report"].assert_called_with("broadsheet")
+        self.calls["monday_report"].assert_called_with()
         self.assertEqual(app.query_params["style"], ["broadsheet"])
+        self.assertEqual(app.segmented_control[0].value, "Broadsheet")
 
     def test_retired_options_leave_shared_links(self):
         app = self.app({"report": "sunday", "theme": "vapor", "layout": "b", "extra": "1", "style": "neon"})
         self.assert_report(app)
-        self.calls["monday_report"].assert_called_once_with("bloomberg")
+        self.calls["monday_report"].assert_called_once_with()
         self.assertEqual(app.query_params["report"], ["monday"])
         for retired in ("theme", "layout", "extra"):
             self.assertNotIn(retired, app.query_params)
@@ -136,6 +137,23 @@ class PanelsPageTests(TestCase):
         self.assertEqual(len(app.exception), 0, [item.message for item in app.exception])
         monday.assert_called_once_with()
         self.calls["monday_report"].assert_not_called()
+
+
+class XImageTests(TestCase):
+    """The X image is drawn on demand, when downloaded or previewed, in the chosen style."""
+
+    def test_each_report_draws_in_both_styles_and_monday_reprices(self):
+        reports = offline_reports()
+        preview = reports["monday_report"]["preview"]
+        with patch.object(panels_page, "_monday", return_value=(preview, None, False)) as monday, \
+             patch.object(panels_page, "wednesday_report", return_value=reports["wednesday_report"]), \
+             patch.object(panels_page, "friday_report", return_value=reports["friday_report"]):
+            for name in ("Monday", "Wednesday", "Friday"):
+                for style in ("bloomberg", "broadsheet"):
+                    with self.subTest(name=name, style=style):
+                        with Image.open(BytesIO(panels_page.x_image(name, style))) as image:
+                            self.assertEqual(image.width, 1440)
+        monday.assert_called_with(fresh=True)  # prices as of the click
 
 
 class FormulaListTests(TestCase):

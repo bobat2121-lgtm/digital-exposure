@@ -1,5 +1,6 @@
 # Pinned versions. Editing this file makes Streamlit Community Cloud reinstall and restart
-# the app, which also forces a push to load if a running app kept its old code.
+# the app. Since Sep 28, 2026 app.py re-imports changed code itself, so a restart is only
+# needed for a change to app.py or to these pins.
 streamlit==1.63.0
 pandas==3.0.1
 altair==6.2.2

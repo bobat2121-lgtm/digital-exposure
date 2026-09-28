@@ -1,5 +1,6 @@
 """Public Monday, Wednesday and Friday panels, plus the detailed Monday and
 Friday reports at ``?classic=1``, sharing one Streamlit entrypoint."""
+import os
 from pathlib import Path
 import sys
 
@@ -9,6 +10,34 @@ ROOT = Path(__file__).resolve().parent
 friday_source = ROOT / "sources" / "friday"
 if str(friday_source) not in sys.path:
     sys.path.insert(0, str(friday_source))
+# Code and the data files modules read once: a change to any of them means a deploy.
+WATCHED = ((ROOT, ".py"), (ROOT / "panels", ".py"), (ROOT / "report", ".py"),
+           (friday_source / "friday", ".py"), (ROOT / "data", ".json"))
+
+
+@st.cache_resource
+def _loaded() -> dict:
+    """The fingerprint of the files the running modules came from, shared by every session."""
+    return {"stamp": None}
+
+
+def _fresh_code() -> None:
+    """Re-import the app's modules after a deploy changed them. Streamlit's own watcher reloads
+    only for sessions open when the files changed, so after a quiet push every later visitor
+    got the old code until a reboot (Sep 28, 2026)."""
+    stamp = max((entry.stat().st_mtime_ns for folder, suffix in WATCHED if folder.is_dir()
+                 for entry in os.scandir(folder) if entry.name.endswith(suffix)), default=0)
+    state = _loaded()
+    if state["stamp"] is not None and state["stamp"] != stamp:
+        root = str(ROOT)
+        for name, module in list(sys.modules.items()):
+            path = getattr(module, "__file__", None) or ""
+            if name != "__main__" and path.startswith(root) and ".venv" not in path:
+                sys.modules.pop(name, None)
+    state["stamp"] = stamp
+
+
+_fresh_code()
 
 # The bookmark icon: a bond coupon paying a yield, as 16x16 pixel art (a bare "₿" is not an
 # emoji to Streamlit, so it never showed as a favicon).

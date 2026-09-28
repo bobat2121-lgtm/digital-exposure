@@ -137,6 +137,8 @@ BASE = """
 [data-testid="stButton"] button:hover, [data-testid="stDownloadButton"] button:hover,
 [data-testid="stPopover"] button:hover { border-color: var(--accent); color: var(--text); background: var(--panel2); }
 [data-testid="stPopoverBody"] { background: var(--panel); border: 1px solid var(--outline); }
+[data-testid="stDialog"] > div { background: var(--panel); color: var(--text); border: 1px solid var(--outline); }
+[data-testid="stDialog"] [role="dialog"] :is(h1, h2, h3, button) { color: var(--text); }
 [data-testid="stExpander"] { background: var(--panel); border: 1px solid var(--outline); }
 [data-testid="stExpander"] summary { color: var(--text); background: var(--panel); }
 [data-testid="stExpander"] summary:hover { background: var(--panel2); }
@@ -249,7 +251,8 @@ def style(look: Look) -> None:
               "bar": look.bar, "up": look.up, "down": look.down, "chip-ink": look.chip_ink,
               "body": f"'{look.body_font}'", "title": f"'{look.title_font}'",
               "stretch": "92%" if look.key == "broadsheet" else "95%"}
-    root = ".stApp { " + " ".join(f"--{name}: {value};" for name, value in tokens.items()) + " }"
+    # Dialogs render outside .stApp, so they get the tokens too.
+    root = ".stApp, [data-testid=\"stDialog\"] { " + " ".join(f"--{name}: {value};" for name, value in tokens.items()) + " }"
     st.html(f"<style>{FONTS}{root}{BASE}{EXTRA[look.key]}</style>")
 
 
