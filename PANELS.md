@@ -191,12 +191,14 @@ then what it did per share.
   shows its makeup: Strategy's "$5.04B reserve + $1.05B USD cash", and Strive's
   "$229.6m cash + $49.7m STRC" (the STRC it holds).
 - **Per share:** BTC/share, NAV/share, amplification and shares, each with its
-  weekly change. Amplification uses each issuer's own formula, shown in ×:
+  weekly change. Amplification uses each issuer's own formula and is shown as a
+  percent above 1×, (× − 1) × 100, so 1.51× reads 51%; its weekly change is in
+  percentage points (pp):
   - Strategy: BTC reserve ÷ net BTC reserve (BTC + USD − debt − preferred),
-    strategy.com's `amplification` KPI since Jul 23, 2026 (about 1.25×).
-  - Strive: 1 + (debt + SATA notional) ÷ BTC value. The ratio is the "Amplification
-    Ratio" on Strive's treasury dashboard, shown as 1 + that ratio in ×. The audit
-    checks the ratio against Strive's dashboard figure.
+    strategy.com's `amplification` KPI since Jul 23, 2026 (about 1.25×, shown as 25%).
+  - Strive: (debt + SATA notional) ÷ BTC value, the "Amplification Ratio" on Strive's
+    treasury dashboard (about 50.5%, shown as 51%). The audit checks it against
+    Strive's dashboard figure.
 
   The two measure different things and are not comparable.
 

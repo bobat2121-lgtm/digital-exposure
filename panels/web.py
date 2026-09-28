@@ -532,10 +532,11 @@ MONDAY_FORMULAS = (
         ("BTC / share (sats)", "BTC held × 100,000,000 ÷ effective common shares."),
         ("NAV", "BTC held × BTC price + cash − debt − preferred claims."),
         ("NAV / share, price / NAV", "NAV ÷ effective common shares; share price ÷ NAV per share."),
+        ("Amplification", "Shown as a percent above 1×: (ratio − 1) × 100, so 1.51× reads 51%; weekly change in points."),
         ("Amplification, Strategy", "BTC reserve ÷ net BTC reserve = BTC value ÷ (BTC value + USD − debt − preferred), "
-                                    "strategy.com's KPI since July 23, 2026."),
-        ("Amplification, Strive", "1 + (debt + SATA notional) ÷ BTC value; the ratio is Strive's dashboard "
-                                  "\"Amplification Ratio\". The two are not comparable."),
+                                    "strategy.com's KPI since July 23, 2026 (1.25× shows as 25%)."),
+        ("Amplification, Strive", "(debt + SATA notional) ÷ BTC value, Strive's dashboard \"Amplification Ratio\" "
+                                  "(its 50.5% shows as 51%). The two are not comparable."),
         ("Weekly changes", "This week's balances vs last week's, each at its own week's BTC price (growth rows hold prices constant)."),
     )),
     ("Coverage", (

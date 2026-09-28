@@ -48,7 +48,7 @@ class CompanyExtras:
     ticker: str
     amplification_pct: float | None = None      # (preferred notional + debt) ÷ BTC value, in % (Strive's ratio)
     amplification_change_pp: float | None = None
-    amplification_x: float | None = None        # shown, in ×: each issuer's own formula (see build_preview)
+    amplification_x: float | None = None        # in ×, each issuer's own formula (see build_preview); shown as (× − 1) in %
     amplification_change_x: float | None = None
     amplification_source: str = ""
     preferred_pct: float | None = None
@@ -331,7 +331,7 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
             # Shown as exposure in ×: 1 + the ratio (a 50.5% ratio reads 1.51×).
             amp_x = 1 + amp / 100 if amp is not None else None
             amp_change_x = (amp - prior_amp) / 100 if amp is not None and prior_amp is not None else None
-            amp_source = "Strive's formula: 1 + (debt + SATA notional) ÷ BTC value"
+            amp_source = "Strive's Amplification Ratio: (debt + SATA notional) ÷ BTC value"
         months, years, breakeven, source = _coverage(ticker, company, report.current_btc_price, extras, facts)
         key = "strategy_reserve_floor_months" if ticker == "MSTR" else "strive_reserve_goal_months"
         target = _n((config.get(key) or {}).get("value"))
@@ -578,20 +578,13 @@ def _logo(canvas, c, theme, p, x, middle):
     canvas.image.paste(art, (round(x), round(middle - art_middle)), art)
 
 
-def _times(value, signed=False):
-    if value is None:
-        return "—"
-    if round(value, 2) == 0:
-        return "0.00×"
-    sign = "−" if value < 0 else "+" if signed else ""
-    return f"{sign}{abs(value):.2f}×"
-
-
 def _amplification(e: CompanyExtras) -> tuple[str, str]:
-    """Each issuer's own ratio: Strategy's in ×, Strive's in %."""
+    """Each issuer's own ratio as a percent above 1×, (× − 1) × 100, so 1.51× reads 51%;
+    the weekly change in percentage points."""
     if e.amplification_x is not None:
-        return _times(e.amplification_x), _times(e.amplification_change_x, True)
-    return _pct(e.amplification_pct), _pct(e.amplification_change_pp, 2, True, " pp")
+        change = e.amplification_change_x * 100 if e.amplification_change_x is not None else None
+        return _pct((e.amplification_x - 1) * 100, 0), _pct(change, 1, True, " pp")
+    return _pct(e.amplification_pct, 0), _pct(e.amplification_change_pp, 1, True, " pp")
 
 
 def _share_change(c: CompanyView):
@@ -737,10 +730,11 @@ def notes(preview: MondayPreview) -> list[str]:
         "Strive's common figure is an estimate: net share change × prior-week VWAP.",
         f"BTC = the week's bitcoin purchase cost, fees included ({costs}). DIVs = the rest of the week's funding: preferred "
         f"dividends and interest, plus fees and other uses. {stated}".strip(),
-        "Amplification uses each issuer's own formula, shown in ×. Strategy: BTC reserve ÷ net BTC reserve (BTC + USD − "
-        "debt − preferred), its strategy.com KPI since July 23, 2026. Strive: 1 + (debt + SATA notional) ÷ BTC value, "
-        "where the ratio is the \"Amplification Ratio\" on its treasury dashboard; Strive has no debt. "
-        "The two measure different things and are not comparable. Weekly changes come from the filed balances.",
+        "Amplification uses each issuer's own formula, shown as a percent above 1× ((× − 1) × 100: 1.51× is 51%), its weekly "
+        "change in percentage points. Strategy: BTC reserve ÷ net BTC reserve (BTC + USD − debt − preferred), its strategy.com "
+        "KPI since July 23, 2026. Strive: (debt + SATA notional) ÷ BTC value, the \"Amplification Ratio\" on its treasury "
+        "dashboard; Strive has no debt. The two measure different things and are not comparable. Weekly changes come from "
+        "the filed balances.",
         "NAV, price/NAV, coverage and growth are estimates from dated balances and reconstructed preferred "
         "claims at the displayed prices; growth holds prices constant.",
         "USD cover = months of dividend (and, for Strategy, interest) obligations held in USD, read against Strategy's 12-month "
