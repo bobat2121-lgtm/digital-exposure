@@ -3,10 +3,17 @@
 Stock metadata may describe an earlier regular-session close. Retrieval time
 never substitutes for the provider's observation time, and a failed refresh
 never replaces the previous complete cache.
+
+Sessions (owner's rules, Sep 28, 2026): before the open on a NYSE trading day MSTR and
+ASST take their latest pre-market trade (Yahoo 1-minute bars with extended hours, free);
+during the session every stock is live; otherwise (evenings, weekends, holidays) the
+close. Preferreds never use pre-market prices. Each quote carries its ``session`` and
+``price_label`` says how to show it.
 """
 
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
+from functools import lru_cache
 import json
 from math import isfinite
 import os
@@ -14,6 +21,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from urllib.parse import quote
 from urllib.request import Request, urlopen
+from zoneinfo import ZoneInfo
 
 
 YAHOO_SYMBOLS = ("MSTR", "ASST", "STRC", "EURUSD=X")
@@ -23,8 +31,52 @@ SOURCE_URLS = {
     for symbol in YAHOO_SYMBOLS
 }
 SOURCE_URLS["BTC-USD"] = "https://api.strategy.com/btc/bitcoinKpis"
+EXTENDED = ("MSTR", "ASST")  # the only symbols priced before the open
+PRE_MARKET_URLS = {symbol: f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1m&range=1d&includePrePost=true"
+                   for symbol in EXTENDED}
+SESSIONS = ("pre-market", "regular", "close", "live")
+NEW_YORK = ZoneInfo("America/New_York")
 CACHE_PATH = Path(__file__).resolve().parents[1] / "data" / "current-prices.json"
 FUTURE_TOLERANCE = timedelta(seconds=60)
+
+
+@lru_cache(maxsize=1)
+def _xnys():
+    import exchange_calendars
+    return exchange_calendars.get_calendar("XNYS")
+
+
+def market_session(now: datetime | None = None) -> str:
+    """'pre-market' from 4:00 am ET to the open on a NYSE trading day, 'regular' while it
+    trades (early closes from the exchange calendar), else 'closed'."""
+    local = _now(now).astimezone(NEW_YORK)
+    day = local.date()
+    try:
+        calendar = _xnys()
+        if not calendar.is_session(day.isoformat()):
+            return "closed"
+        opens = calendar.session_open(day.isoformat()).to_pydatetime()
+        closes = calendar.session_close(day.isoformat()).to_pydatetime()
+    except Exception:  # calendar unavailable or out of range: weekdays, 9:30 to 4:00
+        if day.weekday() >= 5:
+            return "closed"
+        opens, closes = datetime.combine(day, time(9, 30), NEW_YORK), datetime.combine(day, time(16), NEW_YORK)
+    if datetime.combine(day, time(4), NEW_YORK) <= local < opens:
+        return "pre-market"
+    return "regular" if opens <= local < closes else "closed"
+
+
+def price_label(quote: dict) -> str:
+    """How a price was observed: 'pre-market 8:11 AM ET', '11:02 AM ET' during the session,
+    else its close, 'close Fri Sep 25'."""
+    observed = datetime.fromisoformat(quote["as_of"]).astimezone(NEW_YORK)
+    clock = f"{observed.hour % 12 or 12}:{observed:%M} {'AM' if observed.hour < 12 else 'PM'} ET"
+    session = quote.get("session")
+    if session == "pre-market":
+        return f"pre-market {clock}"
+    if session in ("regular", "live"):
+        return clock
+    return f"close {observed:%a %b} {observed.day}"
 
 
 def _now(now: datetime | None = None) -> datetime:
@@ -90,7 +142,44 @@ def parse_yahoo_quote(payload: dict, expected_symbol: str, now: datetime) -> dic
     except (KeyError, IndexError, TypeError, AttributeError) as exc:
         raise ValueError(f"Malformed Yahoo quote for {expected_symbol}") from exc
     return {"symbol": expected_symbol, "price": price, "as_of": observed,
+            "session": "regular" if market_session(now) == "regular" else "close",
             "source_url": SOURCE_URLS[expected_symbol]}
+
+
+def parse_pre_market(payload: dict, symbol: str, now: datetime) -> dict | None:
+    """The latest pre-market trade today (a 1-minute bar with a price), or None."""
+    now = _now(now)
+    try:
+        result = payload["chart"]["result"][0]
+        if result["meta"]["symbol"] != symbol:
+            raise ValueError("Yahoo quote symbol does not match the requested symbol")
+        stamps = result.get("timestamp") or []
+        closes = result["indicators"]["quote"][0].get("close") or []
+    except (KeyError, IndexError, TypeError) as exc:
+        raise ValueError(f"Malformed Yahoo pre-market bars for {symbol}") from exc
+    start = datetime.combine(now.astimezone(NEW_YORK).date(), time(4), NEW_YORK).timestamp()
+    trades = [(stamp, close) for stamp, close in zip(stamps, closes)
+              if isinstance(close, (int, float)) and close > 0 and start <= stamp <= now.timestamp()]
+    if not trades:
+        return None
+    stamp, price = trades[-1]
+    return {"symbol": symbol, "price": _positive_number(price, f"{symbol} pre-market price"),
+            "as_of": _epoch(stamp, now), "session": "pre-market", "source_url": PRE_MARKET_URLS[symbol]}
+
+
+def _pre_market(now: datetime) -> dict:
+    """Pre-market quotes for MSTR and ASST; a symbol with no trade yet, or a failed request, keeps its close."""
+    found = {}
+    with ThreadPoolExecutor(max_workers=len(EXTENDED)) as pool:
+        jobs = {symbol: pool.submit(_fetch_json, PRE_MARKET_URLS[symbol]) for symbol in EXTENDED}
+        for symbol, job in jobs.items():
+            try:
+                quote_ = parse_pre_market(job.result(), symbol, now)
+            except Exception:  # network or format: the close stands
+                continue
+            if quote_:
+                found[symbol] = quote_
+    return found
 
 
 def parse_btc_quote(payload: dict, now: datetime) -> dict:
@@ -102,7 +191,7 @@ def parse_btc_quote(payload: dict, now: datetime) -> dict:
         observed = _epoch(result["msTimestamp"], now, milliseconds=True)
     except (KeyError, TypeError) as exc:
         raise ValueError("Malformed Strategy Bitcoin quote") from exc
-    return {"symbol": "BTC-USD", "price": price, "as_of": observed,
+    return {"symbol": "BTC-USD", "price": price, "as_of": observed, "session": "live",
             "source_url": SOURCE_URLS["BTC-USD"]}
 
 
@@ -123,10 +212,14 @@ def _validate_snapshot(snapshot: dict, now: datetime) -> dict:
         observed = _iso_timestamp(record.get("as_of"), now, f"{symbol} observation timestamp")
         if observed > fetched + FUTURE_TOLERANCE:
             raise ValueError(f"{symbol} observation is after the recorded retrieval")
-        if record.get("source_url") != SOURCE_URLS[symbol]:
+        source = record.get("source_url")
+        if source not in {SOURCE_URLS[symbol], PRE_MARKET_URLS.get(symbol, SOURCE_URLS[symbol])}:
             raise ValueError(f"Saved {symbol} quote has an unexpected source URL")
+        session = record.get("session")
+        if session is not None and (session not in SESSIONS or (session == "pre-market") != (source != SOURCE_URLS[symbol])):
+            raise ValueError(f"Saved {symbol} quote has an unexpected session")
         quotes[symbol] = {"symbol": symbol, "price": price, "as_of": observed.isoformat(),
-                          "source_url": SOURCE_URLS[symbol]}
+                          **({"session": session} if session else {}), "source_url": source}
     return {"schema_version": 1, "fetched_at": fetched.isoformat(), "quotes": quotes}
 
 
@@ -155,6 +248,8 @@ def pull_current_prices(*, now: datetime | None = None) -> dict:
     quotes = {symbol: parse_yahoo_quote(payloads[symbol], symbol, fetched)
               for symbol in YAHOO_SYMBOLS}
     quotes["BTC-USD"] = parse_btc_quote(payloads["BTC-USD"], fetched)
+    if market_session(fetched) == "pre-market":
+        quotes.update(_pre_market(fetched))
     return _validate_snapshot({"schema_version": 1, "fetched_at": fetched.isoformat(),
                                "quotes": quotes}, fetched)
 

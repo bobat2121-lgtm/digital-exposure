@@ -337,7 +337,8 @@ def _company(ticker, filing, all_filings, supplements, prices):
     from .current_report import quote_time
     return Company(
         name="Strategy" if ticker == "MSTR" else "Strive", ticker=ticker,
-        stock_price=quote["price"], quote_session="LAST PRICE", quote_timestamp=quote_time(quote["as_of"]),
+        stock_price=quote["price"], quote_session="PRE-MARKET" if quote.get("session") == "pre-market" else "LAST PRICE",
+        quote_timestamp=quote_time(quote["as_of"]),
         current=current, prior=prior, common_capital=common, preferred_activity=tuple(activity),
         prior_securities_at_current_prices=prior_marked.marketable_securities,
         prior_liquid_assets_at_current_prices=prior_marked.combined_liquid_assets,

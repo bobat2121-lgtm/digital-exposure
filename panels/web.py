@@ -372,7 +372,7 @@ def _m(value, digits=1, signed=False):
 # ── Monday ──────────────────────────────────────────────────────────────────
 def monday(preview, *, notices=()) -> None:
     view = preview.view
-    stamp = view.report_time.replace("Updated ", "", 1)
+    stamp = preview.price_stamp or view.report_time.replace("Updated ", "", 1)
     header("monday", "Digital Credit Report · Monday", ("The ", "Accretion", " Ledger"),
            f"<b>{escape(preview.period)}</b> · BTC <b>{escape(view.btc_price)}</b> · {escape(stamp)} · "
            "what last week's filings did to each common share")
@@ -383,7 +383,8 @@ def monday(preview, *, notices=()) -> None:
     for column, company in zip(columns, companies):
         source = next(item for item in preview.report.companies if item.ticker == company.ticker)
         with column, st.container(border=True, key=f"mon_{company.ticker}"):
-            _monday_company(company, preview.extras[company.ticker], source, preview.report.current_btc_price)
+            _monday_company(company, preview.extras[company.ticker], source, preview.report.current_btc_price,
+                            preview.price_labels.get(company.ticker, ""))
     left, right = st.columns(2, gap="medium")
     first, second = _scorecard(preview)
     with left, st.container(border=True, key="mon_scorecard"):
@@ -392,14 +393,15 @@ def monday(preview, *, notices=()) -> None:
         st.html(heading_html("Coverage, cost and growth") + second)
 
 
-def _monday_company(c, e, source, btc_price) -> None:
+def _monday_company(c, e, source, btc_price, price_label="") -> None:
     color = C.series[c.ticker]
     link = f' · <a href="{escape(e.filing_url)}" target="_blank">8-K</a>' if e.filing_url else ""
+    when = f" · {escape(price_label)}" if price_label else ""  # pre-market, live or the close
     st.html(f'<div class="dcr-bar" style="background:{color}"></div>'
             f'<div class="dcr-card-h"><div><span class="n">{escape(c.name)}</span><span class="t">{escape(c.ticker)}</span></div>'
             f'<div class="p">{escape(c.stock_price)}</div></div>'
             f'<div class="dcr-meta">Balance {escape(mon._short(source.balance_date))}{link} · '
-            f'<b style="color:{C.ink}">{escape(mon._clean(c.price_to_nav))}</b> NAV</div>')
+            f'<b style="color:{C.ink}">{escape(mon._clean(c.price_to_nav))}</b> NAV{when}</div>')
     paid = e.btc_cost / e.btc_bought if e.btc_cost and e.btc_bought else None
     st.html(tiles((
         ("Bitcoin bought", mon._btc(e.btc_bought, True), "", True),

@@ -86,6 +86,24 @@ class MondayPreview:
     subtitle: str
     notes: tuple = field(default_factory=tuple)
     period: str = ""
+    price_labels: dict = field(default_factory=dict)   # ticker -> "pre-market 8:11 AM ET" / "11:02 AM ET" / "close Fri Sep 25"
+    price_stamp: str = ""                             # the image's price time, e.g. "Pre-market 8:11 AM ET · Mon Sep 28"
+
+
+def _price_stamp(quotes: dict) -> tuple[dict, str]:
+    """Per-company labels and one stamp for the header: the session and time of MSTR's and
+    ASST's prices (the same for both unless one hasn't traded pre-market yet)."""
+    from report.current_prices import NEW_YORK, price_label
+    labels = {ticker: price_label(quotes[ticker]) for ticker in ("MSTR", "ASST") if ticker in quotes}
+    if not labels:
+        return {}, ""
+    if len(set(labels.values())) > 1:
+        return labels, " · ".join(f"{ticker} {label.replace(' ET', '')}" for ticker, label in labels.items())
+    label = next(iter(labels.values()))
+    if label.startswith("close "):
+        return labels, "Close · " + label.removeprefix("close ")
+    day = datetime.fromisoformat(quotes["MSTR" if "MSTR" in labels else "ASST"]["as_of"]).astimezone(NEW_YORK)
+    return labels, f"{label[0].upper()}{label[1:]} · {day:%a %b} {day.day}"
 
 
 def _n(value):
@@ -344,7 +362,8 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
     dates = " · ".join(f"{c.name} {_short(c.balance_date)}" for c in report.companies if c.balance_date)
     subtitle = f"What last week's filings did to each common share  ·  Balances: {dates}"
     notes = tuple(f"{t} data stale" for t in extras.get("stale", []) if t != "markets")  # markets: Friday test copy only
-    return MondayPreview(report, view, result, kicker, subtitle, notes, f"8-K week {period}")
+    labels, stamp = _price_stamp((prices or {}).get("quotes") or {})
+    return MondayPreview(report, view, result, kicker, subtitle, notes, f"8-K week {period}", labels, stamp)
 
 
 # ── rendering ───────────────────────────────────────────────────────────────
@@ -639,7 +658,8 @@ def _header(canvas, preview, theme, p):
     themes.kicker(canvas, MARGIN, WIDTH - MARGIN, "DIGITAL CREDIT REPORT · MONDAY", preview.period.upper(), p, theme)
     themes.title(canvas, MARGIN, 146, TITLE, 76, p, theme, on_space=on_space)
     canvas.text(MARGIN, 170, f"BTC {view.btc_price}", T_VALUE - 6, light, True)
-    stamp = view.report_time.replace("Updated ", "", 1)
+    # When the stock prices were taken (pre-market, live or the close), not when the image was drawn.
+    stamp = preview.price_stamp or view.report_time.replace("Updated ", "", 1)
     canvas.text(WIDTH - MARGIN, 176, stamp, T_MIN, muted, align="right", max_width=760)
 
 
@@ -698,6 +718,8 @@ def audit_rows(preview: MondayPreview) -> list[dict]:
         extra = preview.extras[company.ticker]
         report = next(c for c in preview.report.companies if c.ticker == company.ticker)
         rows += [
+            {"metric": f"{company.ticker} price", "value": f"{company.stock_price} ({preview.price_labels.get(company.ticker, '—')})",
+             "source": "Yahoo Finance (pre-market before the open, live in session, else the close)"},
             {"metric": f"{company.ticker} balance date", "value": report.balance_date, "source": "SEC 8-K"},
             {"metric": f"{company.ticker} bitcoin bought", "value": company.btc_activity[0].value if company.btc_activity else "—", "source": "SEC 8-K"},
             {"metric": f"{company.ticker} total BTC held", "value": company.total_bitcoin.value if company.total_bitcoin else "—", "source": "SEC 8-K"},

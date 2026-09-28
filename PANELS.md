@@ -24,6 +24,14 @@ only the ICE BofA IG and HY yields stay on the snapshot. The X image is drawn on
 downloaded or previewed. `app.py` re-imports the app's modules when a deploy changes
 them, because Streamlit's own watcher only reloads sessions that were open at the time.
 
+**Prices** (`report/current_prices.py`). Before the open on a NYSE trading day (4:00 am
+ET to the open), MSTR and ASST take their latest pre-market trade (Yahoo 1-minute bars
+with extended hours, free); in the session every stock is live; otherwise (evenings,
+weekends, holidays) the close. A stock with no pre-market trade yet keeps its close.
+Preferreds never use pre-market prices. The Monday image stamps the price time under the
+handle ("Pre-market 8:11 AM ET · Mon Sep 28", or "Close · Fri Sep 25"), and each company
+card on the web shows its own.
+
 | Day | Title | X image size | Posting time |
 | --- | --- | --- | --- |
 | Monday | The **Accretion** Ledger | 1440 × 1884 | after both 8-Ks |

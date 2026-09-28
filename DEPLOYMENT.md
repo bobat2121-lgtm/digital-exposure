@@ -145,6 +145,8 @@ fallback stays in server memory; concurrent requests cannot replace newer
 quotes with older observations. Downloads and normal reruns keep the session's
 complete snapshot. The PNG cache is bounded to 32 entries. No extended-hours
 feed, real-time widget, repository write or Worker change is involved.
+(Superseded Sep 28, 2026: MSTR and ASST now use pre-market trades before the open;
+see PANELS.md, "Prices".)
 
 All 156 Python tests passed, including 16 focused store/app checks. A live-source
 smoke request returned a complete fresh bundle in about three seconds. Stock
