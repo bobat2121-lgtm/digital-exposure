@@ -234,6 +234,67 @@ class CalendarTests(unittest.TestCase):
         later = {event[1]: event[0] for event in wednesday._scheduled_events(offline_extras(), date(2026, 10, 16))}
         self.assertEqual((later["STRC Nov rate"], later["SATA rate est."]), ("2026-10-30", "2026-11-13"))
 
+    def test_only_confirmed_earnings_dates_are_shown(self):
+        import tempfile
+        from datetime import date
+        extras = offline_extras()
+        extras["calendar"] = {"fomc": [], "earnings": {
+            "MSTR": {"date": "2026-10-29", "estimated": True, "source": "nasdaq.com"},
+            "ASST": {"date": "2026-11-09", "estimated": False, "source": "nasdaq.com"}}}
+        curated = {"events": [
+            {"date": "2026-10-30", "label": "MSTR earnings est.", "kind": "earnings", "ticker": "MSTR", "confirmed": False},
+            {"date": "2026-11-12", "label": "ASST earnings", "kind": "earnings", "ticker": "ASST", "confirmed": True}]}
+
+        def earnings(events_file):
+            with patch.object(wednesday, "EVENTS", events_file):
+                return [event for event in wednesday._scheduled_events(extras, date(2026, 10, 1)) if "earnings" in event[1]]
+
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "events.json"
+            path.write_text(json.dumps(curated))
+            # Neither estimate appears; ASST's curated confirmed date replaces Nasdaq's.
+            self.assertEqual(earnings(path), [("2026-11-12", "ASST earnings", "curated")])
+            path.write_text(json.dumps({"events": []}))
+            self.assertEqual(earnings(path), [("2026-11-09", "ASST earnings", "earnings")])  # Nasdaq, once confirmed
+
+    def test_nasdaq_estimate_wording_is_recognised(self):
+        estimate = ("Strategy Inc Common Stock Class A is estimated to report earnings on  10/29/2026. The upcoming earnings "
+                    "date is derived from an algorithm based on a company's historical reporting dates.")
+        with patch.object(extras_module, "_json", lambda url: {"data": {"reportText": estimate}}):
+            self.assertEqual(extras_module.fetch_earnings("MSTR"), {"date": "2026-10-29", "estimated": True, "source": "nasdaq.com"})
+        confirmed = "Strategy Inc Common Stock Class A is expected to report earnings on 10/29/2026 after market close."
+        with patch.object(extras_module, "_json", lambda url: {"data": {"reportText": confirmed}}):
+            self.assertFalse(extras_module.fetch_earnings("MSTR")["estimated"])
+
+
+class TypeTests(unittest.TestCase):
+    def test_lines_of_one_size_share_a_baseline(self):
+        # Pillow's "lt" anchor tops each string's own ink; the canvas puts the capitals' top at y instead.
+        from panels.draw import Canvas, cap_height, fontset
+        with fontset("terminal"):
+            boxes = {}
+            for text in ("59", "bull", "HELD", "—"):
+                canvas = Canvas((400, 120), "#000")
+                canvas.text(10, 40, text, 34, "#fff", True)
+                boxes[text] = canvas.image.convert("L").point(lambda v: 255 if v > 128 else 0).getbbox()
+            baseline = 40 + cap_height(34, True)
+            for text in ("59", "bull", "HELD"):
+                self.assertAlmostEqual(boxes[text][3], baseline, delta=1, msg=text)
+            self.assertEqual(boxes["HELD"][1], 40)
+            self.assertGreater(boxes["—"][1], 46)  # a dash sits mid-line, not at the capitals' top
+
+    def test_wordmarks_are_recoloured_for_dark_cards(self):
+        import numpy as np
+        art, middle = monday_preview.logo_art("strive", "#FFFFFF", 32)
+        solid = np.asarray(art)
+        solid = solid[solid[..., 3] > 250][:, :3]
+        self.assertTrue((solid == 255).all(axis=1).any())                   # white letters
+        self.assertTrue(((solid[:, 0] > 200) & (solid[:, 2] < 80)).any())  # Strive's orange bar kept
+        self.assertFalse((solid.max(axis=1) < 60).any())                    # no black left
+        self.assertAlmostEqual(middle, art.height / 2, delta=3)
+        strategy, _ = monday_preview.logo_art("strategy", "#FFFFFF", 40)
+        self.assertTrue(200 < strategy.width < 220)
+
 
 class WednesdayTests(unittest.TestCase):
     def test_ladder_sorted_and_panel_renders(self):

@@ -339,7 +339,8 @@ def parse_fomc(html: str) -> list[str]:
 
 
 def fetch_earnings(ticker: str) -> dict | None:
-    """Nasdaq's next earnings date. Usually Zacks' estimate until the company confirms it."""
+    """Nasdaq's next earnings date. Usually Zacks' estimate until the company confirms it
+    ("is estimated to report earnings on … derived from an algorithm"); any such wording marks it estimated."""
     import re
     data = _json(f"https://api.nasdaq.com/api/analyst/{ticker}/earnings-date")
     text = ((data or {}).get("data") or {}).get("reportText") or ""
@@ -347,7 +348,8 @@ def fetch_earnings(ticker: str) -> dict | None:
     if not found:
         return None
     month, day, year = (int(value) for value in found.groups())
-    return {"date": date(year, month, day).isoformat(), "estimated": "estimated" in text.lower(), "source": "nasdaq.com"}
+    estimated = any(word in text.lower() for word in ("estimat", "algorithm", "might revise"))
+    return {"date": date(year, month, day).isoformat(), "estimated": estimated, "source": "nasdaq.com"}
 
 
 def fetch_calendar() -> dict:

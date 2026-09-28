@@ -18,7 +18,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from . import themes
-from .draw import T_BIG, T_BODY, T_HERO, T_LABEL, T_MIN, T_VALUE, Canvas, font, fontset, mix, width
+from .draw import T_BIG, T_BODY, T_HERO, T_LABEL, T_MIN, T_VALUE, Canvas, cap_height, cap_middle, font, fontset, mix, width
 from .extras import fred_latest, number, strategy_weeks
 
 ET = ZoneInfo("America/New_York")
@@ -328,8 +328,9 @@ def _rate_announcements(today: date) -> list[tuple]:
 
 
 def _scheduled_events(extras: dict, today: date) -> list[tuple]:
-    """FOMC decisions (Fed calendar), earnings (curated, else Nasdaq's estimate), the next rate
-    announcements (generated from their patterns) and curated events."""
+    """FOMC decisions (Fed calendar), confirmed earnings dates only (curated, or Nasdaq's once the
+    company has announced it; never an estimate), the next rate announcements (generated from
+    their patterns) and curated events."""
     events = []
     calendar = extras.get("calendar") or {}
     horizon = (today + timedelta(days=75)).isoformat()
@@ -346,9 +347,12 @@ def _scheduled_events(extras: dict, today: date) -> list[tuple]:
         day, label = event.get("date"), event.get("label")
         if not day or not label or day < today.isoformat():
             continue
+        if event.get("kind") == "earnings":
+            if event.get("confirmed") is not True:
+                continue  # an estimated earnings date is never shown
+            if event.get("ticker"):
+                confirmed.add(event["ticker"])
         events.append((day, label, "curated"))
-        if event.get("kind") == "earnings" and event.get("ticker"):
-            confirmed.add(event["ticker"])
         if event.get("kind") == "rate" and event.get("ticker"):
             curated_rates.append((event["ticker"], date.fromisoformat(day)))
     for day, label, kind in _rate_announcements(today):
@@ -356,8 +360,8 @@ def _scheduled_events(extras: dict, today: date) -> list[tuple]:
         if not any(ticker == other and abs((when - other_day).days) <= 10 for other, other_day in curated_rates):
             events.append((day, label, "rate"))
     for ticker, item in (calendar.get("earnings") or {}).items():
-        if item and ticker not in confirmed and today.isoformat() <= item["date"] <= horizon:
-            events.append((item["date"], f"{ticker} earnings{' est.' if item.get('estimated') else ''}", "earnings"))
+        if item and not item.get("estimated") and ticker not in confirmed and today.isoformat() <= item["date"] <= horizon:
+            events.append((item["date"], f"{ticker} earnings", "earnings"))
     return events
 
 
@@ -540,20 +544,29 @@ def _hero(canvas, box, ticker, hero, scale, p, theme, stripe, data, lay=STANDARD
     L, R = x0 + 28, x1 - 28
     item = hero["item"]
     _card(canvas, box, p, theme, stripe)
-    end = canvas.text(L, y0 + 22, ticker, 60, p.ink, True, serif=True)
-    canvas.text(end + 16, y0 + 40, ISSUER[ticker], T_LABEL, p.muted, True)
+    # The nameplate and the price block are centered in the band between the card's stripe and the rule.
+    rule = y0 + 122
+    band = (y0 + 6 + rule) / 2
+    plate = band - cap_middle(60, True, True)
+    end = canvas.text(L, plate, ticker, 60, p.ink, True, serif=True)
+    # The issuer shares the ticker's baseline.
+    canvas.text(end + 16, plate + cap_height(60, True, True) - cap_height(T_LABEL), ISSUER[ticker], T_LABEL, p.muted, True)
     if item.price is not None:
-        canvas.text(R, y0 + 22, f"${item.price:,.2f}", T_VALUE, p.ink, True, align="right")
+        price_top = band - (54 + cap_height(T_MIN)) / 2
+        canvas.text(R, price_top, f"${item.price:,.2f}", T_VALUE, p.ink, True, align="right")
         diff = item.price - 100
-        canvas.text(R, y0 + 76, f"{'+' if diff >= 0 else '−'}${abs(diff):.2f} vs par", T_MIN,
+        canvas.text(R, price_top + 54, f"{'+' if diff >= 0 else '−'}${abs(diff):.2f} vs par", T_MIN,
                     p.positive if diff >= 0 else p.negative, True, align="right")
-    canvas.draw.line((L, y0 + 122, R, y0 + 122), fill=p.line, width=2)
+    canvas.draw.line((L, rule, R, rule), fill=p.line, width=2)
 
     headline = data["headline"]
     canvas.text(L, y0 + 138, f"SPREAD OVER {SHORT[headline].upper()}", T_MIN, p.muted, True)
     canvas.text(R, y0 + 138, "YIELD", T_MIN, p.muted, True, align="right")
-    canvas.text(L, y0 + 170, _bp(hero["spreads"].get(headline)), T_HERO, stripe if theme.key != "classic" else p.ink, True)
-    canvas.text(R, y0 + 184, _pct(item.effective), T_VALUE + 8, p.ink, True, align="right")
+    # The spread and the yield sit midway between their labels and the benchmark stack (from y0 + 290).
+    middle = (y0 + 138 + cap_height(T_MIN) + y0 + 290) / 2
+    canvas.text(L, middle - cap_middle(T_HERO), _bp(hero["spreads"].get(headline)), T_HERO,
+                stripe if theme.key != "classic" else p.ink, True)
+    canvas.text(R, middle - cap_middle(T_VALUE + 8), _pct(item.effective), T_VALUE + 8, p.ink, True, align="right")
 
     # Spread stack over each benchmark.
     y = y0 + 286
@@ -736,7 +749,8 @@ def _header(canvas, data, p, theme):
     themes.kicker(canvas, M, WIDTH - M, "DIGITAL CREDIT REPORT · WEDNESDAY", right, p, theme)
     themes.title(canvas, M, 146, TITLE, 76, p, theme, on_space=on_space)
     refs = "  ·  ".join(f"{SHORT[label]} {value:.2f}%" for label, (_, value) in data["references"] if value is not None)
-    canvas.text(M, 176, refs, T_MIN, muted, max_width=WIDTH - 2 * M)
+    # Centered between the title and the first cards.
+    canvas.text(M, (themes.TITLE_FOOT + 226) / 2 - cap_middle(T_MIN, False), refs, T_MIN, muted, max_width=WIDTH - 2 * M)
 
 
 def render_png(data: dict, theme: themes.Theme = themes.DEFAULT, extra: bool = False) -> tuple[bytes, list[str]]:

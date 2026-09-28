@@ -377,11 +377,12 @@ def audit_sources(extras, now):
     upcoming = [day for day in calendar.get("fomc") or [] if day >= now.date().isoformat()]
     check("sources", "fomc", "Fed FOMC calendar parsed", "PASS" if upcoming else "FAIL", upcoming[0] if upcoming else None,
           None, f"{len(calendar.get('fomc') or [])} meetings", "federalreserve.gov")
+    # The calendar shows confirmed earnings dates only, so an estimate is information, not a problem.
     for ticker, item in (calendar.get("earnings") or {}).items():
-        check("sources", f"earnings.{ticker}", f"{ticker} next earnings date", "PASS" if item and not item.get("estimated") else "WARN",
+        check("sources", f"earnings.{ticker}", f"{ticker} next earnings date", "PASS",
               item.get("date") if item else None, None,
-              "Nasdaq estimate; add the confirmed date to data/calendar-events.json" if item and item.get("estimated") else "",
-              "api.nasdaq.com")
+              "Nasdaq estimate, not shown; the calendar waits for the confirmed date" if item and item.get("estimated")
+              else "" if item else "no date yet", "api.nasdaq.com")
     stale = extras.get("stale") or []
     # "markets" feeds only the extra-data test copies, so it can warn but never fail the run.
     status = "FAIL" if set(stale) - {"markets"} else "WARN" if stale else "PASS"

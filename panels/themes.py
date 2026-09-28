@@ -359,6 +359,11 @@ def kicker(canvas: Canvas, left_x, right_x, left: str, right: str | None, p: Pal
         canvas.text(right_x, 34, right, T_MIN, p.accent, True, align="right")
 
 
+# Every edition title sits on baseline 146; its lowest ink (the terminal field, descenders) ends
+# about here. The line under a title is centered between this and the first card.
+TITLE_FOOT = 158
+
+
 def title(canvas: Canvas, x, baseline, words, size, p: Palette, theme: Theme, *, on_space=False):
     """Draw an edition title in the theme's style; returns the right edge."""
     if theme.decor in trial_styles.DECORS:

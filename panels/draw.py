@@ -68,10 +68,19 @@ def _face(name: str, style: str | None, size: int) -> ImageFont.FreeTypeFont:
     return face
 
 
-def font(size: int, bold: bool = False, serif: bool = False) -> ImageFont.FreeTypeFont:
+def _role(size: int, bold: bool, serif: bool) -> tuple:
     fonts = FONT_SETS[FONTSET.get()]
-    role = ("key" if bold else "key_regular") if serif else ("bold" if bold else "regular")
-    return _face(*fonts[role], size)
+    return (*fonts[("key" if bold else "key_regular") if serif else ("bold" if bold else "regular")], size)
+
+
+def font(size: int, bold: bool = False, serif: bool = False) -> ImageFont.FreeTypeFont:
+    return _face(*_role(size, bold, serif))
+
+
+@lru_cache(maxsize=512)
+def _cap(name: str, style, size: int) -> float:
+    box = _face(name, style, size).getbbox("H", anchor="lt")
+    return box[3] - box[1]
 
 
 def width(text: str, size: int, bold: bool = False, serif: bool = False) -> float:
@@ -79,14 +88,12 @@ def width(text: str, size: int, bold: bool = False, serif: bool = False) -> floa
 
 
 def cap_middle(size: int, bold: bool = True, serif: bool = False) -> float:
-    """Offset from a top-anchored line's y to the middle of its capitals."""
-    box = font(size, bold, serif).getbbox("H", anchor="lt")
-    return (box[1] + box[3]) / 2
+    """Offset from a text line's y (the top of its capitals) to their middle."""
+    return cap_height(size, bold, serif) / 2
 
 
 def cap_height(size: int, bold: bool = True, serif: bool = False) -> float:
-    box = font(size, bold, serif).getbbox("H", anchor="lt")
-    return box[3] - box[1]
+    return _cap(*_role(size, bold, serif))
 
 
 def mix(color: str, background: str, opacity: float) -> tuple[int, int, int]:
@@ -132,7 +139,10 @@ class Canvas:
             x -= length
         elif align == "center":
             x -= length / 2
-        self.draw.text((x, y), text, font=font(size, bold, serif), fill=color, anchor="lt" if anchor_top else "ls")
+        # ``y`` is the top of the capitals, so every line of one size shares a baseline. (Pillow's
+        # "lt" anchor tops each string's own ink: "bull" or "$5" sat lower than "59", and "—" higher.)
+        baseline = y + cap_height(size, bold, serif) if anchor_top else y
+        self.draw.text((x, baseline), text, font=font(size, bold, serif), fill=color, anchor="ls")
         return x + length
 
     def wrap(self, text: str, max_width: float, size: int, bold=False) -> list[str]:
@@ -206,10 +216,10 @@ class Canvas:
         text, size = self.fit(text, size, x1 - x0 - 8, bold)
         if text:
             self.smallest = size if self.smallest is None else min(self.smallest, size)
-        left, _, right, _ = font(size, bold).getbbox(text, anchor="lt")
+        left, _, right, _ = font(size, bold).getbbox(text, anchor="ls")
         x = (x0 + x1) / 2 - (left + right) / 2
-        y = (y0 + y1) / 2 - cap_middle(size, bold)
-        self.draw.text((x, y), text, font=font(size, bold), fill=fg, anchor="lt")
+        baseline = (y0 + y1) / 2 + cap_height(size, bold) / 2
+        self.draw.text((x, baseline), text, font=font(size, bold), fill=fg, anchor="ls")
 
     def cells(self, box, columns, gap=14, inset=12, widths=None):
         """Equal-width columns of stacked lines inside a colored box.

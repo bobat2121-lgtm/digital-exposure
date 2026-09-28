@@ -20,7 +20,10 @@ from __future__ import annotations
 from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import date
+from functools import lru_cache
 from html import escape
+import base64
+import re
 
 import altair as alt
 import pandas as pd
@@ -155,6 +158,9 @@ BASE = """
 .dcr-card-h .n { font-size: 24px; font-weight: 700; color: var(--text); }
 .dcr-card-h .t { font-size: 14px; color: var(--muted); margin-left: 8px; }
 .dcr-card-h .p { font-size: 24px; font-weight: 700; color: var(--ink); }
+.dcr-card-h img.logo { width: auto; }
+.dcr-card-h img.logo.strategy { height: 30px; vertical-align: -7px; }  /* the descender hangs below the baseline */
+.dcr-card-h img.logo.strive { height: 22px; vertical-align: -2px; }
 .dcr-bar { height: 4px; margin: -2px 0 10px; }
 .dcr-h { font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text); margin: 12px 0 6px; }
 .dcr-meta { color: var(--muted); font-size: 13.5px; }
@@ -193,6 +199,8 @@ table.dcr tr:hover td { background: var(--panel2); }
   .dcr-tile .v { font-size: 19px; } .dcr-big .v { font-size: 27px; }
   table.dcr { font-size: 13px; } table.dcr th, table.dcr td { padding: 6px 5px; }
   .dcr-card-h .n, .dcr-card-h .p { font-size: 20px; }
+  .dcr-card-h img.logo.strategy { height: 26px; vertical-align: -6px; }
+  .dcr-card-h img.logo.strive { height: 19px; }
 }
 """
 
@@ -393,12 +401,28 @@ def monday(preview, *, notices=()) -> None:
         st.html(heading_html("Coverage, cost and growth") + second)
 
 
+@lru_cache(maxsize=8)
+def wordmark(name: str, color: str) -> str:
+    """The company's official wordmark (assets/<name>.svg) as an image data URI, drawn in ``color``;
+    Strive's orange bar keeps its own color. Empty when there is no artwork. (st.html strips inline SVG.)"""
+    path = mon.ASSETS / f"{name}.svg"
+    if not path.exists():
+        return ""
+    svg = re.sub(r"<\?xml[^>]*\?>", "", path.read_text(encoding="utf-8")).strip()
+    view = re.search(r'viewBox="([^"]+)"', svg).group(1)
+    svg = re.sub(r"<svg[^>]*>", f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{view}" fill="{color}">', svg, count=1)
+    return "data:image/svg+xml;base64," + base64.b64encode(svg.encode("utf-8")).decode("ascii")
+
+
 def _monday_company(c, e, source, btc_price, price_label="") -> None:
     color = C.series[c.ticker]
     link = f' · <a href="{escape(e.filing_url)}" target="_blank">8-K</a>' if e.filing_url else ""
     when = f" · {escape(price_label)}" if price_label else ""  # pre-market, live or the close
+    art = wordmark(c.logo, C.text)
+    name = (f'<img class="logo {escape(c.logo)}" src="{art}" alt="{escape(c.name)}">' if art
+            else f'<span class="n">{escape(c.name)}</span>')
     st.html(f'<div class="dcr-bar" style="background:{color}"></div>'
-            f'<div class="dcr-card-h"><div><span class="n">{escape(c.name)}</span><span class="t">{escape(c.ticker)}</span></div>'
+            f'<div class="dcr-card-h"><div>{name}<span class="t">{escape(c.ticker)}</span></div>'
             f'<div class="p">{escape(c.stock_price)}</div></div>'
             f'<div class="dcr-meta">Balance {escape(mon._short(source.balance_date))}{link} · '
             f'<b style="color:{C.ink}">{escape(mon._clean(c.price_to_nav))}</b> NAV{when}</div>')

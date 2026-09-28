@@ -19,7 +19,7 @@ from friday.export import display_rows, sma_segments
 from friday.series import SENTIMENT_BANDS, smooth_sentiment, year_start
 
 from . import themes
-from .draw import T_BIG, T_BODY, T_LABEL, T_MIN, T_VALUE, Canvas, fontset, imprint, mix, sparkline, width
+from .draw import T_BIG, T_BODY, T_LABEL, T_MIN, T_VALUE, Canvas, cap_height, cap_middle, fontset, imprint, mix, sparkline, width
 from .extras import fred_latest, number
 
 ET = ZoneInfo("America/New_York")
@@ -28,6 +28,7 @@ BG, CARD, TEXT, MUTED, SOFT = "#0b0d0f", "#15191d", "#f5f3ed", "#9aa4ad", "#6f7a
 LINE, ORANGE, POSITIVE, NEGATIVE, NEUTRAL = "#30363c", "#e88029", "#8cdbb5", "#f5a09b", "#d9c86a"
 BLUE, VIOLET, BAND = "#7fb2ff", "#c39bff", "#56c4a0"
 TITLE = ("The ", "Closing", " Mark")
+SUBTITLE_MIDDLE = (themes.TITLE_FOOT + 226) / 2  # the week line, between the title and the first cards
 THEME = themes.CLASSIC
 # Rendering swaps the module palette for the requested theme; the lock keeps
 # concurrent Streamlit sessions from drawing with each other's colors.
@@ -486,8 +487,8 @@ def _render(panel: dict, derived: dict, stale: tuple, extra: bool = False) -> tu
         imprint(canvas, M, 146, TITLE, 76, ink=TEXT, muted="#aab3ba", dot=ORANGE)
     else:
         themes.title(canvas, M, 146, TITLE, 76, THEME.friday, THEME, on_space=THEME.decor == "orbit")
-    if week_end:
-        canvas.text(M, 170, f"Week of {_short(period.get('start'))}–{_short(week_end)}, "
+    if week_end:  # centered between the title and the first row of cards
+        canvas.text(M, SUBTITLE_MIDDLE - cap_middle(T_BODY), f"Week of {_short(period.get('start'))}–{_short(week_end)}, "
                     f"{date.fromisoformat(str(week_end)[:10]).year}", T_BODY, TEXT, True)
 
     # Row 1: bitcoin and the two treasuries' premiums.
@@ -495,10 +496,12 @@ def _render(panel: dict, derived: dict, stale: tuple, extra: bool = False) -> tu
     top = 226
     boxes = [(M + n * (third + 24), top, M + n * (third + 24) + third, top + 232) for n in range(3)]
     btc = header.get("btc") or {}
+    # Each tile's big figure sits midway between its label and the line below it, on one line across the row.
+    middle = (top + 22 + cap_height(T_MIN) + top + 135) / 2
     x0, _, x1, _ = boxes[0]
     _card(canvas, boxes[0], ORANGE, 5)
     canvas.text(x0 + 24, top + 22, "BITCOIN", T_MIN, MUTED, True)
-    canvas.text(x0 + 24, top + 58, _money(btc.get("price")), T_BIG, TEXT, True, max_width=third - 48)
+    canvas.text(x0 + 24, middle - cap_middle(T_BIG), _money(btc.get("price")), T_BIG, TEXT, True, max_width=third - 48)
     change = btc.get("weekly_return_pct")
     canvas.text(x0 + 24, top + 134, _pct(change, 2, True) + " week", T_BODY, _tone(change), True)
     if derived["zone"]:
@@ -516,9 +519,10 @@ def _render(panel: dict, derived: dict, stale: tuple, extra: bool = False) -> tu
         _card(canvas, box, color, 5)
         canvas.text(x0 + 24, top + 22, f"{ticker} · PRICE / NAV", T_MIN, MUTED, True)
         multiple = company.get("nav_multiple")
-        canvas.text(x0 + 24, top + 58, f"{multiple:.2f}×" if multiple else "—", T_BIG, TEXT, True)
+        canvas.text(x0 + 24, middle - cap_middle(T_BIG), f"{multiple:.2f}×" if multiple else "—", T_BIG, TEXT, True)
         delta = company.get("nav_multiple_change")
-        canvas.text(x1 - 24, top + 80, f"{delta:+.2f}× wk" if delta is not None else "—", T_BODY, _tone(delta), True, align="right")
+        canvas.text(x1 - 24, middle - cap_middle(T_BODY), f"{delta:+.2f}× wk" if delta is not None else "—", T_BODY,
+                    _tone(delta), True, align="right")
         canvas.text(x0 + 24, top + 136, f"NAV/sh {_money(company.get('nav_per_share'), 2)}", T_LABEL, TEXT, max_width=third - 48)
         trend = (panel.get("trends") or {}).get(ticker) or {}
         ext = (((trend.get("averages") or {}).get("200D") or {}).get("extension_pct"))
@@ -554,16 +558,21 @@ def _render(panel: dict, derived: dict, stale: tuple, extra: bool = False) -> tu
     for state in ("BEAR", "NEUTRAL", "BULL"):
         x = canvas.pill(x, top - 4, f"{state} {tally[state]}", T_MIN, BG, colors[state], align="right", pad=(12, 4)) - 12
     row = 48 if extra else 54  # the test copy tightens rows to make room for its markets band
-    box = (M, top + 48, WIDTH - M, top + 48 + 7 * row + 22)
+    pad = 11
+    box = (M, top + 48, WIDTH - M, top + 48 + 7 * row + 2 * pad)
     _card(canvas, box)
+    pill_h = T_MIN + 2 * 4 + 2  # Canvas.pill's height at pad (14, 4)
     for index, (label, value, note, state) in enumerate(derived["checklist"]):
-        y = top + 62 + index * row
+        # Every piece of a row is centered on the row's middle by its capitals.
+        band = box[1] + pad + index * row
+        middle = band + row / 2
         if index:
-            draw.line((M + 24, y - 8, WIDTH - M - 24, y - 8), fill=LINE, width=1)
-        canvas.text(M + 28, y + 4, CHECK_LABELS.get(label, label), T_BODY, TEXT, True, max_width=360)
-        canvas.text(M + 400, y + 4, value, T_BODY, TEXT, True, max_width=280)
-        canvas.text(M + 700, y + 8, derived.get("thresholds", {}).get(label, ""), T_MIN, MUTED, max_width=390)
-        canvas.pill(WIDTH - M - 28, y, state, T_MIN, BG, colors[state], align="right", pad=(14, 4))
+            draw.line((M + 24, band, WIDTH - M - 24, band), fill=LINE, width=1)
+        canvas.text(M + 28, middle - cap_middle(T_BODY), CHECK_LABELS.get(label, label), T_BODY, TEXT, True, max_width=360)
+        canvas.text(M + 400, middle - cap_middle(T_BODY), value, T_BODY, TEXT, True, max_width=280)
+        canvas.text(M + 700, middle - cap_middle(T_MIN, False), derived.get("thresholds", {}).get(label, ""), T_MIN, MUTED,
+                    max_width=390)
+        canvas.pill(WIDTH - M - 28, middle - pill_h / 2, state, T_MIN, BG, colors[state], align="right", pad=(14, 4))
 
     # Row 4: BTC against the 200-week SMA zones.
     top = box[3] + 20

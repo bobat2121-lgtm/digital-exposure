@@ -96,6 +96,9 @@ px, which is 0.27× of a 1440-px panel. So every panel follows these rules:
 - **Signed.** Bloomberg and Broadsheet put the X handle **@WallyXIX** at the top
   right, on the title's line under the report line's right end (`HANDLE` in
   `panels/trial_styles.py`). A title long enough to reach it counts as an overflow.
+- **Aligned type.** A text line's y is the top of its capitals, so lines of one size
+  share a baseline whatever letters they hold, and a hero figure is centered by its
+  capitals in the space between its label and the next row.
 - **No footnotes in the image.** Methods, sources and definitions appear in the
   Formulas and Sources sections of the web page and in `audit.json`, never in the
   downloaded PNG.
@@ -162,7 +165,9 @@ names its downloads by style: `monday-bloomberg.png`, `monday-broadsheet.png`.
 Each company card follows the business: bitcoin bought, then how it was funded,
 then what it did per share.
 
-- **Header:** price, price/NAV and the balance date.
+- **Header:** the company's official wordmark as its name (`assets/strategy.*`,
+  `assets/strive.*`; white on dark cards, Strive's orange bar kept), price, price/NAV
+  and the balance date.
 - **Bitcoin bought and held.**
 - **The funding block.** The page and the X image use the waterfall. Layouts A and
   B remain in the renderer only (`panels/monday_preview.py`):
@@ -258,8 +263,8 @@ The rest of the panel:
   - Strategy's pay dates.
   - The warrant deadline.
   - The next FOMC decision, from the Fed's calendar.
-  - Earnings dates: confirmed dates from `data/calendar-events.json`, else Nasdaq's
-    estimate marked "est.".
+  - Earnings dates, only once confirmed: a confirmed entry in `data/calendar-events.json`,
+    or Nasdaq's date after the company announces it. Estimates are never shown.
   - Any other curated events. The weekly audit task maintains the curated file.
 - **The four-week flow ledger**, with centered columns.
 

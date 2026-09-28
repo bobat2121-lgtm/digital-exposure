@@ -12,9 +12,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, datetime
+from functools import lru_cache
 import json
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+import numpy as np
+from PIL import Image, ImageColor
 
 from report import live_report as lr
 from report.calculations import btc_value, calculate_company, liquid_assets, net_treasury_nav
@@ -22,7 +26,7 @@ from report.models import Report
 from report.presentation import build_report_view
 from report.view_types import CompanyView, ReportView
 
-from .draw import T_BIG, T_BODY, T_HERO, T_LABEL, T_MIN, T_VALUE, Canvas, cap_middle, fontset, mix, width
+from .draw import ASSETS, T_BIG, T_BODY, T_HERO, T_LABEL, T_MIN, T_VALUE, Canvas, cap_height, cap_middle, fontset, mix, width
 from .extras import strategy_weeks
 from . import themes
 
@@ -36,6 +40,7 @@ PANEL = (WIDTH - 2 * MARGIN - GAP) // 2
 INSET = 30
 CARD_TOP = 236
 TITLE = ("The ", "Accretion", " Ledger")
+SUBTITLE_MIDDLE = (themes.TITLE_FOOT + CARD_TOP) / 2  # BTC price and price time, between the title and the cards
 
 
 @dataclass(frozen=True)
@@ -530,14 +535,47 @@ def _top_waterfall(canvas, e, L, R, y, p, stripe):
 TOPS = {"headline": _top_headline, "ledger": _top_ledger, "waterfall": _top_waterfall}
 
 
-def _logo(canvas, c, theme, p, x, y):
+# The official wordmarks (assets/<name>.png): where their capitals start and sit (Strategy's "S",
+# Strive's letters), in source pixels. They are drawn so Strategy's lowercase matches Strive's capitals.
+LOGO_CAPS = {"strategy": (17, 207), "strive": (19, 149)}
+LOGO_CAP_HEIGHT = {"strategy": 40, "strive": 32}
+
+
+def _dark(color) -> bool:
+    r, g, b = ImageColor.getrgb(color) if isinstance(color, str) else tuple(color)[:3]
+    return .2126 * r + .7152 * g + .0722 * b < 128
+
+
+@lru_cache(maxsize=16)
+def logo_art(name: str, ink: str, cap: int) -> tuple[Image.Image, float]:
+    """The wordmark with its black recolored to ``ink`` (Strive's orange bar kept), scaled so its
+    capitals are ``cap`` px tall. Returns the image and its capitals' middle, from the image top."""
+    with Image.open(ASSETS / f"{name}.png") as asset:
+        art = asset.convert("RGBA")
+    box = art.getchannel("A").getbbox()
+    art = art.crop(box)
+    pixels = np.asarray(art).copy()
+    pixels[pixels[..., :3].max(axis=2) < 90, :3] = ImageColor.getrgb(ink)
+    top, base = LOGO_CAPS[name]
+    scale = cap / (base - top)
+    size = (round(art.width * scale), round(art.height * scale))
+    art = Image.fromarray(pixels, "RGBA").convert("RGBa").resize(size, Image.Resampling.LANCZOS).convert("RGBA")
+    return art, ((top + base) / 2 - box[1]) * scale
+
+
+def _logo(canvas, c, theme, p, x, middle):
+    """The company's wordmark as its name, its capitals centered on ``middle``: white on dark cards."""
     if theme.key == "classic" or theme.decor == "orbit" and p.card.startswith("#F"):
         from report.png_export import _Canvas  # approved logo artwork
         host = _Canvas.__new__(_Canvas)
         host.image, host.draw = canvas.image, canvas.draw
-        host.logo(c, x, y)
-    else:
-        canvas.text(x, y + 6, c.name.upper(), T_VALUE, p.ink, True)
+        host.logo(c, x, round(middle - 36))
+        return
+    if c.logo not in LOGO_CAPS:
+        canvas.text(x, middle - cap_middle(T_VALUE), c.name.upper(), T_VALUE, p.ink, True)
+        return
+    art, art_middle = logo_art(c.logo, "#FFFFFF" if _dark(p.card) else p.ink, LOGO_CAP_HEIGHT[c.logo])
+    canvas.image.paste(art, (round(x), round(middle - art_middle)), art)
 
 
 def _times(value, signed=False):
@@ -572,8 +610,10 @@ def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, report_company, i
     top, bottom = CARD_TOP, HEIGHT - MARGIN
     stripe = p.company(c.ticker)
     themes.card(canvas, (x0, top, x1, bottom), p, stripe, theme, 6)
-    _logo(canvas, c, theme, p, L, top + 22)
-    canvas.text(R, top + 22, c.stock_price, T_VALUE, p.ink, True, align="right")
+    # The name row (wordmark and share price) is centered between the stripe and the ticker line.
+    name_middle = (top + 6 + top + 96) / 2
+    _logo(canvas, c, theme, p, L, name_middle)
+    canvas.text(R, name_middle - cap_middle(T_VALUE), c.stock_price, T_VALUE, p.ink, True, align="right")
     canvas.text(L, top + 102, f"{c.ticker} · balance {_short(report_company.balance_date)}", T_MIN, p.muted)
     canvas.text(R, top + 96, f"{_clean(c.price_to_nav)} NAV", T_BODY, stripe, True, align="right")
     canvas.draw.line((L, top + 146, R, top + 146), fill=p.rule or p.line, width=2)
@@ -582,8 +622,11 @@ def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, report_company, i
     y = top + 168
     canvas.text(L, y, "BITCOIN BOUGHT", T_MIN, p.muted, True)
     canvas.text(R, y, "HELD", T_MIN, p.muted, True, align="right")
-    canvas.text(L, y + 34, _btc(e.btc_bought, True), T_BIG + 8, p.ink, True, max_width=(R - L) * .6)
-    canvas.text(R, y + 50, _btc(e.btc_held), T_VALUE - 4, p.ink, True, align="right", max_width=(R - L) * .4)
+    # Both figures sit midway between their labels and the funding block's first row (top + 308).
+    middle = (y + cap_height(T_MIN) + top + 308) / 2
+    canvas.text(L, middle - cap_middle(T_BIG + 8), _btc(e.btc_bought, True), T_BIG + 8, p.ink, True, max_width=(R - L) * .6)
+    canvas.text(R, middle - cap_middle(T_VALUE - 4), _btc(e.btc_held), T_VALUE - 4, p.ink, True, align="right",
+                max_width=(R - L) * .4)
     y = top + 300
     TOPS.get(variant, _top_waterfall)(canvas, e, L, R, y, p, stripe)
 
@@ -657,10 +700,10 @@ def _header(canvas, preview, theme, p):
     muted = "#AEB6D6" if on_space else p.muted
     themes.kicker(canvas, MARGIN, WIDTH - MARGIN, "DIGITAL CREDIT REPORT · MONDAY", preview.period.upper(), p, theme)
     themes.title(canvas, MARGIN, 146, TITLE, 76, p, theme, on_space=on_space)
-    canvas.text(MARGIN, 170, f"BTC {view.btc_price}", T_VALUE - 6, light, True)
+    canvas.text(MARGIN, SUBTITLE_MIDDLE - cap_middle(T_VALUE - 6), f"BTC {view.btc_price}", T_VALUE - 6, light, True)
     # When the stock prices were taken (pre-market, live or the close), not when the image was drawn.
     stamp = preview.price_stamp or view.report_time.replace("Updated ", "", 1)
-    canvas.text(WIDTH - MARGIN, 176, stamp, T_MIN, muted, align="right", max_width=760)
+    canvas.text(WIDTH - MARGIN, SUBTITLE_MIDDLE - cap_middle(T_MIN, False), stamp, T_MIN, muted, align="right", max_width=760)
 
 
 def render_png(preview: MondayPreview, theme: themes.Theme = themes.DEFAULT, variant: str = DEFAULT_VARIANT) -> tuple[bytes, list[str]]:
