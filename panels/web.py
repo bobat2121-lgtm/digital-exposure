@@ -441,34 +441,47 @@ def _monday_company(c, e, source, btc_price, price_label="") -> None:
 
 
 def _waterfall(e, color) -> None:
-    drawn = -e.liquid_change if e.liquid_change is not None else None
-    steps = [("COMMON", e.common_capital, "raise"), ("PREF", e.preferred_capital, "raise"),
-             (mon.cash_step_label(e), drawn, "cash")]
-    if any(value is None for _, value, _ in steps):
+    """The week's cash, as on the X image: money in climbs from $0, money out steps back to $0."""
+    flows = mon.funding_flows(e)
+    if flows is None:
         st.caption("Funding detail unavailable")
         return
-    rows, level = [], 0.0
-    for label, value, kind in steps:
-        shown = mon._money(value, signed=True) if kind == "raise" else mon._money(abs(value), signed=False)
-        rows.append({"step": f"{label}  {shown}", "start": level / 1e6, "end": (level + value) / 1e6, "amount": shown,
-                     "kind": "raise+" if kind == "raise" and value >= 0 else "raise−" if kind == "raise" else "cash"})
-        level += value
-    if e.btc_cost is not None:
-        rows.append({"step": f"BTC  {mon._money(e.btc_cost, signed=False)}", "start": 0, "end": e.btc_cost / 1e6,
-                     "amount": mon._money(e.btc_cost, signed=False), "kind": "btc"})
-        rows.append({"step": f"DIVs  {mon._money(level - e.btc_cost, signed=False)}", "start": e.btc_cost / 1e6,
-                     "end": level / 1e6, "amount": mon._money(level - e.btc_cost, signed=False), "kind": "divs"})
+    money_in, money_out = flows
+    if not money_in and not money_out:
+        st.caption("No funding activity this week")
+        return
+    split, rows, level = len(money_in), [], 0.0
+    for n, (label, amount, kind) in enumerate([*money_in, *money_out]):
+        sign = 1 if n < split else -1
+        start, level = level, level + sign * amount
+        # Rows sit 10 units apart; money out starts 4 units lower, leaving room for the rule between.
+        pos = n * 10 + (4 if n >= split else 0)
+        rows.append({"label": f"{label}  {mon._money(sign * amount)}", "amount": mon._money(sign * amount), "kind": kind,
+                     "start": min(start, level) / 1e6, "end": max(start, level) / 1e6, "edge": (level if n < split else start - amount) / 1e6,
+                     "pos": pos, "top": pos - 3, "bottom": pos + 3})
     frame = pd.DataFrame(rows)
-    order = list(frame["step"])
+    positions = [row["pos"] for row in rows]
+    names = "{" + ", ".join(f"'{row['pos']}': '{row['label']}'" for row in rows) + "}"
+    y = alt.Y("top:Q", scale=alt.Scale(domain=[positions[-1] + 5, positions[0] - 5], nice=False), title=None,
+              axis=alt.Axis(values=positions, labelExpr=f"{names}[datum.value]", labelFontSize=13, labelColor=C.text,
+                            labelFontWeight=600, ticks=False, domain=False, grid=False, labelOverlap=False))
     dim = C.strive_dim if color == C.strive else C.strategy_dim
-    colors = alt.Scale(domain=["raise+", "raise−", "cash", "btc", "divs"], range=[C.up, C.down, C.soft, color, dim])
-    bars = alt.Chart(frame).mark_bar(height=22).encode(
-        y=alt.Y("step:N", sort=order, title=None, axis=alt.Axis(labelFontSize=13, labelColor=C.text, labelFontWeight=600, ticks=False, domain=False)),
-        x=alt.X("start:Q", title="$ millions", axis=alt.Axis(grid=True, tickCount=5)), x2="end:Q",
+    colors = alt.Scale(domain=["raise", "cash", "buyback", "btc", "divs", "other"],
+                       range=[C.up, C.soft, C.down, color, dim, C.soft])
+    bars = alt.Chart(frame).mark_bar().encode(
+        y=y, y2="bottom:Q", x=alt.X("start:Q", title="$ millions", axis=alt.Axis(grid=True, tickCount=5)), x2="end:Q",
         color=alt.Color("kind:N", scale=colors, legend=None),
-        tooltip=[alt.Tooltip("step:N", title="Step"), alt.Tooltip("amount:N", title="Amount")])
-    zero = alt.Chart(pd.DataFrame({"x": [0]})).mark_rule(color=C.soft, strokeWidth=2, strokeDash=[4, 4]).encode(x="x:Q")
-    show(bars + zero, height=36 * len(rows))
+        tooltip=[alt.Tooltip("label:N", title="Flow")])
+    dash = dict(color=C.soft, strokeWidth=1.5, strokeDash=[4, 4])
+    # Each bar starts where the last one ended; money in ends at its right edge, money out at its left.
+    links = pd.DataFrame([{"x": rows[n]["edge"], "y": rows[n]["bottom"], "y2": rows[n + 1]["top"]} for n in range(len(rows) - 1)])
+    parts = [bars, alt.Chart(pd.DataFrame({"x": [0]})).mark_rule(**dash).encode(x="x:Q")]
+    if len(links):
+        parts.append(alt.Chart(links).mark_rule(**dash).encode(x="x:Q", y="y:Q", y2="y2:Q"))
+    if 0 < split < len(rows):  # the rule between money in and money out
+        middle = (rows[split - 1]["bottom"] + rows[split]["top"]) / 2
+        parts.append(alt.Chart(pd.DataFrame({"y": [middle]})).mark_rule(**dash).encode(y="y:Q"))
+    show(alt.layer(*parts), height=40 * len(rows) + 16)
 
 
 def _scorecard(preview) -> str:

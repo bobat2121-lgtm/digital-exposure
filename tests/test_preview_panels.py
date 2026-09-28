@@ -194,6 +194,44 @@ class MondayPreviewTests(unittest.TestCase):
         self.assertEqual(monday_preview.cash_step_label(self.preview.extras["MSTR"]), "FROM CASH")
         self.assertEqual(monday_preview.cash_step_label(self.preview.extras["ASST"]), "TO CASH")
 
+    def test_waterfall_shows_money_in_then_money_out(self):
+        # Each flow once, with its direction; the two sides add up to the same total.
+        flows = {t: monday_preview.funding_flows(e) for t, e in self.preview.extras.items()}
+        money_in, money_out = flows["MSTR"]
+        self.assertEqual([(label, round(amount)) for label, amount, _ in money_in], [("FROM CASH", 310_000_000)])
+        self.assertEqual([label for label, _, _ in money_out], ["STRC BUYBACK", "BTC", "DIVs"])
+        self.assertEqual(round(money_out[0][1]), 174_000_000)  # the buyback is money out, not a negative raise
+        money_in, money_out = flows["ASST"]
+        self.assertEqual([label for label, _, _ in money_in], ["COMMON", "PREF"])
+        self.assertEqual([label for label, _, _ in money_out], ["BTC", "DIVs", "TO CASH"])
+        for money_in, money_out in flows.values():
+            self.assertAlmostEqual(sum(a for _, a, _ in money_in), sum(a for _, a, _ in money_out), places=2)
+        self.assertIn("out STRC BUYBACK −$174.0m", monday_preview._flows_text(self.preview.extras["MSTR"]))
+
+    def test_gross_preferred_sold_and_bought_back_are_separate_rows(self):
+        from dataclasses import replace
+        from report.models import PreferredActivity
+        activities = (PreferredActivity("STRC", 500_000, 200_000, capital_method="reported",
+                                        reported_issuance_proceeds=50e6, reported_repurchases_cash=20e6),
+                      PreferredActivity("STRF", 0, 0, capital_method="reported",
+                                        reported_issuance_proceeds=0.0, reported_repurchases_cash=0.0))
+        self.assertEqual(monday_preview._preferred_split(activities, 30e6), (50e6, 20e6, ("STRC",)))
+        # A net that doesn't match the gross pieces falls back to the net on its side.
+        self.assertEqual(monday_preview._preferred_split(activities, 31e6), (31e6, 0.0, ()))
+        self.assertEqual(monday_preview._split(-5e6), (0.0, 5e6))
+        # A busy week: common and preferred both sold and bought back, cash drawn: seven rows, all legible.
+        busy = replace(self.preview.extras["MSTR"], common_in=100e6, common_out=10e6, preferred_in=50e6, preferred_out=20e6,
+                       preferred_bought_back=("STRC", "STRF"), liquid_change=-30e6, btc_cost=120e6, dividends=30e6)
+        money_in, money_out = monday_preview.funding_flows(busy)
+        self.assertEqual([label for label, _, _ in money_in], ["COMMON", "PREF", "FROM CASH"])
+        self.assertEqual([label for label, _, _ in money_out], ["MSTR BUYBACK", "PREF BUYBACK", "BTC", "DIVs"])
+        preview = replace(self.preview, extras={**self.preview.extras, "MSTR": busy})
+        from panels import themes
+        for theme in themes.THEMES.values():
+            with self.subTest(theme=theme.key):
+                _, overflows = monday_preview.render_png(preview, theme)
+                self.assertEqual(overflows, [])
+
     def test_strive_cash_shows_its_strc_portion(self):
         strive = self.preview.extras["ASST"]
         company = next(c for c in self.report.companies if c.ticker == "ASST")

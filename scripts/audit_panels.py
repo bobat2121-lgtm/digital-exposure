@@ -129,6 +129,11 @@ def audit_monday(report, monday, extras, rows, now):
                   if estimated else e.btc_cost_source, e.btc_cost_source)
             compare("monday", f"{t}.btc_divs", f"{t} BTC + DIVs = funding", e.btc_cost + e.dividends, e.net_funding, 1,
                     source="waterfall arithmetic")
+        flows = monday_preview.funding_flows(e)
+        if flows is not None:
+            money_in, money_out = (sum(amount for _, amount, _ in side) for side in flows)
+            compare("monday", f"{t}.in_out", f"{t} waterfall: money in = money out", money_in, money_out, 1,
+                    source="gross issuance, buybacks, cash change, BTC and DIVs")
         if t == "MSTR" and e.stated_dividends is not None and e.dividends is not None:
             compare("monday", "MSTR.divs_8k", "MSTR DIVs vs 8-K dividends + interest", e.dividends, e.stated_dividends, 20e6,
                     warn_only=True, source="8-K: USD Reserve used for dividends and interest",

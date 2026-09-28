@@ -171,10 +171,17 @@ then what it did per share.
 - **Bitcoin bought and held.**
 - **The funding block.** The page and the X image use the waterfall. Layouts A and
   B remain in the renderer only (`panels/monday_preview.py`):
-  - **C · Waterfall** (default, the main format), read top to bottom, one row per
-    step: COMMON + PREF, plus cash drawn (FROM CASH) or minus cash kept (TO CASH),
-    then where it went: **BTC** (the week's bitcoin purchase cost, fees included)
-    and **DIVs** (the rest: preferred dividends, interest and fees).
+  - **C · Waterfall** (default, the main format): the week's cash, one row per flow,
+    each flow once with its direction. **Money in** climbs from $0: common sold
+    (COMMON), preferred sold (PREF) and cash drawn (FROM CASH), green with a +.
+    **Money out** steps back to $0: buybacks (e.g. STRC BUYBACK; a common buyback
+    reads MSTR BUYBACK), **BTC** (the week's bitcoin purchase cost, fees included),
+    **DIVs** (the rest: preferred dividends, interest and fees) and cash kept
+    (TO CASH), with a − in the normal ink (buying bitcoin is not a loss). The last
+    bar ends on zero, which shows the two sides match; the audit checks it. A rule
+    separates the two groups (dashed grey on Bloomberg, a hairline on Broadsheet),
+    with no text. Sales and buybacks come from the 8-K's gross figures, so a week
+    with both gets two rows; a busy week (up to seven rows) tightens the rows.
     - Strategy's BTC cost is the 8-K's "Aggregate Purchase Price" (filing feed,
       else `data/strategy-weekly-8k.json`). Strive's is its dashboard's purchase
       cost for the same dates. If neither exists, BTC bought × the week's average

@@ -21,7 +21,7 @@ import numpy as np
 from PIL import Image, ImageColor
 
 from report import live_report as lr
-from report.calculations import btc_value, calculate_company, liquid_assets, net_treasury_nav
+from report.calculations import btc_value, calculate_company, liquid_assets, net_treasury_nav, preferred_activity_capital
 from report.models import Report
 from report.presentation import build_report_view
 from report.view_types import CompanyView, ReportView
@@ -58,6 +58,12 @@ class CompanyExtras:
     common_capital: float | None = None
     preferred_capital: float | None = None
     preferred_note: str = ""
+    # Gross pieces of the net capital above: money in (sold) and money out (bought back).
+    common_in: float | None = None
+    common_out: float | None = None
+    preferred_in: float | None = None
+    preferred_out: float | None = None
+    preferred_bought_back: tuple = ()           # the preferred series repurchased this week
     btc_bought: float | None = None
     btc_held: float | None = None
     liquid_balance: float | None = None
@@ -284,6 +290,84 @@ def _warrants(ticker, company, facts, config, now):
             "in_the_money": price - strike if price else None, "days": (expires.date() - now.astimezone(ET).date()).days}
 
 
+def _split(net, gross=None) -> tuple[float | None, float | None]:
+    """(money in, money out) behind a net capital figure: the reported gross pair when it adds up
+    to the net, otherwise the net itself on its side."""
+    if net is None:
+        return None, None
+    if gross and None not in gross and abs(gross[0] - gross[1] - net) < 1:
+        return float(gross[0]), float(gross[1])
+    return (float(net), 0.0) if net >= 0 else (0.0, float(-net))
+
+
+def _preferred_split(activities, net) -> tuple[float | None, float | None, tuple]:
+    """Preferred sold and bought back this week (series by series), and which series were bought back."""
+    sold = bought = 0.0
+    series = []
+    for activity in activities or ():
+        value = preferred_activity_capital(activity)
+        if value is None:
+            return (*_split(net), ())
+        if activity.capital_method == "reported":
+            add, remove = activity.reported_issuance_proceeds, activity.reported_repurchases_cash
+        else:
+            add, remove = _split(value)
+        sold, bought = sold + add, bought + remove
+        if remove > 0:
+            series.append(activity.series)
+    if net is None or abs(sold - bought - net) >= 1:
+        return (*_split(net), ())
+    return sold, bought, tuple(series)
+
+
+def funding_flows(e: CompanyExtras) -> tuple[list, list] | None:
+    """The week's cash, each flow once with its direction: (money in, money out), each a list of
+    (label, amount, kind). The two sides add up to the same total by construction. None when a
+    piece is missing."""
+    if None in (e.common_in, e.common_out, e.preferred_in, e.preferred_out, e.liquid_change):
+        return None
+    drawn = -e.liquid_change
+    money_in, money_out = [], []
+    if e.common_in > 0:
+        money_in.append(("COMMON", e.common_in, "raise"))
+    if e.preferred_in > 0:
+        money_in.append(("PREF", e.preferred_in, "raise"))
+    if drawn > 0:
+        money_in.append(("FROM CASH", drawn, "cash"))
+    if e.common_out > 0:
+        money_out.append((f"{e.ticker} BUYBACK", e.common_out, "buyback"))  # "COMMON BUYBACK" is too wide in Broadsheet
+    if e.preferred_out > 0:
+        series = e.preferred_bought_back
+        money_out.append((f"{series[0]} BUYBACK" if len(series) == 1 else "PREF BUYBACK", e.preferred_out, "buyback"))
+    if e.btc_cost is None:
+        funding = e.net_funding if e.net_funding is not None else 0.0
+        if funding > 0:
+            money_out.append(("BTC + DIVs", funding, "btc"))
+    else:
+        if e.btc_cost > 0:
+            money_out.append(("BTC", e.btc_cost, "btc"))
+        elif e.btc_cost < 0:
+            money_in.append(("BTC SOLD", -e.btc_cost, "btc"))
+        if (e.dividends or 0) > 0:
+            money_out.append(("DIVs", e.dividends, "divs"))
+        elif (e.dividends or 0) < 0:  # rounding in the reported balances, when it outweighs the uses
+            money_in.append(("OTHER", -e.dividends, "other"))
+    if drawn < 0:
+        money_out.append(("TO CASH", -drawn, "cash"))
+    return money_in, money_out
+
+
+def _flows_text(e: CompanyExtras) -> str:
+    """The waterfall's rows in words, for audit.json: 'in COMMON +$246.2m, … · out STRC BUYBACK −$151.7m, …'."""
+    flows = funding_flows(e)
+    if flows is None:
+        return "—"
+    money_in, money_out = flows
+    return (" · ".join(filter(None, (
+        "in " + ", ".join(f"{label} {_money(amount)}" for label, amount, _ in money_in) if money_in else "",
+        "out " + ", ".join(f"{label} {_money(-amount)}" for label, amount, _ in money_out) if money_out else ""))) or "none")
+
+
 def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now: datetime | None = None) -> MondayPreview:
     now = now or datetime.now(ET)
     view = build_report_view(report, prices=prices)
@@ -344,11 +428,16 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
             change = _n(facts.get("net_sata_shares_change"))
             note = f"SATA {change / 1e3:+,.0f}k sh" if change is not None else "SATA"
         cost_basis, average_cost, basis_source = _cost_basis(ticker, company, facts, extras, (btc_cost, cost_source))
+        common_in, common_out = _split(metrics.net_common_capital, None if metrics.common_capital_estimated
+                                       else (metrics.common_issuance_cash, metrics.common_buybacks_cash))
+        preferred_in, preferred_out, bought_back = _preferred_split(company.preferred_activity, metrics.net_preferred_capital)
         result[ticker] = CompanyExtras(
             ticker=ticker, amplification_pct=amp,
             amplification_x=amp_x, amplification_change_x=amp_change_x, amplification_source=amp_source,
             common_capital=metrics.net_common_capital, preferred_capital=metrics.net_preferred_capital,
             preferred_note=note, btc_bought=_n(facts.get("weekly_btc_purchases")), btc_held=current.btc_holdings,
+            common_in=common_in, common_out=common_out, preferred_in=preferred_in, preferred_out=preferred_out,
+            preferred_bought_back=bought_back,
             amplification_change_pp=amp - prior_amp if amp is not None and prior_amp is not None else None,
             btc_cost=btc_cost, btc_cost_source=cost_source, stated_dividends=stated,
             dividends=funding - btc_cost if funding is not None and btc_cost is not None else None,
@@ -477,58 +566,63 @@ def cash_step_label(e: CompanyExtras) -> str:
 
 
 def _top_waterfall(canvas, e, L, R, y, p, stripe):
-    """C · Waterfall, read down: common + preferred ± cash = BTC + DIVs.
+    """C · Waterfall: the week's cash, money in then money out.
 
-    One row per step, so every label and amount stays at phone size. Cash is
-    labeled by direction: FROM CASH when the balance funded the week, TO CASH
-    when part of the raise was kept (its bar steps back). BTC is the week's
-    bitcoin cost; DIVs is the rest (dividends, interest and fees).
+    One row per flow, so every label and amount stays at phone size. The bars climb
+    from $0 with money in (common and preferred sold, cash drawn) and step back to $0
+    with money out (buybacks, BTC, DIVs, cash kept): the last bar ends on zero, which
+    is the check that the two sides match. Money in is green with its +; money out
+    keeps its − in the normal ink, since buying bitcoin is not a loss. BTC is the
+    week's bitcoin cost; DIVs is the rest (dividends, interest and fees).
     """
-    drawn = -e.liquid_change if e.liquid_change is not None else None
-    sources = (("COMMON", e.common_capital), ("PREF", e.preferred_capital), (cash_step_label(e), drawn))
-    if any(value is None for _, value in sources):
+    flows = funding_flows(e)
+    if flows is None:
         canvas.text(L, y + 60, "Funding detail unavailable", T_BODY, p.muted)
         return
-    steps, level = [], 0.0
-    for n, (label, value) in enumerate(sources):
-        # Raises carry their sign; cash is a plain amount (its label gives the direction).
-        text = _money(value, signed=True) if n < 2 else _money(abs(value), signed=False)
-        steps.append((label, text, level, level + value, p.soft if n == 2 else p.positive if value >= 0 else p.negative,
-                      _tone_text(text, p) if n < 2 else p.ink))
-        level += value
-    if e.btc_cost is not None:
-        rest = level - e.btc_cost
-        steps.append(("BTC", _money(e.btc_cost, signed=False), 0.0, e.btc_cost, stripe, p.ink))
-        steps.append(("DIVs", _money(rest, signed=False), e.btc_cost, level, mix(stripe, p.card, .45), p.ink))
+    money_in, money_out = flows
+    fills = {"raise": p.positive, "cash": p.soft, "buyback": p.negative, "btc": stripe,
+             "divs": mix(stripe, p.card, .45), "other": p.soft}
+    rows, level = [], 0.0
+    for label, amount, kind in money_in:
+        rows.append((label, _money(amount), level, level + amount, fills[kind], p.positive))
+        level += amount
+    total = level
+    for label, amount, kind in money_out:
+        rows.append((label, _money(-amount), level - amount, level, fills[kind], p.ink))
+        level -= amount
+    if not rows or total <= 0:
+        canvas.text(L, y + 60, "No funding activity this week", T_BODY, p.muted)
     else:
-        steps.append(("BTC + DIVs", _money(level, signed=False), 0.0, level, stripe, p.ink))
-    row_h, gap = 50, 12
-    # Wide enough for the widest label in the theme's face (180 px in Neon), capped.
-    label_w = min(220, max(180, max(width(step[0], T_MIN, True) for step in steps) + 14))
-    value_w = 146
-    bx0, bx1 = L + label_w, R - value_w - 10
-    points = [0.0] + [value for step in steps for value in step[2:4]]
-    low, high = min(points), max(points)
-    span = (high - low) or 1
-    px = lambda v: bx0 + (v - low) / span * (bx1 - bx0)
-    rows_y = [y + 2 + n * row_h + (gap if n >= 3 else 0) for n in range(len(steps))]
-    if p.dotted_axis:
-        canvas.line([(px(0), rows_y[0] + 2), (px(0), rows_y[-1] + 48)], p.soft, 2, dashed=True, dash=(4, 4))
-    else:
-        canvas.draw.line((px(0), rows_y[0] + 2, px(0), rows_y[-1] + 48), fill=p.line, width=2)
-        canvas.draw.line((L, rows_y[3] - gap / 2 - 1, R, rows_y[3] - gap / 2 - 1), fill=p.line, width=2)
-    for n, (label, text, a, b, color, tone) in enumerate(steps):
-        ry = rows_y[n]
-        x0, x1 = sorted((px(a), px(b)))
-        fill = color if isinstance(color, tuple) else mix(color, p.card, .85)  # DIVs arrives pre-tinted
-        canvas.draw.rounded_rectangle((x0, ry + 8, max(x1, x0 + 4), ry + 42), radius=min(4, p.radius), fill=fill)
-        # Center both texts on the bar (ry + 25) by their cap height, not the font box.
-        canvas.text(L, ry + 25 - cap_middle(T_MIN), label, T_MIN, p.muted, True, max_width=label_w - 10)
-        canvas.text(R, ry + 25 - cap_middle(T_LABEL), text, T_LABEL, tone, True, align="right", max_width=value_w)
-        if n + 1 < len(steps) and steps[n + 1][2] == b:  # each step starts where the last one ended
-            canvas.line([(px(b), ry + 42), (px(b), rows_y[n + 1] + 8)], p.soft, 2, dashed=True, dash=(4, 4))
-    # The total carries down to where the uses end.
-    canvas.line([(px(level), rows_y[2] + 42), (px(level), rows_y[-1] + 8)], p.soft, 2, dashed=True, dash=(4, 4))
+        # Five rows keep the full 50 px rhythm; a busier week (up to seven) tightens rows and bars.
+        room, gap = TOP_H - CASH_BOX_H - 20, 12
+        row_h = min(50, (room - 6) / len(rows))
+        bar = min(34, row_h - 16)
+        split = len(money_in)
+        middles = [y + 10 + bar / 2 + n * row_h + (gap if n >= split else 0) for n in range(len(rows))]
+        label_w = min(230, max(180, max(width(row[0], T_MIN, True) for row in rows) + 14))
+        value_w = 150
+        bx0, bx1 = L + label_w, R - value_w - 10
+        px = lambda v: bx0 + v / total * (bx1 - bx0)
+        # Zero on the left; the bars climb with money in and come back to zero with money out.
+        canvas.line([(px(0), middles[0] - bar / 2 - 6), (px(0), middles[-1] + bar / 2 + 6)], p.soft, 2, dashed=True, dash=(4, 4))
+        if 0 < split < len(rows):  # the rule between money in and money out: dashed grey on Bloomberg, a hairline elsewhere
+            rule = (middles[split - 1] + middles[split]) / 2
+            if p.dotted_axis:
+                canvas.line([(L, rule), (R, rule)], p.soft, 2, dashed=True, dash=(4, 4))
+            else:
+                canvas.draw.line((L, rule, R, rule), fill=p.line, width=2)
+        for n, (label, text, a, b, color, tone) in enumerate(rows):
+            middle = middles[n]
+            fill = color if isinstance(color, tuple) else mix(color, p.card, .85)  # DIVs arrives pre-tinted
+            canvas.draw.rounded_rectangle((px(a), middle - bar / 2, max(px(b), px(a) + 4), middle + bar / 2),
+                                          radius=min(4, p.radius), fill=fill)
+            # Both texts are centered on the bar by their capitals.
+            canvas.text(L, middle - cap_middle(T_MIN), label, T_MIN, p.muted, True, max_width=label_w - 10)
+            canvas.text(R, middle - cap_middle(T_LABEL), text, T_LABEL, tone, True, align="right", max_width=value_w)
+            if n + 1 < len(rows):  # each bar starts where the last one ended
+                edge = b if n < split else a
+                canvas.line([(px(edge), middle + bar / 2), (px(edge), middles[n + 1] - bar / 2)], p.soft, 2,
+                            dashed=True, dash=(4, 4))
     _cash_box(canvas, e, L, R, y + TOP_H - CASH_BOX_H, p, f"Cash on hand {_money(e.liquid_balance, False)}")
 
 
@@ -726,7 +820,8 @@ def notes(preview: MondayPreview) -> list[str]:
                       if e.ticker == "MSTR" and e.stated_dividends is not None)
     return [line for line in (
         "Capital raised = ATM issuance − repurchases, common and preferred. Cash is an existing balance, never counted as a raise. "
-        "The waterfall reads down: common + preferred + cash drawn (or − cash kept) = BTC + DIVs. "
+        "The waterfall is the week's cash, each flow once: money in (common and preferred sold, cash drawn) climbs from $0, "
+        "money out (buybacks, BTC, DIVs, cash kept) steps back to $0, so the two sides match. "
         "Strive's common figure is an estimate: net share change × prior-week VWAP.",
         f"BTC = the week's bitcoin purchase cost, fees included ({costs}). DIVs = the rest of the week's funding: preferred "
         f"dividends and interest, plus fees and other uses. {stated}".strip(),
@@ -767,6 +862,8 @@ def audit_rows(preview: MondayPreview) -> list[dict]:
             {"metric": f"{company.ticker} BTC (bitcoin cost)", "value": _money(extra.btc_cost, False), "source": extra.btc_cost_source or "—"},
             {"metric": f"{company.ticker} DIVs (funding − BTC)", "value": _money(extra.dividends, False),
              "source": "derived" + (f"; 8-K dividends + interest {_money(extra.stated_dividends, False)}" if extra.stated_dividends is not None else "")},
+            {"metric": f"{company.ticker} money in / money out", "value": _flows_text(extra),
+             "source": "8-K gross issuance and repurchases, cash change, BTC cost, DIVs"},
             {"metric": f"{company.ticker} NAV / share (est.)", "value": _clean(company.nav_per_share), "source": "derived"},
             {"metric": f"{company.ticker} BTC cost basis / average", "value":
              f"{_money(extra.cost_basis, False)} / ${extra.average_cost:,.0f}" if extra.average_cost else "—",
