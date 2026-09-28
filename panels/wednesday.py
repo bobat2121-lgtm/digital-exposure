@@ -298,8 +298,38 @@ def _cover_history(rows, extras, config, monday):
     }
 
 
+def _business_day(day: date) -> bool:
+    from report.current_prices import _xnys
+    try:
+        return bool(_xnys().is_session(day.isoformat()))
+    except Exception:  # calendar unavailable: weekdays
+        return day.weekday() < 5
+
+
+def _rate_announcements(today: date) -> list[tuple]:
+    """The next STRC and SATA rate announcements from their patterns, so the calendar never runs
+    dry between curated updates: Strategy posts STRC's next rate on the month's last business
+    day; Strive announces SATA's around the 15th (Jul 15, Aug 14, Sep 15, 2026: the 15th, or
+    the business day before). A curated entry for the same announcement replaces these."""
+    events = []
+    for offset in range(3):
+        year, month = today.year + (today.month - 1 + offset) // 12, (today.month - 1 + offset) % 12 + 1
+        last = date(year + month // 12, month % 12 + 1, 1) - timedelta(days=1)
+        while not _business_day(last):
+            last -= timedelta(days=1)
+        if last >= today and not any(label.startswith("STRC") for _, label, _ in events):
+            events.append((last.isoformat(), f"STRC {last + timedelta(days=7):%b} rate", "rate:STRC"))
+        mid = date(year, month, 15)
+        while not _business_day(mid):
+            mid -= timedelta(days=1)
+        if mid >= today and not any(label.startswith("SATA") for _, label, _ in events):
+            events.append((mid.isoformat(), "SATA rate est.", "rate:SATA"))
+    return events
+
+
 def _scheduled_events(extras: dict, today: date) -> list[tuple]:
-    """FOMC decisions (Fed calendar), earnings (curated, else Nasdaq's estimate) and curated events."""
+    """FOMC decisions (Fed calendar), earnings (curated, else Nasdaq's estimate), the next rate
+    announcements (generated from their patterns) and curated events."""
     events = []
     calendar = extras.get("calendar") or {}
     horizon = (today + timedelta(days=75)).isoformat()
@@ -311,7 +341,7 @@ def _scheduled_events(extras: dict, today: date) -> list[tuple]:
         curated = json.loads(EVENTS.read_text(encoding="utf-8")).get("events") or [] if EVENTS.exists() else []
     except ValueError:
         curated = []
-    confirmed = set()
+    confirmed, curated_rates = set(), []
     for event in curated:
         day, label = event.get("date"), event.get("label")
         if not day or not label or day < today.isoformat():
@@ -319,6 +349,12 @@ def _scheduled_events(extras: dict, today: date) -> list[tuple]:
         events.append((day, label, "curated"))
         if event.get("kind") == "earnings" and event.get("ticker"):
             confirmed.add(event["ticker"])
+        if event.get("kind") == "rate" and event.get("ticker"):
+            curated_rates.append((event["ticker"], date.fromisoformat(day)))
+    for day, label, kind in _rate_announcements(today):
+        ticker, when = kind.split(":")[1], date.fromisoformat(day)
+        if not any(ticker == other and abs((when - other_day).days) <= 10 for other, other_day in curated_rates):
+            events.append((day, label, "rate"))
     for ticker, item in (calendar.get("earnings") or {}).items():
         if item and ticker not in confirmed and today.isoformat() <= item["date"] <= horizon:
             events.append((item["date"], f"{ticker} earnings{' est.' if item.get('estimated') else ''}", "earnings"))

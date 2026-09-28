@@ -217,6 +217,24 @@ class QuoteTests(unittest.TestCase):
         self.assertIsNone(wednesday.quote_tag(wednesday.Ladder("STRC", 98.4, 11.5, 11.7)))
 
 
+class CalendarTests(unittest.TestCase):
+    def test_rate_announcements_come_from_their_patterns(self):
+        from datetime import date
+        # STRC: the month's last business day. SATA: the 15th, or the business day before.
+        self.assertEqual(wednesday._rate_announcements(date(2026, 10, 16)),
+                         [("2026-10-30", "STRC Nov rate", "rate:STRC"), ("2026-11-13", "SATA rate est.", "rate:SATA")])
+        self.assertEqual(wednesday._rate_announcements(date(2026, 12, 20))[0], ("2026-12-31", "STRC Jan rate", "rate:STRC"))
+
+    def test_a_curated_entry_replaces_the_generated_one(self):
+        from datetime import date
+        events = wednesday._scheduled_events(offline_extras(), date(2026, 9, 28))
+        rates = [event for event in events if "rate" in event[1]]
+        self.assertEqual(rates, [("2026-09-30", "STRC Oct rate", "curated"), ("2026-10-15", "SATA rate est.", "curated")])
+        # After the curated dates pass, the calendar still shows the next ones.
+        later = {event[1]: event[0] for event in wednesday._scheduled_events(offline_extras(), date(2026, 10, 16))}
+        self.assertEqual((later["STRC Nov rate"], later["SATA rate est."]), ("2026-10-30", "2026-11-13"))
+
+
 class WednesdayTests(unittest.TestCase):
     def test_ladder_sorted_and_panel_renders(self):
         prices = load_current_prices()

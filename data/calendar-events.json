@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "note": "Curated dates the panels cannot fetch reliably: confirmed earnings dates, STRC/SATA rate announcements, votes and other corporate events. The weekly audit task maintains this file. A confirmed earnings entry (kind 'earnings' with its ticker) replaces Nasdaq's estimate. Past events drop off automatically. Keep labels to 16 characters or fewer so they fit the card.",
+  "note": "Curated dates the panels cannot fetch or derive: confirmed earnings dates, votes, other corporate events, and rate announcements that move off their pattern (the panel generates STRC's on the month's last business day and SATA's on the 15th or the business day before; an entry within 10 days replaces those). The weekly audit task maintains this file. A confirmed earnings entry (kind 'earnings' with its ticker) replaces Nasdaq's estimate. Past events drop off automatically. Keep labels to 16 characters or fewer so they fit the card.",
   "events": [
     {
       "date": "2026-09-30",
