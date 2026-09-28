@@ -14,6 +14,14 @@ from report.publication_check import publication_check
 DATA = Path(__file__).resolve().parents[1] / "data"
 FILINGS = json.loads((DATA / "latest-report-filings.json").read_text())
 SUPPLEMENTS = json.loads((DATA / "report-supplements.json").read_text())
+# These cases model the September 21 review and a synthetic following week.
+# Keep later real publications out of both the feed and reviewed inputs.
+FIXTURE_EDITION = date(2026, 9, 21)
+FILINGS["filings"] = [row for row in FILINGS["filings"] if row["filedDate"] <= FIXTURE_EDITION.isoformat()]
+for ticker, balances in SUPPLEMENTS["balances"].items():
+    SUPPLEMENTS["balances"][ticker] = {day: row for day, row in balances.items() if day <= "2026-09-20"}
+for field in ("comparison_btc_prices", "comparison_release_dates", "balance_marks"):
+    SUPPLEMENTS[field] = {day: row for day, row in SUPPLEMENTS[field].items() if day <= "2026-09-13"}
 
 
 def _stamp(day, hour=20):
@@ -56,6 +64,13 @@ def seed_sep13():
     record = json.loads((DATA / "reconciliation-2026-09-14.json").read_text())
     return {"date": record["strategy_shares"]["balance_date"], "common": record["strategy_shares"]["basic_shares"],
             "series": {name: row["shares"] for name, row in record["strategy_claims"].items()}, "source": "test"}
+
+
+def seed_sep20():
+    record = json.loads((DATA / "reconciliation-2026-09-21.json").read_text())
+    return {"date": record["strategy_shares"]["balance_date"], "common": record["strategy_shares"]["basic_shares"],
+            "series": {name: row["shares"] for name, row in record["strategy_claims"].items()},
+            "source": "test", "debt": record["strategy_debt"]}
 
 
 class ReleaseTimeTests(unittest.TestCase):
@@ -203,8 +218,19 @@ class AutomaticEditionTests(unittest.TestCase):
                                   common_repurchased_shares=0, common_repurchases_cash_usd=0)
             feed["filings"].append(new)
         vwap = {"value": 29.5, "method": "hlc3_5m", "session_start": "2026-09-21", "session_end": "2026-09-25"}
+        original_load, original_estimate = lr._load, lr.load_estimate
+        def historical_load(path):
+            if path == lr.CHECKPOINT:
+                return deepcopy(FILINGS)
+            if path == lr.SUPPLEMENTS:
+                return deepcopy(SUPPLEMENTS)
+            return original_load(path)
+        def historical_estimate(symbol, filed):
+            return original_estimate(symbol, filed) if filed <= FIXTURE_EDITION else None
         with patch.object(ar, "_yahoo", fake_yahoo), patch.object(ar, "_strc_dividends", lambda: STRC_KPI), \
-                patch.object(ar, "vwap_estimate", lambda filed: vwap), patch.object(ar, "_convertibles", lambda: listed):
+                patch.object(ar, "vwap_estimate", lambda filed: vwap), patch.object(ar, "_convertibles", lambda: listed), \
+                patch.object(ar, "_seed", seed_sep20), patch.object(lr, "_load", side_effect=historical_load), \
+                patch.object(lr, "load_estimate", side_effect=historical_estimate):
             prices = load_current_prices()
             result = lr.resolve_complete_report(prices, feed)
             summary, _, _ = publication_check(prices, feed)

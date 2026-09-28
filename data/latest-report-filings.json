@@ -7,6 +7,199 @@
       "ticker": "MSTR",
       "issuer": "Strategy",
       "cik": "0001050446",
+      "accession": "0001193125-26-403417",
+      "form": "8-K",
+      "filedDate": "2026-09-28",
+      "reportDate": "2026-09-14",
+      "acceptedAt": "2026-09-28T08:00:16.000Z",
+      "firstSeenAt": "2026-09-28T12:01:54.819Z",
+      "documentFetchedAt": "2026-09-28T12:01:54.960Z",
+      "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526403417/mstr-20260914.htm",
+      "documents": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526403417/mstr-20260914.htm",
+          "fetchedAt": "2026-09-28T12:01:54.960Z",
+          "sha256": "9d316dec52646c08c76bcc507cb7d9fdc63ff9529c1a5a15aff324ba17ce94fc"
+        }
+      ],
+      "status": "ready_for_review",
+      "baseline": false,
+      "extracted": {
+        "parserVersion": "sec-weekly-v4",
+        "periodStart": "2026-09-21",
+        "periodEnd": "2026-09-27",
+        "priorBalanceDate": null,
+        "balanceDate": "2026-09-27",
+        "facts": {
+          "weekly_btc_purchases": 1665,
+          "btc_holdings": 847666,
+          "weekly_btc_cost_usd": 142700000,
+          "btc_cost_basis_usd": 63950000000,
+          "btc_average_cost_usd": 75437,
+          "usd_reserve_usd": 5020000000,
+          "usd_cash_usd": 1000000000,
+          "usd_reserve_dividends_interest_usd": 22100000,
+          "common_issued_shares": 1469165,
+          "common_issuance_proceeds_usd": 246200000,
+          "common_repurchased_shares": 0,
+          "common_repurchases_cash_usd": 0
+        },
+        "priorFacts": {},
+        "securities": {
+          "STRF": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "STRC": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 1534530,
+            "repurchaseCashUsd": 151700000
+          },
+          "STRK": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "STRD": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "MSTR": {
+            "issuedShares": 1469165,
+            "netIssuanceProceedsUsd": 246200000,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          }
+        },
+        "missing": [],
+        "issues": [],
+        "extractionValidated": true
+      },
+      "attempts": 1,
+      "nextDocumentAttemptAt": 0,
+      "error": null
+    },
+    {
+      "ticker": "ASST",
+      "issuer": "Strive",
+      "cik": "0001920406",
+      "accession": "0001628280-26-063653",
+      "form": "8-K",
+      "filedDate": "2026-09-28",
+      "reportDate": "2026-09-28",
+      "acceptedAt": "2026-09-28T07:59:37.000Z",
+      "firstSeenAt": "2026-09-28T12:00:24.351Z",
+      "documentFetchedAt": "2026-09-28T12:00:24.408Z",
+      "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026063653/asst-20260928.htm",
+      "documents": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026063653/asst-20260928.htm",
+          "fetchedAt": "2026-09-28T12:00:24.408Z",
+          "sha256": "3b5989dfafd990eb1e921114aac7b50c82685576515ae01ab4c62a23d622b832"
+        }
+      ],
+      "status": "ready_for_review",
+      "baseline": false,
+      "extracted": {
+        "parserVersion": "sec-weekly-v4",
+        "periodStart": "2026-09-21",
+        "periodEnd": "2026-09-25",
+        "priorBalanceDate": "2026-09-18",
+        "balanceDate": "2026-09-25",
+        "facts": {
+          "weekly_btc_purchases": 1107,
+          "cash_and_equivalents_usd": 248800000,
+          "held_strc_fair_value_usd": 49763000,
+          "held_strc_shares": 505000,
+          "btc_holdings": 27462,
+          "common_shares_class_a": 88453685,
+          "common_shares_class_b": 9198036,
+          "effective_common_shares": 97651721,
+          "net_common_shares_change": 649072,
+          "options": 856234,
+          "unvested_employee_awards": 2268840,
+          "assumed_diluted_shares": 100776795,
+          "traditional_warrant_shares": 25349806,
+          "sata_shares": 12193180,
+          "net_sata_shares_change": 1009020
+        },
+        "priorFacts": {
+          "cash_and_equivalents_usd": 229600000,
+          "held_strc_fair_value_usd": 49748000,
+          "held_strc_shares": 505000,
+          "btc_holdings": 26355,
+          "common_shares_class_a": 87804613,
+          "common_shares_class_b": 9198036,
+          "effective_common_shares": 97002649,
+          "options": 873224,
+          "unvested_employee_awards": 2268840,
+          "assumed_diluted_shares": 100144713,
+          "traditional_warrant_shares": 25810455,
+          "sata_shares": 11184160
+        },
+        "securities": {},
+        "missing": [],
+        "issues": [],
+        "extractionValidated": true
+      },
+      "attempts": 1,
+      "nextDocumentAttemptAt": 0,
+      "error": null
+    },
+    {
+      "ticker": "MSTR",
+      "issuer": "Strategy",
+      "cik": "0001050446",
+      "accession": "0001193125-26-401636",
+      "form": "8-K",
+      "filedDate": "2026-09-25",
+      "reportDate": "2026-09-24",
+      "acceptedAt": "2026-09-25T12:03:17.000Z",
+      "firstSeenAt": "2026-09-28T10:45:22.074Z",
+      "documentFetchedAt": "2026-09-28T10:45:22.168Z",
+      "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526401636/mstr-20260924.htm",
+      "documents": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526401636/mstr-20260924.htm",
+          "fetchedAt": "2026-09-28T10:45:22.168Z",
+          "sha256": "36cb02d6719852ef81dbb753911523a042d728d2cf38df35b7be9742c889b9e1"
+        }
+      ],
+      "status": "not_weekly",
+      "baseline": false,
+      "extracted": {
+        "parserVersion": "sec-weekly-v4",
+        "periodStart": null,
+        "periodEnd": null,
+        "priorBalanceDate": null,
+        "balanceDate": null,
+        "facts": {},
+        "priorFacts": {},
+        "securities": {},
+        "missing": [
+          "btc_holdings",
+          "common_issued_shares",
+          "common_issuance_proceeds_usd",
+          "weekly_btc_activity",
+          "reporting_period"
+        ],
+        "issues": [],
+        "extractionValidated": false
+      },
+      "attempts": 1,
+      "nextDocumentAttemptAt": 0,
+      "error": null
+    },
+    {
+      "ticker": "MSTR",
+      "issuer": "Strategy",
+      "cik": "0001050446",
       "accession": "0001193125-26-396093",
       "form": "8-K",
       "filedDate": "2026-09-21",
@@ -633,5 +826,5 @@
       "error": null
     }
   ],
-  "reconciledAt": "2026-09-21T13:03:25.093979+00:00"
+  "reconciledAt": "2026-09-28T12:29:44.355017+00:00"
 }

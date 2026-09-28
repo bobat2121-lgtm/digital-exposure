@@ -11,10 +11,19 @@ if str(ROOT / "sources" / "friday") not in sys.path:
 
 from panels import extras as extras_module
 from panels import friday_preview, monday_preview, wednesday
+from report import live_report
 from report.current_prices import load_current_prices
-from report.live_report import resolve_complete_report
+from report.live_report import resolve_live_report
 
 FEED = json.loads((ROOT / "data" / "latest-report-filings.json").read_text())
+# The saved dashboard snapshot and assertions describe the September 21 edition.
+FEED["filings"] = [row for row in FEED["filings"] if row["filedDate"] <= "2026-09-21"]
+
+
+def reviewed_report(prices):
+    result = resolve_live_report(prices, FEED, through_date="2026-09-20")
+    assert result.notice is None, result.notice
+    return result.report
 
 
 def assert_phone_ready(case, png):
@@ -77,7 +86,7 @@ class ExtrasTests(unittest.TestCase):
 class MondayPreviewTests(unittest.TestCase):
     def setUp(self):
         self.prices = load_current_prices()
-        self.report = resolve_complete_report(self.prices, FEED).report
+        self.report = reviewed_report(self.prices)
         self.preview = monday_preview.build_preview(self.report, self.prices, FEED, offline_extras())
 
     def test_amplification_uses_each_issuers_own_formula(self):
@@ -300,9 +309,12 @@ class TypeTests(unittest.TestCase):
 class WednesdayTests(unittest.TestCase):
     def test_ladder_sorted_and_panel_renders(self):
         prices = load_current_prices()
-        report = resolve_complete_report(prices, FEED).report
+        report = reviewed_report(prices)
         monday = monday_preview.build_preview(report, prices, FEED, offline_extras())
-        data = wednesday.build(offline_extras(), FEED, monday)
+        original_load = live_report._load
+        with patch.object(live_report, "_load", side_effect=lambda path:
+                          FEED if path == live_report.CHECKPOINT else original_load(path)):
+            data = wednesday.build(offline_extras(), FEED, monday)
         yields = [item.effective for item in data["ladder"] if item.effective is not None]
         self.assertEqual(yields, sorted(yields, reverse=True))
         sata = next(item for item in data["ladder"] if item.ticker == "SATA")
