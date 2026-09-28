@@ -1,0 +1,169 @@
+# Publishes the Monday Accretion Ledger by itself (owner's decision, Sep 28, 2026). It replaces
+# the ChatGPT/Codex Monday task. The page already shows a new week from memory as soon as both
+# 8-Ks are in the Worker's feed; this saves that edition to main, so an outage of one of its
+# live sources can no longer drop the page back to last week's edition:
+#   scripts/monday_publish.py: gate → freeze → publication check (AUTOMATIC_MONDAY_REPORT.md)
+#   → full test suite → commit to main as github-actions[bot] → wait until the live page shows
+#   the new balance dates → one Discord message (repository secret DISCORD_WEBHOOK_URL).
+# Pushes made with GITHUB_TOKEN start no other workflow, so this one checks the page itself.
+# On any failure nothing is sent to Discord; GitHub emails the failed run.
+name: Monday publish
+
+on:
+  schedule:
+    # Every 10 minutes from 7:50 to 10:30 am New York time on Mondays and Tuesdays (Tuesday
+    # covers an EDGAR holiday). Cron is UTC: 11-15 UTC spans both daylight and standard time,
+    # and the script exits quietly outside the window. Minutes 3, 13, … avoid the top of the hour,
+    # when GitHub delays scheduled runs most.
+    - cron: "3,13,23,33,43,53 11-15 * * 1,2"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: everything except writing files (no commit, no Discord)"
+        type: boolean
+        default: false
+      force:
+        description: "Redo the newest week's automatic entries even if already saved"
+        type: boolean
+        default: false
+      replay:
+        description: "Only replay a saved edition (YYYY-MM-DD) and print the differences"
+        type: string
+        default: ""
+      ping_test:
+        description: "Only send the Discord setup-test message"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: monday-publish
+  cancel-in-progress: false
+
+jobs:
+  ping-test:
+    if: ${{ inputs.ping_test }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Send "Setup test — Monday publish workflow (no new edition)"
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then echo "::error::The DISCORD_WEBHOOK_URL repository secret is not set."; exit 1; fi
+          python scripts/monday_publish.py --ping-payload > "$RUNNER_TEMP/discord.json"
+          code=$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" \
+            -H "Content-Type: application/json" --data @"$RUNNER_TEMP/discord.json" "$DISCORD_WEBHOOK_URL?wait=true")
+          echo "Discord answered HTTP $code"
+          [ "$code" = "200" ]
+
+  publish:
+    if: ${{ !inputs.ping_test }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref }}  # the branch as it is now, not when this run was queued
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"  # as on Streamlit Community Cloud
+          cache: pip
+      - run: pip install -r requirements.txt pytest
+
+      - name: Replay a saved edition
+        if: ${{ inputs.replay != '' }}
+        env:
+          REPLAY: ${{ inputs.replay }}
+        run: python scripts/monday_publish.py --replay "$REPLAY"
+
+      - name: Gate, freeze and check
+        id: publish
+        if: ${{ !inputs.replay }}
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          out="$RUNNER_TEMP/monday"; mkdir -p "$out"
+          args=(--summary "$out/summary.json" --check-dir "$out/check")
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then args+=(--ignore-window); fi
+          if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then args+=(--dry-run); echo "Not on main: dry run only."; fi
+          if [ "$FORCE" = "true" ]; then args+=(--force); fi
+          set +e; python scripts/monday_publish.py "${args[@]}"; code=$?; set -e
+          status=$(jq -r .status "$out/summary.json")
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          if [ "$code" = "0" ] && [ "$status" = "published" ] && [ -n "$(git status --porcelain -- data)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "edition=$(jq -r .edition "$out/summary.json")" >> "$GITHUB_OUTPUT"
+            echo "expect=$(jq -r .expect "$out/summary.json")" >> "$GITHUB_OUTPUT"
+          fi
+          exit "$code"
+
+      - name: Full test suite
+        if: steps.publish.outputs.changed == 'true'
+        run: python -m pytest -q
+
+      - name: Commit and push to main
+        id: commit
+        if: steps.publish.outputs.changed == 'true'
+        env:
+          EDITION: ${{ steps.publish.outputs.edition }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          git commit -m "Publish automatic Monday edition $EDITION"
+          git pull --rebase origin main
+          if ! git push origin HEAD:main; then
+            echo "::error::GitHub refused the push to main. If the log above shows 403, set Settings → Actions → General → Workflow permissions to \"Read and write permissions\" (or allow github-actions[bot] past the branch protection on main)."
+            exit 1
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        if: steps.publish.outputs.changed == 'true'
+        with:
+          node-version: "22"
+      - name: Install Playwright's Chromium
+        if: steps.publish.outputs.changed == 'true'
+        run: npm install --no-save --no-package-lock playwright@1.55.0 && npx playwright install --with-deps chromium
+
+      - name: Wait for the live page to show the new week
+        if: steps.publish.outputs.changed == 'true'
+        env:
+          EXPECT: ${{ steps.publish.outputs.expect }}
+        run: |
+          sleep 60  # let Streamlit Community Cloud pick up the push
+          cd "$RUNNER_TEMP/monday"
+          node "$GITHUB_WORKSPACE/scripts/live_check.mjs" --expect "$EXPECT" --minutes 12
+
+      - name: Send the Discord message
+        if: steps.publish.outputs.changed == 'true'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.commit.outputs.sha }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then echo "::error::The DISCORD_WEBHOOK_URL repository secret is not set."; exit 1; fi
+          python scripts/monday_publish.py --discord "$RUNNER_TEMP/monday/summary.json" --commit-url "$COMMIT_URL" > "$RUNNER_TEMP/discord.json"
+          code=$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" \
+            -H "Content-Type: application/json" --data @"$RUNNER_TEMP/discord.json" "$DISCORD_WEBHOOK_URL?wait=true")
+          echo "Discord answered HTTP $code"
+          [ "$code" = "200" ]
+
+      - uses: actions/upload-artifact@v4
+        if: always() && (steps.publish.outputs.changed == 'true' || steps.publish.outputs.status == 'dry run' || failure())
+        with:
+          name: monday-publish
+          path: ${{ runner.temp }}/monday/
+          retention-days: 30
+          if-no-files-found: ignore
