@@ -7,6 +7,12 @@ notifications.
 
 - Keep the Discord webhook, SEC identification value and administration token
   in Cloudflare secrets. The public Streamlit app needs no notification token.
+- The Discord webhook is now also a GitHub Actions secret, `DISCORD_WEBHOOK_URL`
+  (Settings → Secrets and variables → Actions), for the Monday publish Action.
+  Workflows refer to it only as `${{ secrets.DISCORD_WEBHOOK_URL }}`; GitHub masks it
+  in logs and never passes it to pull requests from forks. Never write it to a file,
+  commit, test fixture or log. If it leaks, delete the webhook in Discord and store
+  the replacement in both Cloudflare and GitHub.
 - Never commit credentials. `.streamlit/secrets.toml`, `.env*`, `.dev.vars*`,
   `.wrangler/` and logs are ignored. If a credential enters Git history, revoke
   or rotate it; deleting the current file is insufficient.

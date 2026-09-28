@@ -39,6 +39,6 @@ def save_estimate(estimate: dict, symbol: str, edition: date) -> Path:
     path = estimate_path(symbol, edition)
     path.parent.mkdir(parents=True, exist_ok=True)
     pending = path.with_suffix(".json.tmp")
-    pending.write_text(json.dumps(estimate, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+    pending.write_text(json.dumps(estimate, indent=2, allow_nan=False) + "\n", encoding="utf-8", newline="\n")
     pending.replace(path)
     return path

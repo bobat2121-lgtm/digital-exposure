@@ -202,9 +202,15 @@ def _quarter_start(balance: date) -> date:
     return max(day for day in ends if day <= balance)
 
 
-def _seed():
-    """Latest reviewed reconciliation with Strategy share and series counts."""
+def _seed(before: str | None = None):
+    """Latest reviewed reconciliation with Strategy share and series counts.
+
+    ``before`` (an edition date) skips reconciliation files of that edition or later,
+    so a saved week can be derived again the way it was first derived.
+    """
     for path in sorted(DATA.glob("reconciliation-*.json"), reverse=True):
+        if before and path.stem.removeprefix("reconciliation-") >= before:
+            continue
         record = json.loads(path.read_text(encoding="utf-8"))
         shares, claims = record.get("strategy_shares") or {}, record.get("strategy_claims") or {}
         if shares.get("balance_date") and shares.get("basic_shares") and claims:
@@ -237,7 +243,8 @@ def _strategy_entry(balance: date, common, series, debt, facts):
             "sources": ["https://api.strategy.com/btc/strcKpiData", "https://query1.finance.yahoo.com/v8/finance/chart/"]}
 
 
-def augment(rows: list, supplements: dict, *, now: datetime | None = None) -> tuple[dict, list[str]]:
+def augment(rows: list, supplements: dict, *, now: datetime | None = None,
+            seed_before: str | None = None) -> tuple[dict, list[str]]:
     """Return supplements with auto-reconciled entries for unreviewed filings."""
     result = deepcopy(supplements)
     balances = result.setdefault("balances", {})
@@ -247,7 +254,7 @@ def augment(rows: list, supplements: dict, *, now: datetime | None = None) -> tu
         by_ticker.setdefault(row["ticker"], {})[row["extracted"]["balanceDate"]] = row
 
     # Strategy: roll forward from the latest reviewed reconciliation.
-    seed = _seed()
+    seed = _seed(seed_before) if seed_before else _seed()
     mstr = by_ticker.get("MSTR", {})
     reviewed = balances.setdefault("MSTR", {})
     if seed and any(day > seed["date"] and day not in reviewed for day in mstr):
@@ -266,9 +273,12 @@ def augment(rows: list, supplements: dict, *, now: datetime | None = None) -> tu
                 series[name] = series.get(name, 0) + (activity.get("issuedShares") or 0) - (activity.get("repurchasedShares") or 0)
             existing = reviewed.get(day)
             if existing and existing.get("effective_common_shares") and existing.get("preferred_claims_usd") is not None:
-                # A reviewed count resets the roll-forward.
+                # A saved count resets the roll-forward.
                 common = existing["effective_common_shares"]
-                debt, split = existing.get("debt_principal", debt), None  # the split was for the seed's debt
+                if not existing.get("auto_reconciled"):
+                    # The split was for the seed's debt. A saved automatic week (the Monday publish
+                    # Action) keeps it, so strategy.com's note list is still compared every week.
+                    debt, split = existing.get("debt_principal", debt), None
                 continue
             if debt is None:
                 break
@@ -335,6 +345,33 @@ def augment(rows: list, supplements: dict, *, now: datetime | None = None) -> tu
     if notes:
         result["auto_reconciled_notes"] = notes
     return result, notes
+
+
+def derive_entries(rows: list, supplements: dict, *, seed_before: str | None = None) -> tuple[dict, dict, list[str]]:
+    """(supplements with the automatic entries added, just those additions, notes).
+
+    The entries the live report derives in memory, in the form they are saved:
+    balances keep ``auto_reconciled``, with the comparison marks the edition
+    compares against. Nothing already saved is replaced. Shared by
+    scripts/auto_reconcile.py and scripts/monday_publish.py.
+    """
+    merged, notes = augment(rows, supplements, seed_before=seed_before)
+    merged.pop("auto_reconciled_notes", None)
+    added = {"balances": {}, "comparison_btc_prices": {}, "comparison_release_dates": {}, "balance_marks": {}}
+    for ticker, dates in merged.get("balances", {}).items():
+        saved = supplements.get("balances", {}).get(ticker, {})
+        new = {day: entry for day, entry in dates.items() if day not in saved}
+        if new:
+            added["balances"][ticker] = new
+    for field in ("comparison_btc_prices", "comparison_release_dates"):
+        saved = supplements.get(field, {})
+        added[field] = {day: value for day, value in merged.get(field, {}).items() if day not in saved}
+    for day, marks in merged.get("balance_marks", {}).items():
+        saved = supplements.get("balance_marks", {}).get(day, {})
+        new = {symbol: value for symbol, value in marks.items() if symbol not in saved}
+        if new:
+            added["balance_marks"][day] = new
+    return merged, added, notes
 
 
 def vwap_estimate(filed: date):

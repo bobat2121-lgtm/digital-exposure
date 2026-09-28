@@ -3,6 +3,36 @@
 Public report: [digital-credit-report.streamlit.app](https://digital-credit-report.streamlit.app/).
 Worker: [capital-report.alatimore06370.workers.dev](https://capital-report.alatimore06370.workers.dev/).
 
+## Monday publish Action — September 28, 2026
+
+`.github/workflows/monday-publish.yml` publishes the Monday edition with no one
+involved. It replaces the ChatGPT/Codex Monday task. On Mondays and Tuesdays it runs
+every 10 minutes from 7:50 to 10:30 am New York time, and does this once both weekly
+8-Ks are in the Worker's feed:
+
+1. `scripts/monday_publish.py` saves the automatically reconciled week to `data/`
+   and checks it with `check_monday_publication.py --live`.
+2. The full test suite runs.
+3. It commits to `main` as github-actions[bot]; Streamlit Cloud redeploys.
+4. It waits until the public page's company cards show the new balance dates.
+5. It sends one Discord message.
+
+See [AUTOMATIC_MONDAY_REPORT.md](AUTOMATIC_MONDAY_REPORT.md) for the gate, the files
+it writes and the manual fallback.
+
+- **Discord webhook:** repository secret `DISCORD_WEBHOOK_URL`, under Settings →
+  Secrets and variables → Actions. The workflow reads it only as
+  `${{ secrets.DISCORD_WEBHOOK_URL }}`. The **ping_test** input sends a labelled
+  setup message.
+- **Push permission:** Settings → Actions → General → Workflow permissions must allow
+  "Read and write permissions". The workflow also asks for `contents: write`. A 403
+  on the push step means this setting, or a branch protection rule on `main`, blocks
+  github-actions[bot].
+- **Failures:** GitHub emails the failed run, and nothing goes to Discord.
+- **No other workflows:** pushes made with `GITHUB_TOKEN` start none, so
+  `live-check.yml` does not run after the Action's commit. The Action checks the
+  page itself with `scripts/live_check.mjs --expect`.
+
 ## Combined weekly reports — September 8, 2026
 
 The existing root entrypoint now hosts Monday and Friday as lazy, switchable
@@ -105,7 +135,8 @@ not a guaranteed end-to-end delivery time.
 ## Credentials and public access
 
 Discord and administration credentials belong in Cloudflare secrets, never
-Git or browser code. The unused Cloudflare `STREAMLIT_ACK_TOKEN` was deleted.
+Git or browser code. The Monday publish Action holds the Discord webhook as the
+GitHub Actions secret `DISCORD_WEBHOOK_URL`. The unused Cloudflare `STREAMLIT_ACK_TOKEN` was deleted.
 The Streamlit application no longer reads it. Future private data connections
 should use Community Cloud's server secret settings.
 

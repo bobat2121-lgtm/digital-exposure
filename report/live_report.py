@@ -163,6 +163,11 @@ def load_supplements(rows=None):
         return supplements
 
 
+def automatic_vwap_note(estimate: dict) -> str:
+    """The card's label for an automatic VWAP estimate (also saved with a frozen one)."""
+    return ("5-minute" if estimate.get("method") == "hlc3_5m" else "1-minute") + " VWAP estimate · automatic"
+
+
 def _vwap(filing):
     """Archived Strive VWAP estimate, else an automatic one for that week."""
     filed = date.fromisoformat(filing["filedDate"])
@@ -171,7 +176,7 @@ def _vwap(filing):
     if estimate is None and auto_reconcile.enabled(SUPPLEMENTS):
         try:
             estimate = dict(auto_reconcile.vwap_estimate(filed))
-            estimate["display_note"] = ("5-minute" if estimate.get("method") == "hlc3_5m" else "1-minute") + " VWAP estimate · automatic"
+            estimate["display_note"] = automatic_vwap_note(estimate)
         except Exception:
             estimate = None
     return estimate

@@ -3,9 +3,11 @@
   python scripts/auto_reconcile.py            # print what the live report derives
   python scripts/auto_reconcile.py --write    # add those entries to data/report-supplements.json
 
-The live report already applies these entries in memory; writing them is only
-needed to freeze a week for review. Written entries keep "auto_reconciled": true
-until a reviewer replaces them with checked figures.
+The live report already applies these entries in memory. scripts/monday_publish.py
+(the Monday publish Action) saves them each week with the same function, together
+with the feed checkpoint, Strive's VWAP and the release prices; use this script to
+inspect them. Written entries keep "auto_reconciled": true until a reviewer replaces
+them with checked figures.
 """
 from argparse import ArgumentParser
 import json
@@ -26,12 +28,10 @@ def main():
     feed = load_monitor_snapshot(force=True).feed or json.loads(live_report.CHECKPOINT.read_text(encoding="utf-8"))
     rows = live_report._merged_filings(feed, live_report._load(live_report.CHECKPOINT))
     committed = live_report._load(live_report.SUPPLEMENTS)
-    merged, notes = auto_reconcile.augment(rows, committed)
-    added = {ticker: {day: entry for day, entry in dates.items() if entry.get("auto_reconciled")}
-             for ticker, dates in merged["balances"].items()}
-    print(json.dumps({"notes": notes, "entries": added}, indent=1, default=str))
-    if args.write and any(added.values()):
-        merged.pop("auto_reconciled_notes", None)
+    merged, added, notes = auto_reconcile.derive_entries(rows, committed)
+    print(json.dumps({"notes": notes, "entries": added["balances"],
+                      "marks": {key: value for key, value in added.items() if key != "balances"}}, indent=1, default=str))
+    if args.write and any(added["balances"].values()):
         live_report.SUPPLEMENTS.write_text(json.dumps(merged, indent=2) + "\n", encoding="utf-8")
         print(f"Wrote {live_report.SUPPLEMENTS}")
 
