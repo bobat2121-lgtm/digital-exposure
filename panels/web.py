@@ -625,7 +625,8 @@ def _wednesday_hero(ticker, data) -> None:
     show(stack, height=170)
     history = hero["history"]
     if len(history) > 2:
-        heading(f"Spread over {headline} · 26 weeks", f"{min(v for _, v in history):,.0f}–{max(v for _, v in history):,.0f} bp")
+        heading(f"Spread over {headline} · {wed.HISTORY_WEEKS} weeks",
+                f"{min(v for _, v in history):,.0f}–{max(v for _, v in history):,.0f} bp")
         frame = pd.DataFrame({"date": pd.to_datetime([d for d, _ in history]), "bp": [v for _, v in history]})
         base = alt.Chart(frame).encode(x=alt.X("date:T", title=None, axis=alt.Axis(format="%b %-d", tickCount=6)))
         line = base.mark_line(color=color, strokeWidth=2).encode(y=alt.Y("bp:Q", title="bp", scale=alt.Scale(zero=False)))
@@ -687,17 +688,17 @@ def _ladder(data) -> str:
 
 
 def _flow(ledger) -> str:
-    rows, totals = [], {"strc": 0, "other": 0, "mstr": 0, "sata": 0}
+    rows, totals = [], {"strc": 0, "other": 0, "mstr": 0, "sata": 0, "asst": 0}
     for entry in ledger:
-        rows.append((_nb(wed._short(entry["week"])), wed._money(entry.get("strc"), signed=True), wed._money(entry.get("other"), signed=True),
-                     wed._money(entry.get("mstr"), signed=True), wed._money(entry.get("sata"), signed=True),
+        rows.append((_nb(wed._short(entry["week"])), *(wed._money(entry.get(key), signed=True) for key in totals),
                      f"{(entry.get('mstr_btc') or 0):,.0f}", f"{(entry.get('asst_btc') or 0):,.0f}"))
-        for key in totals:
-            totals[key] += entry.get(key) or 0
+        for key in totals:  # a week without a figure leaves its column's total blank, not understated
+            totals[key] = None if totals[key] is None or entry.get(key) is None else totals[key] + entry[key]
     rows.append(("section", f"{len(ledger)} weeks"))
-    rows.append(("Total", *(wed._money(totals[key], signed=True) for key in ("strc", "other", "mstr", "sata")),
+    rows.append(("Total", *(wed._money(totals[key], signed=True) for key in totals),
                  f"{sum(e.get('mstr_btc') or 0 for e in ledger):,.0f}", f"{sum(e.get('asst_btc') or 0 for e in ledger):,.0f}"))
-    return table(("Week of", "STRC", "STRF/K/D/E", "MSTR ATM", "SATA", "MSTR BTC", "ASST BTC"), rows, toned=(1, 2, 3, 4))
+    return table(("Week of", "STRC", "STRF/K/D/E", "MSTR ATM", "SATA", "ASST ATM", "MSTR BTC", "ASST BTC"), rows,
+                 toned=(1, 2, 3, 4, 5))
 
 
 WEDNESDAY_FORMULAS = (
@@ -707,8 +708,10 @@ WEDNESDAY_FORMULAS = (
                         "split over the month's business days."),
         ("Spread", "(Effective yield − benchmark yield) × 100, in basis points. Headline benchmark: the 3-month T-bill."),
         ("Benchmarks", "SOFR and EFFR from the NY Fed; the 3-month bill and 10-year from Treasury's daily par curve "
-                       "(FRED for history); ICE BofA US Corporate (IG) and High Yield effective yields from FRED."),
-        ("26-week history", "Each day's close, the stated rate in effect that day and that day's benchmark."),
+                       "(FRED for history), which posts after about 6 pm ET: until then, the latest close plus the day's "
+                       "move in the live quote (CNBC, else Yahoo's CBOE yield index). ICE BofA US Corporate (IG) and High "
+                       "Yield effective yields from FRED, a business day behind."),
+        (f"{wed.HISTORY_WEEKS}-week history", "Each day's close, the stated rate in effect that day and that day's benchmark."),
     )),
     ("Par, liquidity and backing", (
         ("≥ $100", "Closes at or above $100 in the last 20 sessions."),
@@ -725,6 +728,8 @@ WEDNESDAY_FORMULAS = (
         ("STRC and STRF/K/D/E", "ATM net proceeds − repurchase cost for the filing week."),
         ("SATA", "Net share change × $100."),
         ("MSTR ATM", "Common ATM net proceeds."),
+        ("ASST ATM", "Net new Class A + B shares × that week's ASST VWAP: the Monday Accretion Ledger's estimate, before "
+                     "fees. Strive does not report its ATM cash."),
     )),
 )
 
