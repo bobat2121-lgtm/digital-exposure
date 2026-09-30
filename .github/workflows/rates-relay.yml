@@ -1,0 +1,44 @@
+# Copies the FRED series behind the Coupon Sheet's benchmarks to the `rates` branch, hourly on
+# weekdays. FRED's CSV service stalls for Streamlit Community Cloud, which left the live page on
+# the committed snapshot's ICE BofA IG and HY yields; GitHub's runners reach FRED. The page reads
+#   https://raw.githubusercontent.com/bobat2121-lgtm/digital-exposure/rates/fred.json
+# when FRED does not answer (panels/extras.py fetch_fred). Nothing is pushed to main, so
+# Streamlit does not redeploy. A run that reaches no series at all fails; GitHub emails it.
+name: Rates relay
+
+on:
+  schedule:
+    # Hourly from 7:17 am to 7:17 pm New York daylight time (6:17 am to 6:17 pm standard time),
+    # Monday to Friday. ICE's IG/HY yields reach FRED the next morning; Treasury's curve by 6 pm.
+    - cron: "17 11-23 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rates-relay
+  cancel-in-progress: false
+
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Copy FRED
+        run: python scripts/publish_rates.py --out relay
+      - name: Publish to the rates branch
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd relay
+          git init -q
+          git checkout -q -b rates
+          git add -A
+          git -c user.name="rates-relay" -c user.email="rates-relay@users.noreply.github.com" \
+            commit -q -m "FRED relay $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git" rates
