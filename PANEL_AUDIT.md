@@ -88,12 +88,13 @@ fails.
 | STRC/STRF/STRK/STRD/STRE prices, rates, effective yields, notional, record and pay dates | strategy.com KPIs (intraday) | automatic | saved snapshot |
 | SATA price | Yahoo | automatic | saved snapshot |
 | SATA stated rate and history | Strive `api/treasury` `dividendRate`; history = daily amount × the month's business days × 12 | automatic | saved snapshot |
-| 3M bill, 2Y, 10Y | **Treasury daily par curve (same day)**, then FRED | automatic | FRED alone |
+| 3M bill, 2Y, 10Y | **Treasury daily par curve (same day, after ~6 pm ET)**, then FRED | automatic | FRED alone |
+| 3M bill, 10Y during the day | Treasury's latest close + the day's move: **CNBC US3M/US10Y (real time)**, else Yahoo ^IRX/^TNX | every 2 minutes; the X image at the click | Treasury's close, dated in the footnote |
 | SOFR, EFFR | **NY Fed API (next morning)**, then FRED | automatic | FRED alone |
-| ICE BofA IG / HY yields | FRED (one-day lag) | automatic | saved snapshot |
+| ICE BofA IG / HY yields | FRED (one-day lag); the **Rates relay** copy (`rates` branch, hourly on weekdays) when FRED does not answer | automatic | the newest of the relay, the last good fetch and the saved snapshot; labeled if not current |
 | 12-week spread history | Yahoo closes + rate in effect each day + benchmark each day | automatic | "History unavailable" |
 | USD cover timeline | 8-K reserve facts; Strive dashboard | automatic | "History unavailable" |
-| Flow ledger | 8-K feed | automatic | last four complete weeks |
+| Flow ledger | 8-K feed; ASST ATM = 8-K net share change × the Monday edition's saved ASST VWAP | automatic | last four complete weeks; "—" for a week without a VWAP |
 | Calendar | strategy.com dates, **Fed FOMC calendar**, **Nasdaq earnings estimate**, curated `data/calendar-events.json` | automatic; the curated file is weekly | estimates marked "est." |
 
 ### Friday — The Closing Mark

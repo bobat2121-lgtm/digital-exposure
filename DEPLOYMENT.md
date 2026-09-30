@@ -3,6 +3,21 @@
 Public report: [digital-credit-report.streamlit.app](https://digital-credit-report.streamlit.app/).
 Worker: [capital-report.alatimore06370.workers.dev](https://capital-report.alatimore06370.workers.dev/).
 
+## Rates relay Action — September 30, 2026
+
+FRED's CSV service stalls for Streamlit Community Cloud, so the Coupon Sheet's ICE BofA IG
+and HY yields had stayed on the committed snapshot (Sep 24 on Sep 30). GitHub's runners
+reach FRED. `.github/workflows/rates-relay.yml` runs `scripts/publish_rates.py` hourly from
+7:17 am to 7:17 pm New York time on weekdays and force-pushes `fred.json` to the `rates`
+branch; the page reads it from raw.githubusercontent.com when FRED does not answer.
+
+- Nothing is pushed to `main`, so Streamlit does not redeploy; like the audit branch, the
+  `rates` branch holds one commit.
+- A series FRED refuses keeps its earlier copy with its original fetch time. A run that
+  reaches no series fails, and GitHub emails it.
+- After merging, start it once from the Actions page (**Run workflow**) so the branch exists
+  before the first scheduled run.
+
 ## Monday publish Action — September 28, 2026
 
 `.github/workflows/monday-publish.yml` publishes the Monday edition with no one

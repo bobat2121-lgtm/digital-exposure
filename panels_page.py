@@ -27,14 +27,14 @@ ET = ZoneInfo("America/New_York")
 TABS = {"monday": "Monday · Accretion Ledger", "wednesday": "Wednesday · Coupon Sheet",
         "friday": "Friday · Closing Mark"}
 # Seconds each source's copy stays current, and the longest a view waits when there is no copy yet.
-TTL = {"extras": 900, "prices": 120, "feed": 120, "friday": 900}
-FIRST_WAIT = {"extras": 12, "prices": 8, "feed": 8, "friday": 30}
+TTL = {"extras": 900, "prices": 120, "feed": 120, "friday": 900, "treasury": 120}
+FIRST_WAIT = {"extras": 12, "prices": 8, "feed": 8, "friday": 30, "treasury": 6}
 STALE_QUOTES = 1800  # a price copy older than this is labelled as saved quotes
 
 
 def _fetchers():
     from friday.live_inputs import fetch_snapshot
-    from panels.extras import load_extras
+    from panels.extras import fetch_live_treasury, load_extras
     from report.current_prices import pull_current_prices
     from report.filing_monitor import load_monitor_snapshot
 
@@ -43,7 +43,8 @@ def _fetchers():
         if not snapshot.feed:
             raise ValueError("filing feed unavailable")
         return snapshot.feed
-    return {"extras": load_extras, "prices": pull_current_prices, "feed": feed, "friday": fetch_snapshot}
+    return {"extras": load_extras, "prices": pull_current_prices, "feed": feed, "friday": fetch_snapshot,
+            "treasury": fetch_live_treasury}
 
 
 def _live(name: str, *, block: bool = False):
@@ -75,6 +76,18 @@ def _prices(fresh: bool = False):
     if value is None:
         return load_current_prices(), True
     return value, age > STALE_QUOTES
+
+
+def _treasury(fresh: bool = False) -> dict:
+    """Live 3M bill and 10Y quotes, refreshed every two minutes (extras every 15): the Coupon Sheet adds
+    the day's move to Treasury's close. The X image waits for quotes under a minute old."""
+    from panels import live
+    from panels.extras import fetch_live_treasury
+    if fresh:
+        value, _ = live.get("treasury", fetch_live_treasury, 60, wait=6, block=True)
+    else:
+        value, _ = _live("treasury")
+    return value or {}
 
 
 def _feed():
@@ -113,10 +126,12 @@ def monday_report():
             "notices": [line for line in (notice, "Saved quotes (price refresh unavailable)." if saved else "") if line]}
 
 
-def wednesday_report():
+def wednesday_report(fresh: bool = False):
     from panels.wednesday import audit_rows, build, notes
     preview, _, _ = _monday()
-    data = build(_extras(), _feed(), preview)
+    extras = _extras()
+    extras["treasury_live"] = _treasury(fresh) or extras.get("treasury_live") or {}
+    data = build(extras, _feed(), preview)
     return {"data": data, "audit": audit_rows(data), "notes": notes(data, extra=True), "notices": []}
 
 
@@ -139,14 +154,15 @@ def friday_report():
 
 def x_image(name: str, style: str) -> bytes:
     """The X image, drawn now: Monday re-prices MSTR and ASST as of this moment (pre-market,
-    live or the close); Wednesday and Friday use the page's latest data."""
+    live or the close); Wednesday takes the 3M bill and 10Y as of this moment; otherwise the
+    page's latest data."""
     from panels import friday_preview, monday_preview, wednesday
     theme = _theme(style)
     if name == "Monday":
         preview, _, _ = _monday(fresh=True)
         return monday_preview.render_png(preview, theme)[0]
     if name == "Wednesday":
-        return wednesday.render_png(wednesday_report()["data"], theme)[0]
+        return wednesday.render_png(wednesday_report(fresh=True)["data"], theme)[0]
     report = friday_report()
     return friday_preview.render_png(report["panel"], report["derived"], stale=report["stale"], theme=theme)[0]
 
