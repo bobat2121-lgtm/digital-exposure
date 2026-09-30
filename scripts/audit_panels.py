@@ -285,9 +285,18 @@ def audit_wednesday(data, extras, now):
     for (label, code) in wednesday.BENCHMARKS:
         day, _ = fred_latest(extras, code)
         freshness("wednesday", f"fred.{code}", f"FRED {code} latest observation", day, now, 2, "fred.stlouisfed.org")
+    for label, item in (data.get("live_rates") or {}).items():
+        # The level is Treasury's close + the quote's move; the move itself must be a plausible day's move.
+        check("wednesday", f"live.{label}", f"{label} = Treasury close + today's move", "PASS" if abs(item["move"]) <= .25 else "WARN",
+              f"{item['move'] * 100:+.1f} bp", "|move| ≤ 25 bp", f"close {item['close_day']} {item['close']:.2f}%, {item['source']} "
+              f"{item['quote']:.3f}% at {item['time']}", item["source"])
     ledger = data["ledger"]
     check("wednesday", "ledger.weeks", "Flow ledger has four complete filing weeks", "PASS" if len(ledger) == 4 else "FAIL",
           len(ledger), 4, "", "SEC 8-K feed")
+    unpriced = [entry["week"] for entry in ledger if entry.get("asst") is None]
+    check("wednesday", "ledger.asst_atm", "Flow ledger ASST ATM priced every week", "WARN" if unpriced else "PASS",
+          len(ledger) - len(unpriced), len(ledger), ("no share change or saved VWAP: " + ", ".join(unpriced)) if unpriced else "",
+          "8-K net share change × data/asst-vwap-<filed>.json")
     past = [day for day, *_ in data["calendar"] if date.fromisoformat(day) < now.date()]
     check("wednesday", "calendar.future", "Calendar lists only upcoming dates", "FAIL" if past else "PASS", len(past), 0, "", "strategy.com KPIs")
     cover = data["cover"]
@@ -299,9 +308,10 @@ def audit_wednesday(data, extras, now):
     for ticker, hero in heroes.items():
         history = hero["history"]
         span = (date.fromisoformat(history[-1][0]) - date.fromisoformat(history[0][0])).days if len(history) > 1 else 0
-        check("wednesday", f"{ticker}.history", f"{ticker} spread chart covers 26 weeks", "PASS" if span >= 175 else "WARN",
-              f"{span} days", "≥ 175 days", f"{len(history)} closes from {history[0][0] if history else '—'}",
-              "Yahoo closes, stated rate history, FRED 3M bill")
+        floor = wednesday.HISTORY_DAYS - 4  # the window may open on a weekend or holiday
+        check("wednesday", f"{ticker}.history", f"{ticker} spread chart covers {wednesday.HISTORY_WEEKS} weeks",
+              "PASS" if span >= floor else "WARN", f"{span} days", f"≥ {floor} days",
+              f"{len(history)} closes from {history[0][0] if history else '—'}", "Yahoo closes, stated rate history, FRED 3M bill")
 
 
 # ── Friday ──────────────────────────────────────────────────────────────────
