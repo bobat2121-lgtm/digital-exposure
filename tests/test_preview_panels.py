@@ -1,4 +1,5 @@
 """Offline preview panels: saved extras snapshot, committed filings, demo Friday data."""
+from datetime import date
 import json
 from pathlib import Path
 import sys
@@ -39,12 +40,26 @@ def offline_extras():
     return extras_module.load_extras(offline=True)
 
 
+def no_network(test):
+    """No live Treasury quotes or FRED relay, and no FRED copy kept from another test."""
+    def down():
+        raise OSError("offline")
+    for patcher in (patch.object(extras_module, "fetch_live_treasury", dict), patch.object(extras_module, "fetch_fred_relay", down),
+                    patch.dict(extras_module._last_good, clear=True)):
+        patcher.start()
+        test.addCleanup(patcher.stop)
+
+
 class ExtrasTests(unittest.TestCase):
+    def setUp(self):
+        no_network(self)
+
     def test_offline_snapshot_supplies_every_section_marked_stale(self):
         extras = offline_extras()
         for section in extras_module.SECTIONS:
             self.assertIsNotNone(extras[section], section)
         self.assertEqual(sorted(extras["stale"]), sorted(extras_module.SECTIONS))
+        self.assertEqual(extras["treasury_live"], {})  # live quotes are never saved
 
     def test_failed_section_falls_back_to_snapshot(self):
         def broken():
@@ -77,10 +92,64 @@ class ExtrasTests(unittest.TestCase):
              patch.object(extras_module, "fetch_treasury_curve", down), patch.object(extras_module, "fetch_nyfed_rates", down):
             self.assertEqual(extras_module.fetch_fred()["DGS10"], [["2099-01-02", 1.0]])
 
+    def test_fred_that_does_not_answer_takes_the_newest_current_copy(self):
+        # Streamlit Cloud: FRED stalls, so IG/HY come from the Rates relay (or this process's last fetch), not the snapshot.
+        from datetime import UTC, datetime, timedelta
+        now = datetime.now(UTC)
+        saved = extras_module.load_snapshot()["fred"]
+        def fred(series, keep=420):
+            raise TimeoutError("FRED stalled")
+        def down():
+            raise OSError("offline")
+        relay = {series: (rows + [["2099-01-05", 9.0]], now - timedelta(hours=1)) for series, rows in saved.items()}
+        with patch.object(extras_module, "fetch_fred_series", fred), patch.object(extras_module, "fetch_fred_relay", lambda: relay), \
+             patch.object(extras_module, "fetch_treasury_curve", down), patch.object(extras_module, "fetch_nyfed_rates", down):
+            extras = extras_module.load_extras(("fred",))
+            self.assertEqual(extras["stale"], [])
+            self.assertEqual(extras["fred"]["BAMLH0A0HYM2EY"][-1], ["2099-01-05", 9.0])
+            # A relay copy fetched three days ago is still used when it is the newest, but is not current.
+            stale = {series: (rows, now - timedelta(days=3)) for series, (rows, _) in relay.items()}
+            with patch.object(extras_module, "fetch_fred_relay", lambda: stale):
+                extras = extras_module.load_extras(("fred",))
+            self.assertEqual(extras["stale"], ["fred"])
+            self.assertEqual(extras["fred"]["BAMLC0A0CMEY"][-1], ["2099-01-05", 9.0])
+            # No relay: this process's last good FRED fetch, not the older snapshot.
+            extras_module._last_good["BAMLC0A0CMEY"] = ([["2099-01-04", 5.5]], now - timedelta(minutes=20))
+            with patch.object(extras_module, "fetch_fred_relay", down):
+                extras = extras_module.load_extras(("fred",))
+            self.assertEqual(extras["fred"]["BAMLC0A0CMEY"], [["2099-01-04", 5.5]])
+            self.assertEqual(extras["fred"]["BAMLH0A0HYM2EY"], saved["BAMLH0A0HYM2EY"])
+            self.assertIn("BAMLH0A0HYM2EY", extras["errors"][0])
+            self.assertNotIn("BAMLC0A0CMEY", extras["errors"][0])
+
     def test_number_rejects_non_numeric(self):
         self.assertIsNone(extras_module.number(True))
         self.assertIsNone(extras_module.number("nan"))
         self.assertEqual(extras_module.number("1,234.5"), 1234.5)
+
+
+class LiveTreasuryTests(unittest.TestCase):
+    def test_live_treasury_quotes_from_cnbc_then_yahoo(self):
+        cnbc = {"FormattedQuoteResult": {"FormattedQuote": [
+            {"symbol": "US10Y", "last": "5.302%", "previous_day_closing": "5.255%", "last_time": "2026-09-30T13:53:50.000-0400"},
+            {"symbol": "US3M", "last": "4.144%", "previous_day_closing": "4.172%", "last_time": "2026-09-30T13:54:10.000-0400"}]}}
+        with patch.object(extras_module, "_json", return_value=cnbc):
+            quotes = extras_module.fetch_live_treasury()
+        self.assertEqual(quotes["DGS10"], {"last": 5.302, "previous_close": 5.255, "time": "2026-09-30T13:53:50-04:00",
+                                           "source": "CNBC US10Y"})
+        self.assertEqual(quotes["DGS3MO"]["source"], "CNBC US3M")
+        # CNBC down: Yahoo's CBOE indices, the prior close being the last bar before the quote's day.
+        yahoo = {"^TNX": {"price": 5.304, "as_of": "2026-09-30T17:27:25+00:00",
+                          "rows": [{"date": "2026-09-28", "close": 5.24}, {"date": "2026-09-29", "close": 5.255},
+                                   {"date": "2026-09-30", "close": 5.304}]},
+                 "^IRX": {"price": 9.0, "as_of": "2026-09-30T17:27:25+00:00",
+                          "rows": [{"date": "2026-09-29", "close": 4.065}, {"date": "2026-09-30", "close": 9.0}]}}
+        with patch.object(extras_module, "_json", side_effect=OSError("offline")), \
+             patch.object(extras_module, "fetch_yahoo_symbol", lambda symbol, span: yahoo[symbol]):
+            quotes = extras_module.fetch_live_treasury()
+        self.assertEqual((quotes["DGS10"]["last"], quotes["DGS10"]["previous_close"], quotes["DGS10"]["source"]),
+                         (5.304, 5.255, "Yahoo ^TNX"))
+        self.assertNotIn("DGS3MO", quotes)  # a 5-point "move" is a bad print, not a day's move
 
 
 class MondayPreviewTests(unittest.TestCase):
@@ -379,6 +448,51 @@ class WednesdayTests(unittest.TestCase):
         # strategy.com's STRC floor matches (debt + STRF + STRC notional − USD) ÷ BTC held; SATA uses the same formula.
         self.assertGreater(data["backing"]["STRC"]["floor"], 0)
         self.assertGreater(data["backing"]["SATA"]["floor"], 0)
+        # 12 weeks of spread history.
+        history = data["heroes"]["STRC"]["history"]
+        self.assertLessEqual((date.fromisoformat(history[-1][0]) - date.fromisoformat(history[0][0])).days, 84)
+        self.assertGreaterEqual((date.fromisoformat(history[-1][0]) - date.fromisoformat(history[0][0])).days, 80)
+        # ASST ATM is the Monday Accretion Ledger's figure: net new shares × that week's saved VWAP.
+        latest = data["ledger"][-1]
+        self.assertEqual(latest["week"], "2026-09-14")
+        self.assertEqual(latest["asst_shares"], 2_033_885)
+        self.assertAlmostEqual(latest["asst_vwap"], 28.640658195777085)
+        self.assertAlmostEqual(latest["asst"], 2_033_885 * 28.640658195777085)
+        self.assertTrue(all(entry["asst"] is not None for entry in data["ledger"]))
+
+    def test_asst_atm_needs_the_filing_weeks_own_vwap(self):
+        row = next(row for row in FEED["filings"] if row["ticker"] == "ASST" and row["filedDate"] == "2026-09-21")
+        self.assertAlmostEqual(wednesday._asst_atm(row)["asst"], 58_251_805.09, places=1)
+        with patch.object(live_report, "_vwap", return_value={"value": 30.0, "session_start": "2026-09-08",
+                                                              "session_end": "2026-09-11"}):
+            self.assertIsNone(wednesday._asst_atm(row)["asst"])  # the prior week's VWAP is not this week's
+
+    def test_benchmarks_add_the_days_move_to_treasurys_close(self):
+        fred = {"DGS3MO": [["2026-09-28", 4.28], ["2026-09-29", 4.25]], "DGS10": [["2026-09-29", 5.26]],
+                "SOFR": [["2026-09-29", 3.88]]}
+        live = {"DGS3MO": {"last": 4.144, "previous_close": 4.172, "time": "2026-09-30T13:54:10-04:00", "source": "CNBC US3M"},
+                "DGS10": {"last": 5.302, "previous_close": 5.255, "time": "2026-09-30T13:53:50-04:00", "source": "CNBC US10Y"}}
+        series, how = wednesday.benchmarks({"fred": fred, "treasury_live": live})
+        # The bill keeps Treasury's basis (CNBC's runs ~8 bp lower): 4.25 − 0.028.
+        self.assertEqual(series["DGS3MO"][-1][0], "2026-09-30")
+        self.assertAlmostEqual(series["DGS3MO"][-1][1], 4.222)
+        # The 10Y closes agree to Treasury's rounding (5.26 vs 5.255): the quote itself.
+        self.assertAlmostEqual(series["DGS10"][-1][1], 5.302)
+        self.assertEqual(how["10Y"]["time"], "1:53 PM ET")
+        self.assertEqual(series["SOFR"], [["2026-09-29", 3.88]])
+        self.assertEqual(fred["DGS10"], [["2026-09-29", 5.26]])  # the caller's series are not changed
+        # After Treasury posts the day's close, the close stands.
+        posted = {**fred, "DGS10": [["2026-09-29", 5.26], ["2026-09-30", 5.30]]}
+        series, how = wednesday.benchmarks({"fred": posted, "treasury_live": live})
+        self.assertEqual(series["DGS10"][-1], ["2026-09-30", 5.30])
+        self.assertNotIn("10Y", how)
+        # A missing close in between (the move is from Sep 29's close, not Sep 28's): the close stands.
+        behind = {**fred, "DGS10": [["2026-09-28", 5.24]]}
+        self.assertEqual(wednesday.benchmarks({"fred": behind, "treasury_live": live})[0]["DGS10"], [["2026-09-28", 5.24]])
+        # Columbus Day closes the bond market but not NYSE: Friday's close + Tuesday's move.
+        friday = {"DGS10": [["2026-10-09", 5.2]]}
+        tuesday = {"DGS10": {"last": 5.25, "previous_close": 5.2, "time": "2026-10-13T11:00:00-04:00", "source": "CNBC US10Y"}}
+        self.assertAlmostEqual(wednesday.benchmarks({"fred": friday, "treasury_live": tuesday})[0]["DGS10"][-1][1], 5.25)
 
 
 class FridayPreviewTests(unittest.TestCase):

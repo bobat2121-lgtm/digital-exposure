@@ -146,7 +146,7 @@ class XImageTests(TestCase):
         reports = offline_reports()
         preview = reports["monday_report"]["preview"]
         with patch.object(panels_page, "_monday", return_value=(preview, None, False)) as monday, \
-             patch.object(panels_page, "wednesday_report", return_value=reports["wednesday_report"]), \
+             patch.object(panels_page, "wednesday_report", return_value=reports["wednesday_report"]) as wednesday, \
              patch.object(panels_page, "friday_report", return_value=reports["friday_report"]):
             for name in ("Monday", "Wednesday", "Friday"):
                 for style in ("bloomberg", "broadsheet"):
@@ -154,6 +154,7 @@ class XImageTests(TestCase):
                         with Image.open(BytesIO(panels_page.x_image(name, style))) as image:
                             self.assertEqual(image.width, 1440)
         monday.assert_called_with(fresh=True)  # prices as of the click
+        wednesday.assert_called_with(fresh=True)  # the 3M bill and 10Y as of the click
 
 
 class FormulaListTests(TestCase):
