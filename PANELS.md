@@ -223,15 +223,18 @@ then what it did per share.
 ### Wednesday — The Coupon Sheet
 
 Posted midday on purpose, so the image reads **INTRADAY** with that day's preferred
-prices (after 4:00 pm ET it reads CLOSE). The benchmarks post after the close (SOFR, IG
-and HY a day later), so at midday they are the prior day's; the page footnote dates each one.
+prices (after 4:00 pm ET it reads CLOSE). Treasury posts the 3M bill and 10Y after about
+6 pm ET, so during the day each is Treasury's latest close plus the day's move in its live
+quote (CNBC, else Yahoo's CBOE yield index); the X image takes them at the click. SOFR is the
+NY Fed's morning publication for the prior day, and ICE's IG and HY yields reach FRED a
+business day later. The page footnote dates each one.
 
 STRC and SATA carry the two treasuries, so they are the heroes. Each gets a card with:
 
 - the spread over the 3-month bill, in basis points, as the headline;
 - effective yield;
 - a spread stack over SOFR, the 3-month bill, the 10-year, ICE BofA IG and HY;
-- 26 weeks of spread history, using each day's close, stated rate and 3-month bill;
+- 12 weeks of spread history, using each day's close, stated rate and 3-month bill;
 - the same row for both: closes at or above $100 (last 20 sessions), 30-day volume
   and size. SATA's rate-cut test is in the page footnote: Strive may lower SATA's
   rate only if its closes over the prior month averaged at least $99, by at most
@@ -275,7 +278,10 @@ The rest of the panel:
   - Earnings dates, only once confirmed: a confirmed entry in `data/calendar-events.json`,
     or Nasdaq's date after the company announces it. Estimates are never shown.
   - Any other curated events. The weekly audit task maintains the curated file.
-- **The four-week flow ledger**, with centered columns.
+- **The four-week flow ledger**, with centered columns: STRC, STRF/K/D/E and MSTR ATM
+  (Strategy's 8-K cash), SATA (net share change × $100), ASST ATM and BTC bought. ASST ATM
+  is the Monday Accretion Ledger's estimate for that week: net new Class A + B shares × the
+  week's ASST VWAP saved with the edition (`data/asst-vwap-<filed>.json`), before fees.
 
 ### Friday — The Closing Mark
 
@@ -339,6 +345,8 @@ file with `scripts/render_previews.py --save-extras`.
 | api.strategy.com `bitcoinKpis`, `mstrKpiData`, `{strc,strf,strk,strd,stre}KpiData` | USD months of dividends, annual dividends, preferred prices, rates and rate history, effective yields, notional, record/pay dates |
 | strive.com `treasury/api/dashboard/base-data`, `api/treasury` | dividend reserve months, SATA stated rate and dividend history (daily amount × the month's business days × 12), cash, shares |
 | fred.stlouisfed.org `fredgraph.csv` | DGS10, DGS2, DGS3MO, DFF, SOFR, BAMLH0A0HYM2EY, BAMLC0A0CMEY |
+| `rates` branch `fred.json` (Rates relay Action) | the same FRED series, when FRED does not answer |
+| quote.cnbc.com (US3M, US10Y), else Yahoo ^IRX/^TNX | the day's move in the 3M bill and 10Y |
 | Yahoo chart API | preferred prices/volume, DX-Y.NYB, ^TNX, PFF, HYG, BTC-USD volume |
 | Checkonchain public charts | MVRV with mean/±sd, realized price, Puell Multiple with bands |
 | Monday filing feed (Cloudflare Worker) and committed checkpoint | issuance, buybacks, USD reserve/cash, BTC purchase cost and cost basis, SATA shares, warrants |
@@ -350,7 +358,19 @@ Rates come from the same-day official sources first:
 - **Treasury daily par yield curve:** 3M, 2Y and 10Y.
 - **NY Fed API:** SOFR and EFFR.
 
-FRED fills in history and serves as the fallback.
+FRED fills in history and serves as the fallback. Before Treasury posts the day's curve
+(about 6 pm ET), the Coupon Sheet adds the day's move in the live quote to the 3M bill's and
+10Y's latest close (`panels.wednesday.benchmarks`): the move keeps the bill on Treasury's
+constant-maturity basis, about 8 bp above CNBC's quote. When the two closes agree to
+Treasury's rounding (the 10Y), the level is the quote itself. The move applies only to the
+close from the session just before the quote; otherwise the close stands.
+
+FRED's CSV service stalls for Streamlit Community Cloud (it answers GitHub's runners), which
+had left the live page on the saved snapshot's IG and HY yields. The **Rates relay** Action
+(`.github/workflows/rates-relay.yml`, `scripts/publish_rates.py`) copies every FRED series
+to the `rates` branch hourly on weekdays. When FRED does not answer, each series takes the
+newest of that copy, the app's last good FRED fetch and the snapshot; only a copy fetched
+more than two days ago, or the snapshot, marks FRED as a saved snapshot.
 
 ## Audit
 

@@ -7,7 +7,10 @@ panel never mixes invented values with live ones. Missing values stay None.
 Sources (no API keys):
 - api.strategy.com  bitcoinKpis, mstrKpiData, {strc,strf,strk,strd,stre}KpiData
 - strive.com/treasury/api/dashboard/base-data
-- fred.stlouisfed.org fredgraph.csv (Treasury, SOFR, Fed funds, ICE BofA indices)
+- fred.stlouisfed.org fredgraph.csv (Treasury, SOFR, Fed funds, ICE BofA indices), with its
+  copy on this repository's ``rates`` branch when FRED does not answer
+- home.treasury.gov par yield curve, markets.newyorkfed.org (same-day 3M, 2Y, 10Y, SOFR, EFFR)
+- quote.cnbc.com, else Yahoo ^TNX/^IRX (the day's move in the 10Y and 3M bill)
 - query1.finance.yahoo.com chart API (preferreds, DXY, 10Y, PFF, HYG)
 - charts-cdn.checkonchain.com public Plotly charts (MVRV, realized price, Puell)
 """
@@ -22,8 +25,10 @@ import math
 from pathlib import Path
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
+ET = ZoneInfo("America/New_York")
 SNAPSHOT = ROOT / "data" / "preview-extras.json"
 USER_AGENT = "Mozilla/5.0 (compatible; DigitalCreditReport/1.0)"
 MAX_BYTES = 9_000_000
@@ -212,6 +217,12 @@ def sata_rate_from_daily(daily: float, year: int, month: int) -> float:
 # ── FRED ────────────────────────────────────────────────────────────────────
 FRED_TIMEOUT = 8        # FRED's CSV service stalls for long stretches; nothing waits on it longer
 FRED_DAYS = 800         # enough history for 420 business days, instead of each series since the 1950s
+# FRED's CSV service stalls for Streamlit Community Cloud but answers GitHub's runners, so the
+# Rates relay Action (scripts/publish_rates.py) copies these series to the `rates` branch hourly
+# on weekdays. A copy fetched more than two days ago no longer counts as current.
+FRED_RELAY = "https://raw.githubusercontent.com/bobat2121-lgtm/digital-exposure/rates/fred.json"
+COPY_MAX_AGE = timedelta(days=2)
+_last_good: dict[str, tuple[list, datetime]] = {}  # this process's latest FRED fetch per series, and when
 
 
 class Partial(Exception):
@@ -222,9 +233,9 @@ class Partial(Exception):
         self.value, self.missing = value, missing
 
 
-def fetch_fred_series(series: str, keep: int = 420) -> list[list]:
+def fetch_fred_series(series: str, keep: int = 420, timeout: float = FRED_TIMEOUT) -> list[list]:
     start = (datetime.now(UTC).date() - timedelta(days=FRED_DAYS)).isoformat()
-    text = _get(FRED + urlencode({"id": series, "cosd": start}), "text/csv", FRED_TIMEOUT).decode("utf-8")
+    text = _get(FRED + urlencode({"id": series, "cosd": start}), "text/csv", timeout).decode("utf-8")
     rows = []
     for row in csv.reader(io.StringIO(text)):
         if len(row) != 2 or row[0] in ("DATE", "observation_date"):
@@ -237,25 +248,48 @@ def fetch_fred_series(series: str, keep: int = 420) -> list[list]:
     return rows[-keep:]
 
 
+def fetch_fred_relay() -> dict:
+    """The Rates relay's copy of FRED: {series: (rows, fetched at)}."""
+    payload = _json(FRED_RELAY)
+    fetched = payload.get("fetched_at") or {}
+    return {series: (rows, datetime.fromisoformat(fetched[series])) for series, rows in (payload.get("series") or {}).items()
+            if series in FRED_SERIES and rows and fetched.get(series)}
+
+
 def fetch_fred() -> dict:
-    """Each FRED series on its own: one that fails falls back to the snapshot, then the same-day
-    official sources extend it (Treasury: 3M bill, 2Y, 10Y; New York Fed: SOFR, fed funds). A series
-    those don't cover (the ICE BofA IG and HY yields) stays on the snapshot and marks FRED stale."""
+    """Each FRED series on its own. One that fails takes the newest copy among the Rates relay's,
+    this process's last good fetch and the snapshot; then the same-day official sources extend it
+    (Treasury: 3M bill, 2Y, 10Y; New York Fed: SOFR, fed funds). A series left on the snapshot, or on
+    a copy fetched more than two days ago, that those don't cover marks FRED stale."""
     saved = load_snapshot().get("fred") or {}
+    now = datetime.now(UTC)
     result, failed = {}, []
     with ThreadPoolExecutor(max_workers=len(FRED_SERIES)) as pool:
         jobs = {series: pool.submit(fetch_fred_series, series) for series in FRED_SERIES}
         for series, job in jobs.items():
             try:
                 result[series] = job.result()
+                _last_good[series] = (result[series], now)
             except Exception:  # FRED down or slow
                 failed.append(series)
-                result[series] = [list(row) for row in saved.get(series) or []]
-    if len(failed) == len(FRED_SERIES) and not saved:
-        raise ValueError("FRED unavailable and no snapshot")
+    relay = (_optional(fetch_fred_relay) or {}) if failed else {}
+    current = set()  # failed series served from a copy fetched within COPY_MAX_AGE
+    for series in failed:
+        copies = [(copy[0], now - copy[1] <= COPY_MAX_AGE) for copy in (relay.get(series), _last_good.get(series))
+                  if copy and copy[0]]
+        copies += [(saved[series], False)] if saved.get(series) else []
+        if not copies:
+            result[series] = []
+            continue
+        rows, fresh = max(copies, key=lambda copy: (copy[0][-1][0], copy[1]))  # newest observation, then a current copy
+        result[series] = [list(row) for row in rows]
+        if fresh:
+            current.add(series)
+    if not any(result.values()):
+        raise ValueError("FRED unavailable and no copy")
     # FRED republishes these a day or two late; overlay the same-day official
     # sources when they are newer. An overlay failure keeps what FRED gave.
-    covered = set()
+    covered = set(current)
     for overlay in (fetch_treasury_curve, fetch_nyfed_rates):
         try:
             newer = overlay()
@@ -308,6 +342,59 @@ def fetch_nyfed_rates() -> dict:
         rows = json.loads(_get("https://markets.newyorkfed.org/api/" + path, "application/json"))["refRates"]
         result[series] = [(row["effectiveDate"], number(row["percentRate"])) for row in rows if number(row.get("percentRate")) is not None]
     return result
+
+
+# ── Live Treasury quotes ────────────────────────────────────────────────────
+# Treasury posts the day's par curve after about 6 pm ET, so until then the 3M bill and 10Y above
+# are the prior close. These quotes give the day's move since that close, which the Coupon Sheet adds
+# to it (panels.wednesday.benchmarks), keeping the level on Treasury's basis. CNBC is real time;
+# Yahoo's CBOE yield indices (^TNX; ^IRX, a discount rate, so only its move is used) are the fallback.
+CNBC = "https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol?"
+LIVE_TREASURY = {"DGS3MO": ("US3M", "^IRX"), "DGS10": ("US10Y", "^TNX")}
+MAX_MOVE = .5  # percentage points in a day; a larger "move" means the quote and its close don't match
+
+
+def _cnbc_treasury() -> dict:
+    params = urlencode({"symbols": "|".join(symbol for symbol, _ in LIVE_TREASURY.values()), "requestMethod": "itv",
+                        "noform": 1, "partnerId": 2, "fund": 1, "exthrs": 1, "output": "json"})
+    quotes = {row.get("symbol"): row for row in _json(CNBC + params)["FormattedQuoteResult"]["FormattedQuote"]}
+    result = {}
+    for series, (symbol, _) in LIVE_TREASURY.items():
+        row = quotes.get(symbol) or {}
+        last, close = (number(str(row.get(key) or "").rstrip("%")) for key in ("last", "previous_day_closing"))
+        try:
+            stamp = datetime.strptime(row.get("last_time") or "", "%Y-%m-%dT%H:%M:%S.%f%z")
+        except ValueError:
+            continue
+        if last is not None and close is not None:
+            result[series] = {"last": last, "previous_close": close, "time": stamp.isoformat(), "source": f"CNBC {symbol}"}
+    return result
+
+
+def _yahoo_treasury(symbol: str) -> dict:
+    item = fetch_yahoo_symbol(symbol, "5d")
+    stamp = datetime.fromisoformat(item["as_of"]).astimezone(ET)
+    closes = [row["close"] for row in item["rows"] if row["date"] < stamp.date().isoformat()]
+    if item["price"] is None or not closes:
+        raise ValueError(f"Yahoo {symbol} has no quote and prior close")
+    return {"last": item["price"], "previous_close": closes[-1], "time": stamp.isoformat(), "source": f"Yahoo {symbol}"}
+
+
+def fetch_live_treasury() -> dict:
+    """{series: {last, previous_close, time, source}} for the 3M bill and 10Y. Never raises: a series
+    no source can quote is left out, and the panel keeps Treasury's close for it."""
+    try:
+        result = _cnbc_treasury()
+    except Exception:  # network or format change
+        result = {}
+    for series, (_, symbol) in LIVE_TREASURY.items():
+        if series not in result:
+            try:
+                result[series] = _yahoo_treasury(symbol)
+            except Exception:
+                pass
+    return {series: quote for series, quote in result.items()
+            if 0 < quote["last"] < 25 and 0 < quote["previous_close"] < 25 and abs(quote["last"] - quote["previous_close"]) <= MAX_MOVE}
 
 
 # ── Calendar ────────────────────────────────────────────────────────────────
@@ -486,17 +573,20 @@ def load_snapshot() -> dict:
 
 
 def load_extras(sections=SECTIONS, *, offline: bool = False) -> dict:
-    """Fetch each section live; fall back per section to the saved snapshot."""
+    """Fetch each section live; fall back per section to the saved snapshot. With FRED come the live
+    Treasury quotes (``treasury_live``), which are never saved: offline there are none."""
     saved = load_snapshot()
-    result = {"fetched_at": datetime.now(UTC).isoformat(), "errors": [], "stale": []}
+    result = {"fetched_at": datetime.now(UTC).isoformat(), "errors": [], "stale": [], "treasury_live": {}}
     if offline:
         for section in sections:
             result[section] = saved.get(section)
             result["stale"].append(section)
         result["fetched_at"] = saved.get("fetched_at")
         return result
-    with ThreadPoolExecutor(max_workers=len(sections)) as pool:
+    with ThreadPoolExecutor(max_workers=len(sections) + 1) as pool:
+        live = pool.submit(fetch_live_treasury) if "fred" in sections else None
         jobs = {section: pool.submit(FETCHERS[section]) for section in sections}
+        result["treasury_live"] = live.result() if live else {}
         for section, job in jobs.items():
             try:
                 result[section] = job.result()
@@ -512,7 +602,7 @@ def load_extras(sections=SECTIONS, *, offline: bool = False) -> dict:
 
 
 def save_snapshot(extras: dict) -> Path:
-    payload = {key: value for key, value in extras.items() if key not in ("errors", "stale")}
+    payload = {key: value for key, value in extras.items() if key not in ("errors", "stale", "treasury_live")}
     SNAPSHOT.write_text(json.dumps(payload, sort_keys=True, separators=(",", ":")), encoding="utf-8")
     return SNAPSHOT
 

@@ -3,7 +3,7 @@ Strategy and Strive.
 
 STRC (Strategy) and SATA (Strive) carry the treasuries, so each gets a hero
 card: the spread over the 3-month bill, the spread stack over cash, Treasuries
-and corporate credit, 26 weeks of spread history, par and liquidity.
+and corporate credit, 12 weeks of spread history, par and liquidity.
 STRF, STRK, STRD and STRE follow in a compact ladder. USD cover is read
 against each issuer's own target on a weekly timeline, then the flow ledger
 and the dated calendar.
@@ -19,7 +19,7 @@ from zoneinfo import ZoneInfo
 
 from . import themes
 from .draw import T_BIG, T_BODY, T_HERO, T_LABEL, T_MIN, T_VALUE, Canvas, cap_height, cap_middle, font, fontset, mix, width
-from .extras import fred_latest, number, strategy_weeks
+from .extras import federal_holidays, number, strategy_weeks
 
 ET = ZoneInfo("America/New_York")
 WIDTH, HEIGHT = 1440, 1920
@@ -40,7 +40,8 @@ BENCHMARKS = (("SOFR", "SOFR"), ("3M bill", "DGS3MO"), ("10Y", "DGS10"), ("IG co
               ("HY corp", "BAMLH0A0HYM2EY"))
 SERIES = dict(BENCHMARKS)
 DEFAULT_HEADLINE = "3M bill"
-HISTORY_DAYS = 182  # 26 weeks
+HISTORY_WEEKS = 12
+HISTORY_DAYS = HISTORY_WEEKS * 7
 
 
 @dataclass(frozen=True)
@@ -166,6 +167,43 @@ def _asof(series, day):
     return value
 
 
+def _next_session(day: date) -> date:
+    """The bond market's next session: weekdays except federal holidays (Columbus and Veterans Day
+    included, when NYSE trades). Good Friday is not modelled; a skipped session just keeps the close."""
+    day += timedelta(days=1)
+    while day.weekday() >= 5 or day in federal_holidays(day.year):
+        day += timedelta(days=1)
+    return day
+
+
+def benchmarks(extras: dict) -> tuple[dict, dict]:
+    """The FRED series, with today's level added to the 3M bill and 10Y: ({series: rows}, {label: how}).
+
+    Treasury posts each close after about 6 pm ET. Until it does, the level is the latest close plus
+    the live quote's move since that close, so it stays on Treasury's basis (CNBC's 3M bill runs
+    about 8 bp under Treasury's constant-maturity yield). When the two closes agree to Treasury's
+    two-decimal rounding (the 10Y), that is the quote itself. The move is used only when the quote is
+    from the session right after that close; otherwise the close stands and the footnote dates it.
+    """
+    fred = {series: [list(row) for row in rows or []] for series, rows in (extras.get("fred") or {}).items()}
+    labels = {code: label for label, code in BENCHMARKS}
+    live = {}
+    for series, quote in (extras.get("treasury_live") or {}).items():
+        rows = fred.get(series)
+        if series not in labels or not rows:
+            continue
+        close_day, close = date.fromisoformat(rows[-1][0]), rows[-1][1]
+        stamp = datetime.fromisoformat(quote["time"]).astimezone(ET)
+        if stamp.date() <= close_day or _next_session(close_day) != stamp.date():
+            continue
+        gap = close - quote["previous_close"]
+        level = quote["last"] + (gap if abs(gap) > .0051 else 0)  # within Treasury's rounding, the quote is the level
+        rows.append([stamp.date().isoformat(), level])
+        live[labels[series]] = {"close_day": close_day.isoformat(), "close": close, "move": level - close, "quote": quote["last"],
+                                "time": f"{stamp:%I:%M %p}".lstrip("0") + " ET", "source": quote["source"]}
+    return fred, live
+
+
 def _strc_rate_at(item):
     """STRC's stated rate for the payment period covering a date (strategy.com history)."""
     schedule = sorted((entry["payDate"], number(entry.get("rate"))) for entry in item.get("dividendHistory") or []
@@ -257,9 +295,29 @@ def _ledger(feed_rows):
             change = facts.get("net_sata_shares_change")
             change = number(change) if not isinstance(change, (int, float)) else change
             entry.update(sata=change * 100 if isinstance(change, (int, float)) else None,
-                         asst_btc=number(facts.get("weekly_btc_purchases")))
+                         asst_btc=number(facts.get("weekly_btc_purchases")), **_asst_atm(row))
     complete = [entry for entry in weeks.values() if "strc" in entry and "sata" in entry]
     return sorted(complete, key=lambda entry: entry["week"])[-4:]
+
+
+def _asst_atm(row) -> dict:
+    """Strive's common ATM for the filing week, as the Monday Accretion Ledger estimates it: net new
+    effective shares (Class A + B) × that week's ASST VWAP, the estimate saved with each Monday edition
+    (data/asst-vwap-<filed>.json; else the automatic one). Before fees; Strive does not report the cash."""
+    from report import live_report
+    extraction = row["extracted"]
+    now, before = (number((facts or {}).get("effective_common_shares"))
+                   for facts in (extraction["facts"], extraction.get("priorFacts")))
+    shares = now - before if now is not None and before is not None else number(extraction["facts"].get("net_common_shares_change"))
+    try:
+        estimate = live_report._vwap(row) if row.get("filedDate") else None
+    except Exception:  # an unreadable saved estimate: no figure rather than a guessed one
+        estimate = None
+    if estimate and not extraction["periodStart"] <= estimate["session_start"] <= estimate["session_end"] <= extraction["periodEnd"]:
+        estimate = None  # the VWAP must come from the filing's own week, as on Monday
+    vwap = number(estimate.get("value")) if estimate else None
+    value = 0.0 if shares == 0 else shares * vwap if shares is not None and vwap else None
+    return {"asst": value, "asst_shares": shares, "asst_vwap": vwap}
 
 
 def _cover_history(rows, extras, config, monday):
@@ -378,7 +436,7 @@ def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None)
     config = json.loads(CONFIG.read_text(encoding="utf-8")) if CONFIG.exists() else {}
     strategy = (extras.get("strategy") or {}).get("preferreds") or {}
     strive = extras.get("strive") or {}
-    fred = extras.get("fred") or {}
+    fred, live_rates = benchmarks(extras)
     ladder = []
     for series in ("STRC",) + REST:
         item = strategy.get(series) or {}
@@ -392,7 +450,7 @@ def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None)
     ladder.append(Ladder("SATA", sata_price, sata_rate, sata_rate * 100 / sata_price if sata_rate and sata_price else None))
     ladder.sort(key=lambda item: -(item.effective or 0))
     by_ticker = {item.ticker: item for item in ladder}
-    references = [(label, fred_latest(extras, code)) for label, code in BENCHMARKS]
+    references = [(label, tuple(fred[code][-1]) if fred.get(code) else (None, None)) for label, code in BENCHMARKS]
     levels = {label: value for label, (_, value) in references}
     headline = (config.get("spread_benchmark") or {}).get("label") or DEFAULT_HEADLINE
     headline = headline if headline in SERIES else DEFAULT_HEADLINE
@@ -459,7 +517,8 @@ def build(extras: dict, feed: dict, monday=None, *, now: datetime | None = None)
     coverage = dict(monday.extras) if monday is not None else {}
     backing = _backing((extras.get("strategy") or {}).get("credit") or {}, monday, heroes)
     stamp = max((row["date"] for row in _rows(extras, "STRC")), default=None)
-    return {"ladder": ladder, "references": references, "bill": bill, "headline": headline, "heroes": heroes, "rest": rest,
+    return {"ladder": ladder, "references": references, "live_rates": live_rates, "bill": bill, "headline": headline,
+            "heroes": heroes, "rest": rest,
             "liquidity": liquidity, "btc_adv": btc_adv, "credit_adv": credit_adv, "ledger": ledger,
             "calendar": calendar[:CALENDAR_ROWS], "coverage": coverage, "cover": _cover_history(rows, extras, config, monday),
             "sata_rate": sata_rate, "stamp": stamp, "now": now,
@@ -582,10 +641,10 @@ def _hero(canvas, box, ticker, hero, scale, p, theme, stripe, data, lay=STANDARD
         canvas.text(R, y + 2, _bp(spread).replace(" bp", ""), T_LABEL, p.ink, key, align="right")
         y += lay.stack_row
 
-    # 26 weeks of spread over the headline benchmark.
+    # 12 weeks of spread over the headline benchmark.
     top = y + 14
     history = hero["history"]
-    canvas.text(L, top, "26 WEEKS", T_MIN, p.muted, True)
+    canvas.text(L, top, f"{HISTORY_WEEKS} WEEKS", T_MIN, p.muted, True)
     if len(history) > 2:
         values = [value for _, value in history]
         canvas.text(R, top, f"{min(values):,.0f}–{max(values):,.0f} bp", T_MIN, p.muted, align="right")
@@ -703,32 +762,34 @@ def _flow(canvas, box, ledger, p, theme, lay=STANDARD):
     L, R = x0 + 28, x1 - 28
     _card(canvas, box, p, theme)
     _heading(canvas, L, y0 + 20, "Flow ledger · last four filing weeks", p, "+ issued / − repurchased", R)
-    labels = ("WEEK", "STRC", "STRF/K/D/E", "MSTR ATM", "SATA", "BTC BOUGHT")
-    span = (R - L) / len(labels)
-    centers = [L + span * (n + .5) for n in range(len(labels))]
-    for label, x in zip(labels, centers):
-        canvas.text(x, y0 + 62, label, T_MIN, p.muted, True, align="center", max_width=span - 8)
+    labels = ("WEEK", "STRC", "STRF/K/D/E", "MSTR ATM", "SATA", "ASST ATM", "BTC BOUGHT")
+    weights = (.8, 1, 1, 1, 1, 1, 1.2)  # the week is short; the BTC pair and its label are the widest
+    unit = (R - L) / sum(weights)
+    edges = [L + unit * sum(weights[:n]) for n in range(len(weights) + 1)]
+    centers = [(left + right) / 2 for left, right in zip(edges, edges[1:])]
+    widths = [unit * weight - 8 for weight in weights]
+    for label, x, room in zip(labels, centers, widths):
+        canvas.text(x, y0 + 62, label, T_MIN, p.muted, True, align="center", max_width=room)
     canvas.draw.line((L, y0 + 100, R, y0 + 100), fill=p.line, width=2)
-    totals = {"strc": 0, "other": 0, "mstr": 0, "sata": 0}
+    totals = {"strc": 0, "other": 0, "mstr": 0, "sata": 0, "asst": 0}
     for index, entry in enumerate(ledger):
         y = y0 + 110 + index * lay.flow_row
-        values = (_short(entry["week"]), _money(entry.get("strc"), signed=True), _money(entry.get("other"), signed=True),
-                  _money(entry.get("mstr"), signed=True), _money(entry.get("sata"), signed=True),
+        values = (_short(entry["week"]), *(_money(entry.get(key), signed=True) for key in totals),
                   f"{(entry.get('mstr_btc') or 0):,.0f} · {(entry.get('asst_btc') or 0):,.0f}")
-        for value, x in zip(values, centers):
+        for value, x, room in zip(values, centers, widths):
             money = "$" in value
             color = p.negative if money and value.startswith("−") else p.positive if money and value.startswith("+") else p.ink
-            canvas.text(x, y, value, T_BODY - 2, color, money, align="center", max_width=span - 8)
-        for key in totals:
-            totals[key] += entry.get(key) or 0
+            canvas.text(x, y, value, T_BODY - 2, color, money, align="center", max_width=room)
+        for key in totals:  # a week without a figure leaves its column's total blank, not understated
+            totals[key] = None if totals[key] is None or entry.get(key) is None else totals[key] + entry[key]
     y = y0 + 116 + len(ledger) * lay.flow_row
     canvas.draw.line((L, y - 8, R, y - 8), fill=p.line, width=2)
-    canvas.text(centers[0], y + 2, f"{len(ledger)} WK", T_BODY - 2, p.ink, True, align="center")
-    for key, x in zip(("strc", "other", "mstr", "sata"), centers[1:5]):
+    canvas.text(centers[0], y + 2, f"{len(ledger)} WK", T_BODY - 2, p.ink, True, align="center", max_width=widths[0])
+    for key, x, room in zip(totals, centers[1:6], widths[1:6]):
         value = _money(totals[key], signed=True)
         canvas.text(x, y + 2, value, T_BODY - 2, p.negative if value.startswith("−") else p.positive if value.startswith("+") else p.ink,
-                    True, align="center", max_width=span - 8)
-    canvas.text(centers[5], y + 6, "MSTR · ASST", T_MIN, p.soft, align="center")
+                    True, align="center", max_width=room)
+    canvas.text(centers[6], y + 6, "MSTR · ASST", T_MIN, p.soft, align="center", max_width=widths[6])
 
 
 def price_stamp(data) -> tuple[bool, str] | None:
@@ -798,6 +859,23 @@ def _quote_note(data: dict) -> str:
     return ("; ".join(parts) + ". Its yield is at that price and its spreads are omitted.") if parts else ""
 
 
+def _benchmark_note(data: dict) -> str:
+    live = data.get("live_rates") or {}
+    shown = []
+    for label, (day, _) in data["references"]:
+        item = live.get(label)
+        if item:
+            shown.append(f"{SHORT[label]} {_short(item['close_day'])} close {item['move'] * 100:+.0f} bp to "
+                         f"{item['time']} ({item['source']})")
+        elif day:
+            shown.append(f"{SHORT[label]} {_short(day)}")
+    return ("Benchmarks: SOFR from the New York Fed, published each morning for the prior business day; the 3M bill and "
+            "10Y from Treasury's daily par curve, which posts after about 6 pm ET, so until then each is the latest close "
+            "plus the day's move in its live quote (CNBC, or Yahoo's CBOE yield index when CNBC is unavailable); ICE BofA "
+            "US Corporate (IG) and High Yield effective yields from FRED, a business day behind (from the repository's "
+            "FRED relay when FRED does not answer). As shown: " + " · ".join(shown) + ".")
+
+
 def _cut_note(data: dict) -> str:
     par = (data["heroes"].get("SATA") or {}).get("par") or {}
     if not par.get("prior_avg"):
@@ -817,18 +895,16 @@ def notes(data: dict, extra: bool = False) -> list[str]:
         "dividend is the rate ÷ 12 split over the month's business days). "
         f"Spreads = effective yield − benchmark, in basis points. Headline benchmark: {headline} — Strategy's stated "
         "risk-free rate and the bill Jeff Walton compares digital credit to; both preferreds reset monthly around $100 par.",
-        "Benchmarks from FRED: SOFR, DGS3MO (3M bill), DGS10 (10Y), ICE BofA US Corporate (IG) and "
-        "High Yield effective yields, each at its latest posting: "
-        + " · ".join(f"{SHORT[label]} {_short(day)}" for label, (day, value) in data["references"] if day) + ". "
-        "Before the 4:00 pm ET close the preferred prices are intraday; the benchmarks post after the close "
-        "(SOFR, IG and HY a day later), so at midday they are the prior day's.",
-        "26-week history uses each day's close, the stated rate in effect that day and the benchmark that day.",
+        _benchmark_note(data),
+        f"{HISTORY_WEEKS}-week history uses each day's close, the stated rate in effect that day and the benchmark that day "
+        "(today's includes its live move). Before the 4:00 pm ET close the preferred prices are intraday.",
         _quote_note(data),
         _cut_note(data),
         "USD cover: Strategy (USD Reserve + USD Cash) ÷ current monthly dividends against its 12-month floor, each week's "
         "balances from its 8-K (USD Cash began Aug 23, 2026; earlier weeks are the USD Reserve alone); Strive's dashboard "
         "reserve against its 18-month goal.",
-        "Flow ledger: Strategy 8-K cash; SATA = net share change × $100.",
+        "Flow ledger: Strategy 8-K cash; SATA = net share change × $100; ASST ATM = net new Class A + B shares × that "
+        "week's ASST VWAP, the Monday Accretion Ledger's estimate, before fees (Strive does not report the cash).",
         ("BTC floor = (debt + preferred notional senior to and including the series − USD cash) ÷ BTC held, "
          "the BTC price below which those claims would exceed the bitcoin. strategy.com publishes STRC's; SATA's uses "
          "the same formula with Strive's cash and the STRC it holds. Stated rate = the annual dividend on $100 par. "
@@ -844,8 +920,12 @@ def audit_rows(data: dict) -> list[dict]:
         rows.append({"metric": f"{item.ticker} price", "value": f"{item.price:.2f} {item.currency}" if item.price else "—",
                      "source": "strategy.com KPIs" if item.ticker != "SATA" else "Yahoo Finance"})
         rows.append({"metric": f"{item.ticker} effective yield", "value": _pct(item.effective), "source": "rate × 100 ÷ price"})
+    live = data.get("live_rates") or {}
     for label, (day, value) in data["references"]:
-        rows.append({"metric": label, "value": f"{value:.2f}% ({day})" if value is not None else "—", "source": "FRED"})
+        item = live.get(label)
+        source = (f"Treasury {item['close_day']} close {item['close']:.2f}% + {item['source']} move {item['move'] * 100:+.1f} bp "
+                  f"to {item['time']}" if item else "Treasury / NY Fed / FRED")
+        rows.append({"metric": label, "value": f"{value:.2f}% ({day})" if value is not None else "—", "source": source})
     for ticker, hero in data["heroes"].items():
         for label, spread in hero["spreads"].items():
             rows.append({"metric": f"{ticker} spread over {label}", "value": _bp(spread), "source": "effective − benchmark"})
@@ -863,4 +943,8 @@ def audit_rows(data: dict) -> list[dict]:
     for entry in data["ledger"]:
         rows.append({"metric": f"Week of {entry['week']} STRC net / SATA net",
                      "value": f"{_money(entry.get('strc'), signed=True)} / {_money(entry.get('sata'), signed=True)}", "source": "SEC 8-K"})
+        shares, vwap = entry.get("asst_shares"), entry.get("asst_vwap")
+        rows.append({"metric": f"Week of {entry['week']} ASST ATM (est.)", "value": _money(entry.get("asst"), signed=True),
+                     "source": f"{shares:+,.0f} net shares (8-K) × ${vwap:.2f} VWAP (Monday estimate)" if shares is not None and vwap
+                     else "8-K net share change × saved Monday VWAP"})
     return rows
