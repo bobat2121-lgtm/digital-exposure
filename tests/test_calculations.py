@@ -49,6 +49,29 @@ class CalculationTests(unittest.TestCase):
                 )
                 self.assertEqual(actual, values)
 
+    def test_diluted_basis_drives_per_share_measures_but_not_share_count(self):
+        prior = Snapshot(90.0, 10.0, 0.0, 0.0, 0.0, 0.0, diluted_shares=12.0)
+        current = Snapshot(100.0, 11.0, 0.0, 0.0, 0.0, 0.0, diluted_shares=12.5)
+        company = replace(self.strive, current=current, prior=prior, stock_price=20.0,
+                          prior_securities_at_current_prices=0.0, prior_preferred_claims_at_current_prices=0.0)
+        metrics = calculate_company(company, 1.0, 1.0)
+        self.assertAlmostEqual(metrics.nav_per_share, 100 / 12.5)
+        self.assertAlmostEqual(metrics.price_to_nav, 20 / (100 / 12.5))
+        self.assertAlmostEqual(metrics.sats_per_share, 100 / 12.5 * 1e8)
+        self.assertAlmostEqual(metrics.sats_change_pct, ((100 / 12.5) / (90 / 12) - 1) * 100)
+        self.assertAlmostEqual(metrics.constant_price_nav_change_pct, ((100 / 12.5) / (90 / 12) - 1) * 100)
+        self.assertEqual((metrics.effective_common_shares, metrics.shares_change), (11.0, 1.0))
+
+    def test_weekly_changes_never_mix_diluted_and_basic_bases(self):
+        prior = Snapshot(90.0, 10.0, 0.0, 0.0, 0.0, 0.0)
+        current = Snapshot(100.0, 11.0, 0.0, 0.0, 0.0, 0.0, diluted_shares=12.5)
+        company = replace(self.strive, current=current, prior=prior,
+                          prior_securities_at_current_prices=0.0, prior_preferred_claims_at_current_prices=0.0)
+        metrics = calculate_company(company, 1.0, 1.0)
+        self.assertAlmostEqual(metrics.nav_per_share, 100 / 12.5)
+        self.assertAlmostEqual(metrics.sats_change_pct, ((100 / 11) / (90 / 10) - 1) * 100)
+        self.assertAlmostEqual(metrics.constant_price_nav_change_pct, ((100 / 11) / (90 / 10) - 1) * 100)
+
     def test_conceptual_cash_investment_keeps_nav_and_changes_distinct_ratios(self):
         before = Snapshot(100.0, 1.0, 50.0, 0.0, 0.0, 50.0)
         after = replace(before, btc_holdings=150.0, cash=0.0)

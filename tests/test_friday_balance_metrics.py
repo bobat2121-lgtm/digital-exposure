@@ -117,6 +117,18 @@ class FridayBalanceMetricsTests(TestCase):
                 self.assertEqual(result["header"]["companies"]["MSTR"]["price"], 132)
                 self.assertTrue(result["treasury"][1]["valid"])
 
+    def test_nav_divides_by_supplied_diluted_shares_and_keeps_basic_shares(self):
+        data = market_data()
+        result = metrics.reprice_company_inputs(metrics.compute_panel(data), data, {
+            "MSTR": monday_company(), "ASST": monday_company(nav_shares=125_000, nav_share_basis="fully diluted")})
+        mstr, asst = result["treasury"]
+        self.assertEqual((mstr["nav_per_share"], mstr["nav_shares"], mstr["nav_share_basis"]), (88, 100_000, "basic"))
+        self.assertAlmostEqual(asst["nav_per_share"], 88 * 100_000 / 125_000)
+        self.assertAlmostEqual(asst["start_nav_per_share"], 80 * 100_000 / 125_000)
+        self.assertAlmostEqual(asst["btc_effect_per_share"], 8 * 100_000 / 125_000)
+        self.assertEqual((asst["shares"], asst["nav_shares"], asst["nav_share_basis"]), (100_000, 125_000, "fully diluted"))
+        self.assertAlmostEqual(result["header"]["companies"]["ASST"]["nav_multiple"], 15 / (88 * .8))
+
     def test_cash_and_securities_are_separate_and_strategy_combined_cash_is_counted_once(self):
         data = market_data()
         result = metrics.reprice_company_inputs(metrics.compute_panel(data), data, {

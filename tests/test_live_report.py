@@ -58,7 +58,14 @@ class LiveReportTests(unittest.TestCase):
         self.assertEqual(strive.weekly_btc_purchases, 1375)
         self.assertEqual(a.net_preferred_capital, 92151100)
         self.assertAlmostEqual(a.net_common_capital, 1671988 * 24.83868215153755)
-        self.assertAlmostEqual(a.sats_change_pct, 4.072205398742024)
+        # Strive's per-share figures divide by the 8-K's Assumed Fully Diluted Shares, as its
+        # dashboard does (4.07% on basic A + B shares); Strategy's stay on basic shares.
+        self.assertEqual((strive.current.diluted_shares, strive.prior.diluted_shares), (98148551, 96523351))
+        self.assertIsNone(strategy.current.diluted_shares)
+        self.assertAlmostEqual(a.sats_change_pct, ((24531 / 98148551) / (23156 / 96523351) - 1) * 100)
+        self.assertAlmostEqual(a.sats_change_pct, 4.183803905617434)
+        self.assertAlmostEqual(a.nav_per_share, a.net_nav / 98148551)
+        self.assertAlmostEqual(m.nav_per_share, m.net_nav / 420497000)
         self.assertAlmostEqual(m.sats_change_pct, -0.003329393550954851)
         view = build_report_view(result.report, prices=self.prices)
         self.assertEqual(view.label, "")
