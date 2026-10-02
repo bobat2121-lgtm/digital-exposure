@@ -2,7 +2,8 @@
 
 All percentages are expressed in percentage points (12.5 means 12.5%).
 Missing or incomplete observations produce None, never a fabricated zero.
-Company amounts use the Monday report's basic-share, net-treasury convention.
+Company amounts use the Monday report's net-treasury convention: NAV/share divides by
+Strive's dashboard fully diluted shares for ASST and by basic shares for MSTR.
 """
 
 from __future__ import annotations
@@ -223,10 +224,16 @@ def _baseline(company: dict, close_at: datetime) -> tuple[bool, str | None]:
     return True, None
 
 
+def _nav_shares(company: dict) -> float:
+    """NAV/share denominator: Strive's dashboard fully diluted shares when supplied, else basic."""
+    diluted = _number(company.get("nav_shares"))
+    return diluted if diluted is not None and diluted > 0 else float(company["shares"])
+
+
 def _nav(company: dict, btc: float | None) -> float | None:
     if btc is None:
         return None
-    return (float(company["btc_held"]) * btc + float(company["cash_usd"]) + float(company.get("securities_usd", 0)) - float(company["debt_usd"]) - float(company["preferred_usd"])) / float(company["shares"])
+    return (float(company["btc_held"]) * btc + float(company["cash_usd"]) + float(company.get("securities_usd", 0)) - float(company["debt_usd"]) - float(company["preferred_usd"])) / _nav_shares(company)
 
 
 def _treasury(ticker: str, company: dict, btc_prices: dict, equity_prices: dict, period: dict, use_equity: bool) -> dict:
@@ -261,7 +268,7 @@ def _treasury(ticker: str, company: dict, btc_prices: dict, equity_prices: dict,
         "nav_per_share": end_nav,
         "start_nav_per_share": start_nav,
         "nav_change_pct": _change(end_nav, start_nav),
-        "btc_effect_per_share": float(company["btc_held"]) * (end_btc - start_btc) / float(company["shares"]) if valid else None,
+        "btc_effect_per_share": float(company["btc_held"]) * (end_btc - start_btc) / _nav_shares(company) if valid else None,
         "premium_pct": premium,
         "nav_multiple": end_multiple,
         "start_nav_multiple": start_multiple,
@@ -271,6 +278,8 @@ def _treasury(ticker: str, company: dict, btc_prices: dict, equity_prices: dict,
         "publication_basis": "latest_monday_disclosures" if _latest_monday_inputs(company) else "available_by_friday_close",
         "shares": _number(company.get("shares")),
         "share_basis": "basic",
+        "nav_shares": _nav_shares(company) if valid else None,
+        "nav_share_basis": company.get("nav_share_basis", "basic"),
         "estimated_fields": list(company.get("estimated_fields", [])),
         "baseline_notes": list(company.get("notes", [])),
         "baseline_sources": list(company.get("sources", [])),
