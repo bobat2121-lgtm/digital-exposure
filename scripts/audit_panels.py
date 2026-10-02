@@ -25,7 +25,7 @@ sys.path.insert(0, str(ROOT))
 import panels  # noqa: E402,F401  (adds sources/friday to sys.path)
 from panels import extras as extras_module, friday_preview, monday_preview, wednesday  # noqa: E402
 from panels.extras import fred_latest, number  # noqa: E402
-from report.calculations import liquid_assets  # noqa: E402
+from report.calculations import liquid_assets, per_share_count  # noqa: E402
 
 ET = ZoneInfo("America/New_York")
 CHECKS: list[dict] = []
@@ -90,11 +90,13 @@ def audit_monday(report, monday, extras, rows, now):
         liquid = liquid_assets(cur)
         bitcoin = cur.btc_holdings * btc_price
         nav = bitcoin + liquid - cur.debt_principal - cur.preferred_claims
-        nav_ps = nav / cur.effective_common_shares
+        shares = per_share_count(cur)  # Strategy basic A + B; Strive fully diluted, as its dashboard
+        basis = "basic shares" if t == "MSTR" else "fully diluted shares"
+        nav_ps = nav / shares
         compare("monday", f"{t}.sats", f"{t} sats per share", parse_number(view.bitcoin.value),
-                cur.btc_holdings / cur.effective_common_shares * 1e8, 1, source="BTC held ÷ effective common shares")
+                cur.btc_holdings / shares * 1e8, 1, source=f"BTC held ÷ {basis}")
         compare("monday", f"{t}.nav_ps", f"{t} NAV per share", parse_number(view.nav_per_share), nav_ps, .006,
-                source="(BTC × price + cash − debt − preferred claims) ÷ shares")
+                source=f"(BTC × price + cash − debt − preferred claims) ÷ {basis}")
         compare("monday", f"{t}.price_nav", f"{t} price / NAV", parse_number(view.price_to_nav), price / nav_ps, .006,
                 source="price ÷ NAV per share")
         if t == "MSTR":
@@ -191,6 +193,19 @@ def audit_monday(report, monday, extras, rows, now):
                 compare("monday", "ASST.shares", "ASST Class A + B vs Strive dashboard", cur.effective_common_shares,
                         (number(share_row.get("class_a_common")) or 0) + (number(share_row.get("class_b_common")) or 0), 1,
                         source="strive.com dashboard shares")
+                diluted = number(share_row.get("fully_diluted_shares"))
+                compare("monday", "ASST.diluted_shares", "ASST per-share denominator vs Strive dashboard diluted shares",
+                        cur.diluted_shares, diluted, 1, source="strive.com dashboard shares.fully_diluted_shares",
+                        detail="8-K Assumed Fully Diluted Shares; NAV/share and BTC/share divide by it")
+                notional = number((strive.get("dashboard_amplification") or {}).get("sata_notional"))
+                if cash_row and diluted and notional:
+                    # Strive's own Net Treasury Asset Value per share, from its dashboard's inputs at our BTC price.
+                    dashboard_nav = (bitcoin + number(cash_row.get("cash")) + number(cash_row.get("marketable_securities"))
+                                     - number(cash_row.get("debt")) - notional) / diluted
+                    compare("monday", "ASST.nav_dashboard", "ASST NAV per share vs Strive's dashboard formula", nav_ps,
+                            dashboard_nav, .002, relative=True,
+                            source="(BTC × price + cash + securities − debt − SATA notional) ÷ fully diluted, strive.com inputs",
+                            detail="residual: STRC marked live vs the 8-K's fair value; SATA claim $100.01 vs $100")
             trades = [row for row in strive.get("transactions") or [] if row.get("transaction_date") == balance]
             if trades:
                 held = number(trades[0].get("total_btc_holdings"))
@@ -373,6 +388,12 @@ def audit_friday_inputs(dataset, rows):
     check("friday", "inputs", "Monday balance inputs loaded for Friday",
           "PASS" if status == "current" else "WARN" if status in ("checkpoint", "retained") else "FAIL",
           status, "current", why, "friday.live_inputs")
+    asst = (dataset.get("companies") or {}).get("ASST") or {}
+    if asst:
+        diluted = asst.get("nav_share_basis") == "fully diluted"
+        check("friday", "ASST.nav_basis", "ASST NAV per fully diluted share, as Strive's dashboard", "PASS" if diluted else "FAIL",
+              asst.get("nav_shares"), None, "" if diluted else f"basis: {asst.get('nav_share_basis') or 'missing'}",
+              "8-K Assumed Fully Diluted Shares")
     values = {row["metric"]: row["value"] for row in rows}
     for company in ("MSTR", "ASST"):
         value = values.get(f"{company} price / NAV")
