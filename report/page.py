@@ -41,7 +41,7 @@ def _panel(c: CompanyView, capital_period_label: str) -> str:
       </header>
       <section class="nav-summary">
         <div><h3>Net treasury NAV / share</h3><div class="nav-value">{escape(c.nav_per_share)}</div></div>
-        <div class="nav-ratio"><h3>Price / basic NAV</h3><div>{escape(c.price_to_nav)}</div></div>
+        <div class="nav-ratio"><h3>Price / NAV</h3><div>{escape(c.price_to_nav)}</div></div>
         <p class="nav-note">{escape(c.nav_note)}</p>
       </section>
       {''.join(_row(activity, 'bitcoin-activity') for activity in btc_activity_metrics(c))}
@@ -80,7 +80,7 @@ def render_post_preview(v: ReportView, png: bytes) -> str:
     data = base64.b64encode(png).decode("ascii")
     summary = [v.title, v.label, v.report_time, f"BTC {v.btc_price}", v.subtitle, v.capital_period_label]
     for c in v.companies:
-        summary.extend((c.name, c.ticker, c.stock_price, f"NAV/share {c.nav_per_share}", f"Price/basic NAV {c.price_to_nav}"))
+        summary.extend((c.name, c.ticker, c.stock_price, f"NAV/share {c.nav_per_share}", f"Price/NAV {c.price_to_nav}"))
         summary.append(c.nav_note)
         for activity in btc_activity_metrics(c):
             summary.append(f"{activity.label}: {activity.value}")
@@ -92,7 +92,7 @@ def render_post_preview(v: ReportView, png: bytes) -> str:
                 summary.append(metric.overline)
             summary.extend(metric.post_details or metric.details)
         for period in c.periods:
-            summary.append(f"{period.period} basic-share growth: BTC/share {period.btc_growth}; NAV/share {period.nav_growth}")
+            summary.append(f"{period.period} per-share growth: BTC/share {period.btc_growth}; NAV/share {period.nav_growth}")
     alt = escape(". ".join(summary))
     return f'''<figure class="post-preview" aria-label="Complete report for a weekly post">
       <img src="data:image/png;base64,{data}" alt="{alt}">

@@ -545,7 +545,7 @@ def render_png(panel: dict) -> bytes:
             caption=f"{average} SMA starts {first_anchor} · price in USD"
         text(x0+22,y1-25,caption,15,MUTED,max_width=508)
 
-    footer="SYNTHETIC DEMO · All values and histories are illustrative. Not a current market report." if demo else "Estimated basic treasury NAV · disclosed quantities held fixed · unavailable data shown as —"
+    footer="SYNTHETIC DEMO · All values and histories are illustrative. Not a current market report." if demo else "Estimated treasury NAV · MSTR basic, ASST fully diluted shares · disclosed quantities held fixed · unavailable data shown as —"
     text(54,1540,footer,18,ORANGE if demo else MUTED,max_width=1692)
     text(54,1570,"NAV/share WoW isolates BTC price; shares, cash, other assets and senior claims stay fixed. 4wk = prior four-week average.",16,MUTED,max_width=1692)
     output=BytesIO()

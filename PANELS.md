@@ -209,6 +209,19 @@ then what it did per share.
 
   The two measure different things and are not comparable.
 
+  **Share basis.** Strategy's BTC/share and NAV/share divide by basic Class A + B
+  shares. Strive's divide by its fully diluted shares (Class A + B + options +
+  RSUs/RSAs, warrants excluded): the 8-K's "Assumed Fully Diluted Shares" and the
+  default on Strive's treasury dashboard. So ASST's NAV/share and price/NAV are
+  Strive's "Net Treasury Asset Value per Share (Diluted)" and "Multiple to Net
+  Treasury Asset Value", and its BTC/share and weekly change are the dashboard's
+  sats per diluted share and BTC Yield. Weekly, 4-week, QTD and YTD changes put both
+  dates on the same basis (June 30 and December 31 use the dashboard's 84,653,128
+  and 44,766,899). The Shares row, the ASST ATM estimate and turnover stay Class A + B.
+  The audit checks the count and NAV/share against Strive's dashboard; the remaining
+  gap (STRC marked live vs the 8-K's fair value, SATA at $100.01 vs $100) is about
+  0.02%.
+
   Strive's PIPE warrant tag (25.8M @ $27, due Oct 13) disappears after the deadline.
 - **Coverage against each issuer's own target** (each cell's text is centered, with a
   short note: "of dividends", "BTC gain / yr"):
@@ -290,7 +303,8 @@ Every reading is taken at the Friday 4:00 pm ET mark; none needs a Sunday close.
 - **Tiles:**
   - BTC with its weekly change and 200W zone.
   - MSTR and ASST price/NAV with the weekly change, NAV/share and distance from
-    the 200-day SMA.
+    the 200-day SMA. ASST's NAV/share is per fully diluted share, as Strive's
+    dashboard (see the Monday share basis).
 - **The macro strip:** DXY, the 10-year, and Fed funds − 2-year. Each chart is
   marked with its high/low values, start and end dates, and a labeled reference
   line (DXY 101).

@@ -1,5 +1,7 @@
 # Public calculation overview audit
 
+> **Update, Oct 2, 2026:** the live panels now divide Strive's BTC/share and NAV/share by its fully diluted shares, as Strive's dashboard does (see PANELS.md, "Share basis"). This audit documents the earlier basic-share basis.
+
 Audited September 7, 2026 against the existing calculation code and saved financial inputs. This audit reconciles the explanation to the implementation; it does not independently refresh issuer disclosures or market quotes. Financial inputs and NAV calculations are unchanged; Strategy average sale price is an added presentation calculation.
 
 The new `PUBLIC_METHODOLOGY` in `report/methodology.py` is **279 words**, versus 468 words in the previous overview before its separate yield-audit paragraph and table. It preserves legacy methodology constants and retains the assumptions that materially affect interpretation after the Sources & input audit section is removed.

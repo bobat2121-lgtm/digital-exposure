@@ -21,7 +21,8 @@ import numpy as np
 from PIL import Image, ImageColor
 
 from report import live_report as lr
-from report.calculations import btc_value, calculate_company, liquid_assets, net_treasury_nav, preferred_activity_capital
+from report.calculations import (btc_value, calculate_company, comparable_share_counts, liquid_assets,
+                                net_treasury_nav, preferred_activity_capital)
 from report.models import Report
 from report.presentation import build_report_view
 from report.view_types import CompanyView, ReportView
@@ -177,14 +178,15 @@ def _windows(report, rows, supplements, prices):
             continue
         start_day, start = points[-1 - weeks]
         current = company.current
-        btc_now = current.btc_holdings / current.effective_common_shares
-        btc_then = start.btc_holdings / start.effective_common_shares
+        shares_now, shares_then = comparable_share_counts(current, start)
+        btc_now = current.btc_holdings / shares_now
+        btc_then = start.btc_holdings / shares_then
         nav_now = net_treasury_nav(current, report.current_btc_price)
         nav_then = net_treasury_nav(start, report.current_btc_price)
         result[company.ticker] = {
             "weeks": weeks, "start": start_day,
             "btc": (btc_now / btc_then - 1) * 100,
-            "nav": ((nav_now / current.effective_common_shares) / (nav_then / start.effective_common_shares) - 1) * 100
+            "nav": ((nav_now / shares_now) / (nav_then / shares_then) - 1) * 100
             if nav_now and nav_then and nav_now > 0 and nav_then > 0 else None,
         }
     return result
@@ -831,7 +833,10 @@ def notes(preview: MondayPreview) -> list[str]:
         "dashboard; Strive has no debt. The two measure different things and are not comparable. Weekly changes come from "
         "the filed balances.",
         "NAV, price/NAV, coverage and growth are estimates from dated balances and reconstructed preferred "
-        "claims at the displayed prices; growth holds prices constant.",
+        "claims at the displayed prices; growth holds prices constant. Per-share figures divide by Strategy's basic "
+        "Class A + B shares and by Strive's fully diluted shares (Class A + B + options + RSUs/RSAs, warrants excluded: "
+        "the 8-K's \"Assumed Fully Diluted Shares\", Strive's dashboard default), so ASST's NAV/share and price/NAV "
+        "match its dashboard's Net Treasury Asset Value per share and Multiple to Net Treasury Asset Value.",
         "USD cover = months of dividend (and, for Strategy, interest) obligations held in USD, read against Strategy's 12-month "
         "floor and Strive's 18-month goal. Coverage = (BTC + cash) ÷ annual obligations; break-even = obligations ÷ BTC value. "
         f"{sources}.",
@@ -868,7 +873,8 @@ def audit_rows(preview: MondayPreview) -> list[dict]:
             {"metric": f"{company.ticker} BTC cost basis / average", "value":
              f"{_money(extra.cost_basis, False)} / ${extra.average_cost:,.0f}" if extra.average_cost else "—",
              "source": extra.cost_source or "—"},
-            {"metric": f"{company.ticker} price / basic NAV", "value": _clean(company.price_to_nav), "source": "derived"},
+            {"metric": f"{company.ticker} price / NAV ({'basic' if company.ticker == 'MSTR' else 'fully diluted'} shares)",
+             "value": _clean(company.price_to_nav), "source": "derived"},
             {"metric": f"{company.ticker} sats per share", "value": company.bitcoin.value, "source": "derived"},
             {"metric": f"{company.ticker} amplification ({'BTC reserve ÷ net BTC reserve' if company.ticker == 'MSTR' else '(debt + SATA notional) ÷ BTC value'})",
              "value": " / ".join(_amplification(extra)), "source": extra.amplification_source},

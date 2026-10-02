@@ -1,4 +1,4 @@
-"""Period growth uses basic shares and identical market marks, with no network."""
+"""Period growth uses one share basis per comparison and identical market marks, with no network."""
 
 from copy import deepcopy
 from dataclasses import replace
@@ -31,6 +31,16 @@ class PeriodGrowthTests(unittest.TestCase):
             self.assertAlmostEqual(result.nav_per_share_growth_pct, expected_nav, places=12)
             self.assertNotEqual(result.nav_per_share_growth_pct, round(result.nav_per_share_growth_pct, 2))
             self.assertFalse(result.nav_not_meaningful)
+
+    def test_diluted_denominators_apply_only_when_both_dates_carry_them(self):
+        current = Snapshot(150, 12, 30, 0, 20, 10, diluted_shares=15)
+        diluted = Snapshot(100, 10, 20, 0, 20, 10, diluted_shares=11)
+        basic = replace(diluted, diluted_shares=None)
+        growth = calculate_period_growth(current, {"QTD": diluted, "YTD": basic}, 2)
+        self.assertAlmostEqual(growth["QTD"].btc_per_share_growth_pct, ((150 / 15) / (100 / 11) - 1) * 100)
+        self.assertAlmostEqual(growth["QTD"].nav_per_share_growth_pct, ((300 / 15) / (190 / 11) - 1) * 100)
+        self.assertAlmostEqual(growth["YTD"].btc_per_share_growth_pct, 25)
+        self.assertAlmostEqual(growth["YTD"].nav_per_share_growth_pct, ((300 / 12) / (190 / 10) - 1) * 100)
 
     def test_identical_balances_at_identical_current_marks_have_zero_growth(self):
         # Both snapshots contain 505 securities marked at the same supplied

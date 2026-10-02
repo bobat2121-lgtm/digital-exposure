@@ -13,6 +13,13 @@ class StrivePeriodBaselineTests(unittest.TestCase):
         self.assertEqual(baselines["QTD"].preferred_claims, 782_950_200)
         self.assertAlmostEqual(baselines["YTD"].preferred_claims, 202_300_230.42708333)
 
+    def test_per_share_growth_uses_strives_dashboard_diluted_counts(self):
+        # strive.com dashboard shares: June 30 = 81,944,827 issued + 1,004,282 options
+        # + 1,704,019 RSUs/RSAs; December 31 = 44,766,899 (incl. pre-funded warrants).
+        baselines = strive_period_baselines(100)
+        self.assertEqual(baselines["QTD"].diluted_shares, 81_944_827 + 1_004_282 + 1_704_019)
+        self.assertEqual(baselines["YTD"].diluted_shares, 44_766_899)
+
     def test_only_elapsed_dividends_are_included_in_liquidation_claims(self):
         baselines = strive_period_baselines(100)
         # June 30 is after that day's settled dividend. The June 30 GAAP

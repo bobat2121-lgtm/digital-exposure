@@ -77,6 +77,10 @@ class FridayInputsTests(unittest.TestCase):
         self.assertEqual(mstr["securities_usd"], 0)
         self.assertEqual(asst["btc_held"], 24531)
         self.assertEqual(asst["shares"], 94934558)
+        # NAV/share divides by Strive's dashboard basis (8-K Assumed Fully Diluted Shares);
+        # turnover keeps the basic count in "shares".
+        self.assertEqual((asst["nav_shares"], asst["nav_share_basis"]), (98148551, "fully diluted"))
+        self.assertEqual((mstr["nav_shares"], mstr["nav_share_basis"]), (420497000, "basic"))
 
     def test_empty_or_older_feed_uses_same_published_checkpoint_as_monday(self):
         actual = self.resolve()

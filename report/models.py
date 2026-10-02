@@ -18,6 +18,10 @@ class Snapshot:
     # Exclusive alternative when the issuer discloses cash and securities as
     # one reserve. Leave both separate asset fields unknown to avoid overlap.
     combined_liquid_assets: float | None = None
+    # The issuer's assumed fully diluted shares, when its dashboard divides by
+    # them (Strive: A + B + options + RSUs/RSAs; warrants excluded). BTC/share
+    # and NAV/share then use this count; share-count changes stay basic.
+    diluted_shares: float | None = None
 
 
 @dataclass(frozen=True)
