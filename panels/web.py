@@ -542,9 +542,13 @@ MONDAY_FORMULAS = (
         ("Price paid", "BTC ÷ bitcoin bought."),
     )),
     ("Per share", (
-        ("BTC / share (sats)", "BTC held × 100,000,000 ÷ effective common shares."),
+        ("BTC / share (sats)", "BTC held × 100,000,000 ÷ shares (the share basis below)."),
         ("NAV", "BTC held × BTC price + cash − debt − preferred claims."),
-        ("NAV / share, price / NAV", "NAV ÷ effective common shares; share price ÷ NAV per share."),
+        ("NAV / share, price / NAV", "NAV ÷ shares; share price ÷ NAV per share."),
+        ("Share basis", "Strategy: basic Class A + B shares. Strive: fully diluted shares (Class A + B + options + "
+                        "RSUs/RSAs, warrants excluded; the 8-K's \"Assumed Fully Diluted Shares\"), the default on "
+                        "Strive's dashboard, so NAV / share and price / NAV match its Net Treasury Asset Value per share "
+                        "and Multiple to Net Treasury Asset Value. The shares row stays Class A + B."),
         ("Amplification", "Shown as a percent above 1×: (ratio − 1) × 100, so 1.51× reads 51%; weekly change in points."),
         ("Amplification, Strategy", "BTC reserve ÷ net BTC reserve = BTC value ÷ (BTC value + USD − debt − preferred), "
                                     "strategy.com's KPI since July 23, 2026 (1.25× shows as 25%)."),
@@ -897,7 +901,8 @@ def _turnover(turnover) -> None:
 FRIDAY_FORMULAS = (
     ("Tiles", (
         ("Weekly change", "Friday 4:00 pm ET mark ÷ the prior Friday's mark − 1."),
-        ("Price / NAV", "Share price ÷ NAV per share, where NAV = BTC × price + cash − debt − preferred claims."),
+        ("Price / NAV", "Share price ÷ NAV per share, where NAV = BTC × price + cash − debt − preferred claims. "
+                        "Strategy divides by basic shares; Strive by fully diluted shares, as its dashboard does."),
         ("vs 200D", "Share price ÷ its 200-day simple moving average − 1."),
         ("200W zone", "BTC ÷ its 200-week SMA − 1: below 0 Very Cheap, 0–50% Cheap, 50–100% Fair Value, 100–150% Expensive, "
                       "150%+ Very Expensive."),

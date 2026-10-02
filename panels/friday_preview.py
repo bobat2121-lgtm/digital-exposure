@@ -704,8 +704,9 @@ def notes(panel: dict, derived: dict, stale: tuple = (), extra: bool = False) ->
     stale = tuple(section for section in stale if extra or section != "markets")  # markets feeds the test copy only
     rules = "; ".join(f"{label}: {rule}" for label, rule in RULES.items())
     return [line for line in (
-        "Every weekly reading is taken at the Friday 4:00 pm ET mark. Price/NAV uses estimated basic treasury NAV with "
-        "Monday balances held fixed.",
+        "Every weekly reading is taken at the Friday 4:00 pm ET mark. Price/NAV uses estimated treasury NAV with "
+        "Monday balances held fixed, per basic share for Strategy and per fully diluted share for Strive (its "
+        "dashboard's basis).",
         f"Cycle checklist rules (rule-based states, not forecasts): {rules}.",
         "Zones = BTC's distance above its 200-week SMA: below 0 Very Cheap, 0–50% Cheap, 50–100% Fair Value, "
         "100–150% Expensive, 150%+ Very Expensive (names after Crypto Currently).",
