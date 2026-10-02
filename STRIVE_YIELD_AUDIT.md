@@ -1,5 +1,7 @@
 # Why Strive shows 40.8% YTD
 
+> **Update, Oct 2, 2026:** the live panels now divide Strive's BTC/share and NAV/share by its fully diluted shares, as Strive's dashboard does (see PANELS.md, "Share basis"). This audit documents the earlier basic-share basis.
+
 Strive's dashboard reports **40.8% BTC Yield YTD** using its assumed-diluted share series. This report shows **45.56% growth in BTC per actual Class A + Class B common share**. The difference comes mainly from the share denominator; neither number measures a stock-price return.
 
 Verified September 7, 2026 against the [Strive ASST dashboard](https://www.strive.com/treasury?tab=asst), its [base-data API](https://www.strive.com/treasury/api/dashboard/base-data), and its [full-history calculated API](https://www.strive.com/treasury/api/dashboard/calculated?fromDate=2025-05-06&toDate=2026-09-07&currency=USD&stockSymbol=ASST). The API labels the calculation September 7; the latest underlying BTC and share records remain dated **August 28**. These are live reconstructed records, not an archived December 31 or August 31 API snapshot.

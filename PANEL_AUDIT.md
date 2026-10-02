@@ -220,6 +220,16 @@ Each figure below was recomputed independently from raw inputs. All passed.
   annual interest + dividends ($1.62B). The footnotes now say so.
 - **Strategy's mNAV** (price ÷ net BTC per fully diluted share, 1.20×) and the
   panel's price / basic NAV (1.19×) differ slightly by design.
+- **Strive's price/NAV now matches its dashboard (Oct 2, 2026).** Strive's dashboard
+  divides Net Treasury Asset Value by fully diluted shares (its default: Class A + B
+  + options + RSUs/RSAs, warrants excluded; 100,776,795 at Sep 25). The panels used
+  basic Class A + B (97,651,721), so ASST read 2.07× / $14.19 against Strive's
+  2.14× / $13.76 for the same Friday. Strive's BTC/share and NAV/share (and their
+  weekly, 4-week, QTD and YTD changes) now use the 8-K's "Assumed Fully Diluted
+  Shares"; the audit checks the count against the dashboard (`ASST.diluted_shares`)
+  and NAV/share against Strive's own formula at the panel's BTC price
+  (`ASST.nav_dashboard`, ±0.2%; the residual is STRC marked live vs the 8-K's fair
+  value and the $100.01 vs $100 SATA claim, about 0.02%).
 - **SATA's rate-cut test** uses the average of daily closing prices over the prior
   dividend period (not VWAP), with a $99 threshold
   ([term sheet](https://www.sec.gov/Archives/edgar/data/1920406/000114036126001962/ny20063534x4_fwp.htm)).

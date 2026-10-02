@@ -194,8 +194,9 @@ constant prices, while BTC/share rises **4.27%**. The approximately $80.4m
 increase in senior preferred claims helps explain that gap.
 
 The post uses short transaction notes; full source reconciliations remain in
-the repository audit documents. **Price / basic NAV** names the report's basic-share
-valuation basis explicitly; it is not a reproduction of either issuer's mNAV.
+the repository audit documents. This saved edition's **Price / basic NAV** used basic
+shares; it is not a reproduction of either issuer's mNAV. The live panels now divide
+Strive's per-share figures by its fully diluted shares, as Strive's dashboard does.
 
 All historical valuation metrics carry **≈** because of these specific
 assumptions and bounds. Reported financing cash is labeled separately. Sources
