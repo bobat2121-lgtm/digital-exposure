@@ -59,7 +59,7 @@ def _company(c: CompanyView, period: str) -> str:
       </header>
       <section class="valuation-pair">
         <div><h3>Net treasury NAV / share</h3><strong>{escape(c.nav_per_share)}</strong></div>
-        <div><h3>Price / basic NAV</h3><strong>{escape(c.price_to_nav)}</strong></div>
+        <div><h3>Price / NAV</h3><strong>{escape(c.price_to_nav)}</strong></div>
       </section>
       <section class="bitcoin-pair{activity_css}">
         {btc_rows}

@@ -217,7 +217,13 @@ def _snapshot(ticker, balance_date, facts, supplements, prices):
         return Snapshot(holdings, shares, None, None, debt, claims, combined_liquid_assets=liquid)
     held_shares = fact("held_strc_shares")
     securities = held_shares * prices["quotes"]["STRC"]["price"] if held_shares is not None else None
-    return Snapshot(holdings, shares, fact("cash_and_equivalents_usd"), securities, debt, claims)
+    # The 8-K's "Assumed Fully Diluted Shares": the denominator of Strive's
+    # dashboard (its default). Missing or below A + B, per-share stays basic.
+    diluted = fact("assumed_diluted_shares")
+    if diluted is not None and (shares is None or diluted < shares):
+        diluted = None
+    return Snapshot(holdings, shares, fact("cash_and_equivalents_usd"), securities, debt, claims,
+                    diluted_shares=diluted)
 
 
 def _complete(snapshot):
@@ -354,7 +360,8 @@ def _company(ticker, filing, all_filings, supplements, prices):
         share_basis_note="A + B · rounded to 1,000" if ticker == "MSTR" else "Class A + Class B · effective shares",
         preferred_activity_notes=("Net share change × $100 · before fees",) if ticker == "ASST" else (),
         valuation_estimated=True, preferred_claims_estimated=True,
-        valuation_note="≈ Basic common shares · after debt & preferred claims",
+        valuation_note=("≈ Basic common shares · after debt & preferred claims" if ticker == "MSTR"
+                        else "≈ Fully diluted shares, as Strive's dashboard · after debt & preferred claims"),
         balance_date=balance, prior_balance_date=prior_date,
         period_baselines=_rolling_baselines(ticker, balance, all_filings, supplements, prices)), prior_date
 

@@ -42,6 +42,18 @@ def _percentage_change(current: float | None, prior: float | None) -> float | No
     return None if ratio is None else (ratio - 1.0) * 100.0
 
 
+def per_share_count(snapshot: Snapshot) -> float | None:
+    """BTC/share and NAV/share denominator: the issuer's diluted basis when set."""
+    return snapshot.diluted_shares if snapshot.diluted_shares is not None else snapshot.effective_common_shares
+
+
+def comparable_share_counts(current: Snapshot, baseline: Snapshot) -> tuple[float | None, float | None]:
+    """Both sides on one basis: diluted only when both dates carry it."""
+    if current.diluted_shares is not None and baseline.diluted_shares is not None:
+        return current.diluted_shares, baseline.diluted_shares
+    return current.effective_common_shares, baseline.effective_common_shares
+
+
 def btc_value(snapshot: Snapshot, btc_price: float | None) -> float | None:
     if not _nonnegative(snapshot.btc_holdings) or not _nonnegative(btc_price):
         return None
@@ -199,12 +211,14 @@ def calculate_company(company: Company, current_btc_price: float | None,
     current, prior = company.current, company.prior
     bitcoin, previous_bitcoin = btc_value(current, current_btc_price), btc_value(prior, prior_btc_price)
     nav, previous_nav = net_treasury_nav(current, current_btc_price), net_treasury_nav(prior, prior_btc_price)
-    nav_per_share = _ratio(nav, current.effective_common_shares)
-    previous_nav_per_share = _ratio(previous_nav, prior.effective_common_shares)
-    sats = _ratio(current.btc_holdings, current.effective_common_shares)
-    previous_sats = _ratio(prior.btc_holdings, prior.effective_common_shares)
+    nav_per_share = _ratio(nav, per_share_count(current))
+    previous_nav_per_share = _ratio(previous_nav, per_share_count(prior))
+    sats = _ratio(current.btc_holdings, per_share_count(current))
     sats = None if sats is None else sats * 100_000_000.0
-    previous_sats = None if previous_sats is None else previous_sats * 100_000_000.0
+    # Weekly per-share changes put both weeks on one share basis.
+    current_count, prior_count = comparable_share_counts(current, prior)
+    sats_change_pct = _percentage_change(_ratio(current.btc_holdings, current_count),
+                                         _ratio(prior.btc_holdings, prior_count))
     amplification, previous_amplification = _ratio(bitcoin, nav), _ratio(previous_bitcoin, previous_nav)
     preferred_ratio, previous_preferred_ratio = _ratio(current.preferred_claims, bitcoin), _ratio(prior.preferred_claims, previous_bitcoin)
     preferred_pct = None if preferred_ratio is None else preferred_ratio * 100.0
@@ -226,14 +240,14 @@ def calculate_company(company: Company, current_btc_price: float | None,
     prior_at_current_prices = Snapshot(
         prior.btc_holdings, prior.effective_common_shares, prior.cash,
         prior_repriced_securities, prior.debt_principal, prior_repriced_preferred,
-        combined_liquid_assets=prior_repriced_liquid,
+        combined_liquid_assets=prior_repriced_liquid, diluted_shares=prior.diluted_shares,
     )
     previous_constant_nav = (
         None if has_combined_reserve and (
             prior_repriced_liquid is None or liquid_assets(prior) is None
         ) else net_treasury_nav(prior_at_current_prices, current_btc_price)
     )
-    previous_constant_per_share = _ratio(previous_constant_nav, prior.effective_common_shares)
+    previous_constant_per_share = _ratio(previous_constant_nav, prior_count)
     disclosed_issuance_cash = common_issuance_cash(company.common_capital)
     disclosed_common_capital = calculate_common_capital(company.common_capital)
     if company.common_capital_method == "reported_atm":
@@ -267,12 +281,12 @@ def calculate_company(company: Company, current_btc_price: float | None,
         shares_change=_difference(current.effective_common_shares, prior.effective_common_shares),
         shares_change_pct=_percentage_change(current.effective_common_shares, prior.effective_common_shares),
         sats_per_share=sats,
-        sats_change_pct=_percentage_change(sats, previous_sats),
+        sats_change_pct=sats_change_pct,
         btc_holdings=current.btc_holdings,
         btc_change=_difference(current.btc_holdings, prior.btc_holdings),
         weekly_btc_purchases=bitcoin_activity_amount(company.weekly_btc_purchases),
         weekly_btc_sales=bitcoin_activity_amount(company.weekly_btc_sales),
-        constant_price_nav_change_pct=_percentage_change(nav_per_share, previous_constant_per_share),
+        constant_price_nav_change_pct=_percentage_change(_ratio(nav, current_count), previous_constant_per_share),
         net_btc_amplification=amplification,
         amplification_change=_difference(amplification, previous_amplification),
         preferred_to_btc_pct=preferred_pct,

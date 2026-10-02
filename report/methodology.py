@@ -11,10 +11,13 @@ def _reviewed_debt():
 
 
 PUBLIC_METHODOLOGY = """
-**Shares & NAV.** Per-share figures use split-adjusted Class A + B common shares.
+**Shares & NAV.** Strategy's per-share figures use split-adjusted Class A + B
+common shares. Strive's use its fully diluted shares (Class A + B + options +
+RSUs/RSAs, warrants excluded; the 8-K's Assumed Fully Diluted Shares), the
+default on Strive's dashboard; its share count and ATM estimate stay Class A + B.
 NAV is BTC value + cash/securities − debt principal − preferred liquidation
 claims, including accrued dividends. Strategy includes its designated
-treasury liquidity only. Price/basic NAV divides the stock price by NAV/share.
+treasury liquidity only. Price/NAV divides the stock price by NAV/share.
 
 **Bitcoin.** Bought and Sold show reported gross activity separately, never inferred
 from changes in holdings; total BTC is ending holdings.
@@ -46,14 +49,16 @@ unavailable. September 8 uses complete five-minute ASST bars because two
 one-minute observations were missing. Strategy's September claims assume
 scheduled dividend payments and include the newly declared STRD accrual.
 
-**Strive yield.** The company uses assumed dilution; this report uses basic
-shares. Its year-end award count remains unreconciled.
+**Strive yield.** Like the company, this report divides Strive's BTC/share and
+NAV/share by assumed fully diluted shares, at every date including the June 30
+and December 31 baselines. Its year-end award count remains unreconciled.
 """
 
 POST_METHODOLOGY = """
-**Share basis.** All per-share measures use actual effective Class A + Class B
-common shares, adjusted consistently for stock splits. They do not use EPS
-weighted-average shares or either issuer's assumed diluted KPI denominator.
+**Share basis.** Strategy's per-share measures use actual effective Class A +
+Class B common shares, adjusted consistently for stock splits. Strive's use its
+assumed fully diluted shares, as its dashboard does. Neither uses EPS
+weighted-average shares.
 
 **Net treasury NAV/share.** Bitcoin market value + cash/reserves + securities
 market value − debt principal − preferred liquidation claims, divided by common

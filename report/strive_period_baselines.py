@@ -32,9 +32,16 @@ STRIVE_DAILY_CERTIFICATE_URL = (
 STRIVE_YEAR_END_DIVIDEND_ESTIMATE = float(
     Decimal(2_012_729) * 100 * Decimal("0.1225") * 15 / 360
 )
+# Strive's dashboard share history (strive.com/treasury/api/dashboard/base-data,
+# "shares"): fully diluted = issued + options + RSUs/RSAs (+ pre-funded
+# warrants), warrants excluded, the denominator its per-share figures use.
+STRIVE_DASHBOARD_SHARES_URL = "https://strive.com/treasury/api/dashboard/base-data"
+STRIVE_DILUTED_SHARES = {"2026-06-30": 84_653_128, "2025-12-31": 44_766_899}
 STRIVE_PERIOD_BASELINE_NOTE = (
     "Strive baselines use split-adjusted Class A + B common shares and approximate "
-    "reported BTC. June 30's 505,000 STRC shares are marked at the report price. "
+    "reported BTC; per-share growth divides by Strive's dashboard fully diluted shares "
+    "(84,653,128 at June 30; 44,766,899 at December 31). "
+    "June 30's 505,000 STRC shares are marked at the report price. "
     "Preferred claims use the explicitly reported $100 liquidation preference, "
     "zero ordinary accrual after June 30's paid daily dividend, and an estimated "
     "15/360 accrual at 12.25% on December 31's ending shares. Declared future "
@@ -64,6 +71,7 @@ def strive_period_baselines(strc_price: float | None) -> dict[str, Snapshot]:
             marketable_securities=(505_000 * strc_price if strc_price is not None else None),
             debt_principal=0,
             preferred_claims=7_829_502 * 100,
+            diluted_shares=STRIVE_DILUTED_SHARES["2026-06-30"],
         ),
         "YTD": Snapshot(
             btc_holdings=7_627,
@@ -72,5 +80,6 @@ def strive_period_baselines(strc_price: float | None) -> dict[str, Snapshot]:
             marketable_securities=0,
             debt_principal=0,
             preferred_claims=2_012_729 * 100 + STRIVE_YEAR_END_DIVIDEND_ESTIMATE,
+            diluted_shares=STRIVE_DILUTED_SHARES["2025-12-31"],
         ),
     }

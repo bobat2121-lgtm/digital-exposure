@@ -11,10 +11,11 @@ import hashlib
 import json
 
 from . import live_report
+from .calculations import per_share_count
 
 
 PUBLICATION_BASIS = "latest_monday_disclosures"
-NUMERIC_FIELDS = ("btc_held", "cash_usd", "securities_usd", "debt_usd", "preferred_usd", "shares")
+NUMERIC_FIELDS = ("btc_held", "cash_usd", "securities_usd", "debt_usd", "preferred_usd", "shares", "nav_shares")
 
 
 def _accepted_at(value):
@@ -90,6 +91,8 @@ def resolve_friday_inputs(prices: dict, feed: dict, *, now=None) -> dict:
             "securities_usd": 0 if combined is not None else current.marketable_securities,
             "debt_usd": current.debt_principal, "preferred_usd": current.preferred_claims,
             "shares": current.effective_common_shares,
+            # NAV/share denominator: Strive's dashboard fully diluted shares; Strategy basic.
+            "nav_shares": per_share_count(current),
         }
         published = bool(publication.get("accepted_at") and company.balance_date
                          and datetime.fromisoformat(publication["accepted_at"]) <= now)
@@ -115,7 +118,9 @@ def resolve_friday_inputs(prices: dict, feed: dict, *, now=None) -> dict:
             "source": publication.get("source_url"),
             "sources": list(dict.fromkeys(source for source in sources if isinstance(source, str) and source)),
             "accession": publication.get("accession"),
-            "share_basis": "basic", "estimated": company.valuation_estimated,
+            "share_basis": "basic",
+            "nav_share_basis": "fully diluted" if current.diluted_shares is not None else "basic",
+            "estimated": company.valuation_estimated,
             "estimated_fields": ["preferred_usd"] if company.preferred_claims_estimated else [],
             "notes": notes,
             "allow_post_friday_disclosure": True, "publication_basis": PUBLICATION_BASIS,

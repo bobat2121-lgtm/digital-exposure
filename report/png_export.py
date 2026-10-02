@@ -175,8 +175,8 @@ def _company_rows(company: CompanyView) -> tuple[_Row, ...]:
     ))
     for period in company.periods:
         rows.extend((
-            _metric_row(MetricView(f"{period.period} · BTC / basic share growth", period.btc_growth), "supporting", 80),
-            _metric_row(MetricView(f"{period.period} · NAV / basic share growth", period.nav_growth), "supporting", 80),
+            _metric_row(MetricView(f"{period.period} · BTC / share growth", period.btc_growth), "supporting", 80),
+            _metric_row(MetricView(f"{period.period} · NAV / share growth", period.nav_growth), "supporting", 80),
         ))
     return tuple(rows)
 

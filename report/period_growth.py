@@ -9,7 +9,7 @@ from datetime import date
 from decimal import Decimal
 from math import isclose, isfinite
 
-from .calculations import net_treasury_nav
+from .calculations import comparable_share_counts, net_treasury_nav
 from .current_prices import load_current_prices
 from .historical_claims import ECB_USD_PER_EUR, strategy_claim_components
 from .models import Report, Snapshot
@@ -62,20 +62,22 @@ def calculate_period_growth(current: Snapshot, baselines: dict[str, Snapshot | N
     """
     if set(baselines) - set(PERIODS):
         raise ValueError("Period baselines must use QTD and/or YTD keys")
-    current_btc = (_per_share(current.btc_holdings, current.effective_common_shares)
-                   if _finite(current.btc_holdings) and current.btc_holdings >= 0 else None)
     current_nav = net_treasury_nav(current, current_btc_price)
-    current_nav_per_share = _per_share(current_nav, current.effective_common_shares)
     result = {}
     for period in PERIODS:
         baseline = baselines.get(period)
         if baseline is None:
             result[period] = PeriodGrowth(None, None)
             continue
-        baseline_btc = (_per_share(baseline.btc_holdings, baseline.effective_common_shares)
+        # Diluted on both dates when both carry it (Strive), else basic.
+        current_shares, baseline_shares = comparable_share_counts(current, baseline)
+        current_btc = (_per_share(current.btc_holdings, current_shares)
+                       if _finite(current.btc_holdings) and current.btc_holdings >= 0 else None)
+        current_nav_per_share = _per_share(current_nav, current_shares)
+        baseline_btc = (_per_share(baseline.btc_holdings, baseline_shares)
                         if _finite(baseline.btc_holdings) and baseline.btc_holdings >= 0 else None)
         baseline_nav = net_treasury_nav(baseline, current_btc_price)
-        baseline_nav_per_share = _per_share(baseline_nav, baseline.effective_common_shares)
+        baseline_nav_per_share = _per_share(baseline_nav, baseline_shares)
         not_meaningful = ((_finite(current_nav) and current_nav <= 0)
                           or (_finite(baseline_nav) and baseline_nav <= 0))
         result[period] = PeriodGrowth(

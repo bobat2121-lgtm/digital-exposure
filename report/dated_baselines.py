@@ -42,5 +42,8 @@ def dated_baseline(ticker: str, balance_date: str, eurusd: float, strc: float) -
         return Snapshot(holdings, shares, None, None, debt, claims,
                         combined_liquid_assets=number("combined_liquid_assets"))
     if ticker == "ASST":
-        return Snapshot(holdings, shares, number("cash"), number("held_strc_shares") * strc, debt, claims)
+        # Strive's dashboard divides per-share figures by assumed fully diluted shares.
+        diluted = number("assumed_diluted_shares") if "assumed_diluted_shares" in row else None
+        return Snapshot(holdings, shares, number("cash"), number("held_strc_shares") * strc, debt, claims,
+                        diluted_shares=diluted if diluted is not None and diluted >= shares else None)
     raise ValueError("Unsupported baseline issuer")
