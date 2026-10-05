@@ -867,7 +867,7 @@ def audit_rows(preview: MondayPreview) -> list[dict]:
         report = next(c for c in preview.report.companies if c.ticker == company.ticker)
         rows += [
             {"metric": f"{company.ticker} price", "value": f"{company.stock_price} ({preview.price_labels.get(company.ticker, '—')})",
-             "source": "Yahoo Finance (pre-market before the open, live in session, else the close)"},
+             "source": "Yahoo Finance, else CNBC (pre-market before the open, live in session, else the close)"},
             {"metric": f"{company.ticker} balance date", "value": report.balance_date, "source": "SEC 8-K"},
             {"metric": f"{company.ticker} bitcoin bought", "value": company.btc_activity[0].value if company.btc_activity else "—", "source": "SEC 8-K"},
             {"metric": f"{company.ticker} total BTC held", "value": company.total_bitcoin.value if company.total_bitcoin else "—", "source": "SEC 8-K"},
