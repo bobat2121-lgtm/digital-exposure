@@ -20,7 +20,7 @@ from math import isfinite
 import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
@@ -35,6 +35,11 @@ SOURCE_URLS["BTC-USD"] = "https://api.strategy.com/btc/bitcoinKpis"
 EXTENDED = ("MSTR", "ASST")  # the only symbols priced before the open
 PRE_MARKET_URLS = {symbol: f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1m&range=1d&includePrePost=true"
                    for symbol in EXTENDED}
+# CNBC's real-time quote stands in when Yahoo refuses (Oct 5, 2026: HTTP 429 to Streamlit Cloud all morning).
+CNBC_SYMBOLS = {"MSTR": "MSTR", "ASST": "ASST", "STRC": "STRC", "EURUSD=X": "EUR="}
+CNBC_URLS = {symbol: "https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol?" + urlencode(
+    {"symbols": cnbc, "requestMethod": "itv", "noform": 1, "partnerId": 2, "fund": 1, "exthrs": 1, "output": "json"})
+    for symbol, cnbc in CNBC_SYMBOLS.items()}
 SESSIONS = ("pre-market", "regular", "close", "live")
 NEW_YORK = ZoneInfo("America/New_York")
 CACHE_PATH = Path(__file__).resolve().parents[1] / "data" / "current-prices.json"
@@ -183,6 +188,49 @@ def _pre_market(now: datetime) -> dict:
     return found
 
 
+def _cnbc_number(value) -> float:
+    try:
+        return float(str(value).replace(",", ""))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("CNBC price is not a number") from exc
+
+
+def _cnbc_time(value) -> datetime:
+    try:
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f%z")
+    except (TypeError, ValueError) as exc:
+        raise ValueError("CNBC quote time is malformed") from exc
+
+
+def parse_cnbc_quote(payload: dict, symbol: str, now: datetime) -> dict:
+    """CNBC's real-time quote, labelled by session like Yahoo's. For MSTR and ASST before the open, its
+    pre-market trade from today stands in for the close, as Yahoo's 1-minute bars do."""
+    now = _now(now)
+    try:
+        rows = payload["FormattedQuoteResult"]["FormattedQuote"]
+        row = next(row for row in rows if isinstance(row, dict) and row.get("symbol") == CNBC_SYMBOLS[symbol])
+    except (KeyError, TypeError, StopIteration) as exc:
+        raise ValueError(f"Malformed CNBC quote for {symbol}") from exc
+    price = _positive_number(_cnbc_number(row.get("last")), f"{symbol} price")
+    observed = _cnbc_time(row.get("last_time")).astimezone(timezone.utc)
+    if observed > now + FUTURE_TOLERANCE:
+        raise ValueError("Quote timestamp is in the future")
+    session = market_session(now)
+    quote_ = {"symbol": symbol, "price": price, "as_of": observed.isoformat(),
+              "session": "regular" if session == "regular" else "close", "source_url": CNBC_URLS[symbol]}
+    extended = row.get("ExtendedMktQuote") or {}
+    if session == "pre-market" and symbol in EXTENDED and extended.get("type") == "PRE_MKT":
+        try:
+            stamp = _cnbc_time(extended.get("last_time")).astimezone(timezone.utc)
+            last = _positive_number(_cnbc_number(extended.get("last")), f"{symbol} pre-market price")
+        except ValueError:
+            return quote_  # no usable pre-market trade: the close stands
+        start = datetime.combine(now.astimezone(NEW_YORK).date(), time(4), NEW_YORK)
+        if start <= stamp <= now + FUTURE_TOLERANCE:
+            quote_.update(price=last, as_of=stamp.isoformat(), session="pre-market")
+    return quote_
+
+
 def parse_btc_quote(payload: dict, now: datetime) -> dict:
     """Use Strategy's Bitcoin price and its millisecond observation timestamp."""
     now = _now(now)
@@ -214,10 +262,12 @@ def _validate_snapshot(snapshot: dict, now: datetime) -> dict:
         if observed > fetched + FUTURE_TOLERANCE:
             raise ValueError(f"{symbol} observation is after the recorded retrieval")
         source = record.get("source_url")
-        if source not in {SOURCE_URLS[symbol], PRE_MARKET_URLS.get(symbol, SOURCE_URLS[symbol])}:
+        from_cnbc = symbol in CNBC_URLS and source == CNBC_URLS[symbol]
+        if not from_cnbc and source not in {SOURCE_URLS[symbol], PRE_MARKET_URLS.get(symbol, SOURCE_URLS[symbol])}:
             raise ValueError(f"Saved {symbol} quote has an unexpected source URL")
         session = record.get("session")
-        if session is not None and (session not in SESSIONS or (session == "pre-market") != (source != SOURCE_URLS[symbol])):
+        # Yahoo's pre-market trades come only from its 1-minute bars; CNBC's one quote serves every session.
+        if session is not None and (session not in SESSIONS or (not from_cnbc and (session == "pre-market") != (source != SOURCE_URLS[symbol]))):
             raise ValueError(f"Saved {symbol} quote has an unexpected session")
         quotes[symbol] = {"symbol": symbol, "price": price, "as_of": observed.isoformat(),
                           **({"session": session} if session else {}), "source_url": source}
@@ -258,10 +308,11 @@ def pull_current_prices(*, now: datetime | None = None, fallback: dict | None = 
     """Fetch and validate all five prices.
 
     Without ``fallback`` any failure raises and nothing partial is returned. With an earlier complete
-    snapshot as ``fallback`` (the page passes its last good copy), a source that fails keeps that
-    snapshot's quote, at its own earlier observation time, and the result lists it under ``"saved"``
-    with the reason, so one refused request no longer throws away the other live prices (Oct 5, 2026:
-    the page sat on saved quotes all morning). If every source fails it still raises.
+    snapshot as ``fallback`` (the page passes its last good copy), a Yahoo quote that fails comes from
+    CNBC instead, and a source that still fails keeps that snapshot's quote, at its own earlier
+    observation time, listed under ``"saved"`` with the reason. One refused request no longer throws
+    away the other live prices (Oct 5, 2026: Yahoo answered Streamlit Cloud with HTTP 429 and the page
+    sat on saved quotes all morning). If every source fails it still raises.
 
     Call save_current_prices only after this function succeeds. No cache is
     modified during network requests or parsing.
@@ -289,18 +340,32 @@ def pull_current_prices(*, now: datetime | None = None, fallback: dict | None = 
         except Exception as problem:
             if fallback is None:
                 raise
-            failed[symbol] = problem
+            failed[symbol] = failure_reason(problem)
+    for symbol in [symbol for symbol in failed if symbol in CNBC_URLS]:
+        try:
+            quotes[symbol] = parse_cnbc_quote(_fetch_json(CNBC_URLS[symbol]), symbol, fetched)
+            del failed[symbol]
+        except Exception as problem:
+            failed[symbol] += f"; CNBC {failure_reason(problem)}"
     if len(failed) == len(REQUIRED_SYMBOLS):
-        raise next(iter(failed.values()))
+        raise ValueError("No price source answered: " + "; ".join(f"{s} {why}" for s, why in failed.items()))
     if market_session(fetched) == "pre-market":
         quotes.update(_pre_market(fetched))
+        for symbol in EXTENDED if fallback is not None else ():
+            if symbol in quotes and quotes[symbol]["session"] != "pre-market":
+                try:  # Yahoo's bars failed or show no trade yet: CNBC's pre-market trade, if any
+                    cnbc = parse_cnbc_quote(_fetch_json(CNBC_URLS[symbol]), symbol, fetched)
+                except Exception:
+                    continue
+                if cnbc["session"] == "pre-market":
+                    quotes[symbol] = cnbc
     saved = {}
     if failed:
         earlier = _validate_snapshot(fallback, fetched)["quotes"]
-        for symbol, problem in failed.items():
+        for symbol, reason in failed.items():
             if symbol not in quotes:  # else a pre-market trade stood in for the failed close
                 quotes[symbol] = earlier[symbol]
-                saved[symbol] = failure_reason(problem)
+                saved[symbol] = reason
     snapshot = _validate_snapshot({"schema_version": 1, "fetched_at": fetched.isoformat(),
                                    "quotes": quotes}, fetched)
     if saved:
