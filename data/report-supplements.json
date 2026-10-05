@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "2026-09-28.1",
+  "revision": "2026-10-05.1",
   "basis": "Dated supplemental inputs; NAV estimates use ending preferred shares and ordinary accrued dividends. No supplement automatically rolls into a newer balance date.",
   "balances": {
     "MSTR": {
@@ -67,6 +67,50 @@
           "https://api.strategy.com/btc/credit"
         ],
         "limitations": "Debt principal carries June 30, corroborated by current note list. Preferred estimates assume scheduled payments and no unreported issuance. The filed BTC total differs by 1 BTC from prior reported holdings plus purchases. See reconciliation-2026-09-28.json."
+      },
+      "2026-10-04": {
+        "effective_common_shares": 422070894,
+        "debt_principal": 6753703000,
+        "preferred_claims_usd": 13135898513.81911,
+        "preferred_claims_eur": 775861111.1111112,
+        "auto_reconciled": true,
+        "components": {
+          "STRF": {
+            "shares": 12839689,
+            "base": 103.572,
+            "accrual_days": 4,
+            "annual": 10.0
+          },
+          "STRC": {
+            "shares": 89853581,
+            "base": 100.0,
+            "accrual_days": 4,
+            "annual": 12.0
+          },
+          "STRK": {
+            "shares": 14020744,
+            "base": 100.0,
+            "accrual_days": 4,
+            "annual": 8.0
+          },
+          "STRD": {
+            "shares": 14024221,
+            "base": 100.0,
+            "accrual_days": 4,
+            "annual": 10.0
+          },
+          "STRE": {
+            "shares": 7750000,
+            "base": 100.0,
+            "accrual_days": 4,
+            "currency": "EUR"
+          }
+        },
+        "limitations": "Basic shares roll the reviewed count forward with 8-K ATM activity; employee issuance since review is not included. Claims: max($100, ten-close mean) plus 30/360 accrual \u2014 STRC 4 days at $12, quarterly series 4 days; scheduled payments assumed paid.",
+        "sources": [
+          "https://api.strategy.com/btc/strcKpiData",
+          "https://query1.finance.yahoo.com/v8/finance/chart/"
+        ]
       }
     },
     "ASST": {
@@ -117,6 +161,16 @@
           "https://www.sec.gov/Archives/edgar/data/1920406/000162828026034802/certi1.htm"
         ],
         "limitations": "Friday after-payment convention; conservative $100.01 certificate preference. Common capital uses complete same-week five-minute VWAP estimate before fees. See reconciliation-2026-09-28.json."
+      },
+      "2026-10-02": {
+        "debt_principal": 0,
+        "preferred_claims_usd": 1349943180.8200002,
+        "preferred_claims_eur": 0,
+        "auto_reconciled": true,
+        "limitations": "SATA claims: 13,498,082 shares at $100.01 (max of $100, ten-close mean, prior close); daily dividends assumed paid through the balance date.",
+        "sources": [
+          "https://query1.finance.yahoo.com/v8/finance/chart/SATA"
+        ]
       }
     }
   },
@@ -124,13 +178,15 @@
     "2026-08-30": 78414.14,
     "2026-09-07": 79207.14,
     "2026-09-13": 77471.9,
-    "2026-09-20": 85149.67
+    "2026-09-20": 85149.67,
+    "2026-09-27": 83539.0234375
   },
   "comparison_release_dates": {
     "2026-08-30": "2026-08-31",
     "2026-09-07": "2026-09-08",
     "2026-09-13": "2026-09-14",
-    "2026-09-20": "2026-09-21"
+    "2026-09-20": "2026-09-21",
+    "2026-09-27": "2026-09-28"
   },
   "balance_marks": {
     "2026-08-30": {
@@ -156,6 +212,21 @@
     },
     "2026-09-18": {
       "STRC": 98.51089108910891
+    },
+    "2026-09-27": {
+      "EURUSD=X": 1.1373976469039917
+    },
+    "2026-08-14": {
+      "STRC": 94.78019801980199
+    },
+    "2026-08-21": {
+      "STRC": 96.18019801980198
+    },
+    "2026-09-25": {
+      "STRC": 98.54059405940595
+    },
+    "2026-10-02": {
+      "STRC": 99.409900990099
     }
   },
   "preferred_audit_files": [
