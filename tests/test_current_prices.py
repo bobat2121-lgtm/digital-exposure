@@ -36,6 +36,13 @@ def btc_payload(price=78_863.01, observed=BTC_OBSERVED):
             "timestamp": NOW.isoformat()}
 
 
+def cnbc_payload(symbol, last, last_time, extended=None):
+    row = {"symbol": symbol, "last": last, "last_time": last_time, "curmktstatus": "REG_MKT"}
+    if extended:
+        row["ExtendedMktQuote"] = extended
+    return {"FormattedQuoteResult": {"FormattedQuote": [row]}}
+
+
 def valid_snapshot():
     quotes = {symbol: parse_yahoo_quote(yahoo_payload(symbol), symbol, NOW)
               for symbol in ("MSTR", "ASST", "STRC", "EURUSD=X")}
@@ -161,20 +168,62 @@ class CurrentPriceTests(unittest.TestCase):
         earlier["quotes"]["STRC"]["price"] = 97.0
 
         def source(url):
-            symbol = next(symbol for symbol, value in current_prices.SOURCE_URLS.items() if value == url)
-            if symbol == "STRC":
+            if url in current_prices.CNBC_URLS.values() or "STRC" in url:
                 raise HTTPError(url, 429, "Too Many Requests", None, None)
+            symbol = next(symbol for symbol, value in current_prices.SOURCE_URLS.items() if value == url)
             price = 150.0 if symbol == "MSTR" else 142.80
             return btc_payload() if symbol == "BTC-USD" else yahoo_payload(symbol, price)
 
         with patch("report.current_prices._fetch_json", side_effect=source):
             snapshot = pull_current_prices(now=NOW, fallback=earlier)
-        self.assertEqual(snapshot["saved"], {"STRC": "HTTP 429"})
+        self.assertEqual(snapshot["saved"], {"STRC": "HTTP 429; CNBC HTTP 429"})
         self.assertEqual(snapshot["quotes"]["STRC"], earlier["quotes"]["STRC"])
         self.assertEqual(snapshot["quotes"]["MSTR"]["price"], 150.0)
         with patch("report.current_prices._fetch_json", side_effect=OSError("offline")), \
-             self.assertRaises(OSError):
+             self.assertRaisesRegex(ValueError, "No price source answered"):
             pull_current_prices(now=NOW, fallback=earlier)  # every source failed: no refresh at all
+
+    def test_cnbc_stands_in_when_yahoo_refuses(self):
+        from urllib.error import HTTPError
+        session = datetime(2026, 10, 5, 14, 35, tzinfo=timezone.utc)
+
+        def source(url):
+            if url == current_prices.SOURCE_URLS["BTC-USD"]:
+                return btc_payload(observed=session - timedelta(seconds=20))
+            if url in current_prices.CNBC_URLS.values():
+                symbol = next(s for s, value in current_prices.CNBC_URLS.items() if value == url)
+                return cnbc_payload(current_prices.CNBC_SYMBOLS[symbol], "1,161.91" if symbol == "MSTR" else "99.61",
+                                    "2026-10-05T10:35:24.596-0400")
+            raise HTTPError(url, 429, "Too Many Requests", None, None)
+
+        with patch("report.current_prices._fetch_json", side_effect=source):
+            snapshot = pull_current_prices(now=session, fallback=valid_snapshot())
+        self.assertNotIn("saved", snapshot)
+        mstr = snapshot["quotes"]["MSTR"]
+        self.assertEqual((mstr["price"], mstr["session"], mstr["as_of"]), (1161.91, "regular", "2026-10-05T14:35:24.596000+00:00"))
+        self.assertEqual(mstr["source_url"], current_prices.CNBC_URLS["MSTR"])
+        self.assertEqual(load_round_trip(snapshot)["quotes"]["MSTR"], mstr)
+
+    def test_cnbc_pre_market_trade_stands_in_for_yahoo_bars(self):
+        from urllib.error import HTTPError
+        pre_open = datetime(2026, 10, 5, 12, 40, tzinfo=timezone.utc)
+        extended = {"type": "PRE_MKT", "last": "163.05", "last_time": "2026-10-05T08:36:00.000-0400"}
+
+        def source(url):
+            if url == current_prices.SOURCE_URLS["BTC-USD"]:
+                return btc_payload(observed=pre_open - timedelta(seconds=20))
+            if url in current_prices.CNBC_URLS.values():
+                symbol = next(s for s, value in current_prices.CNBC_URLS.items() if value == url)
+                return cnbc_payload(current_prices.CNBC_SYMBOLS[symbol], "160.01", "2026-10-02T16:00:00.000-0400",
+                                    extended if symbol in current_prices.EXTENDED else None)
+            raise HTTPError(url, 429, "Too Many Requests", None, None)
+
+        with patch("report.current_prices._fetch_json", side_effect=source):
+            snapshot = pull_current_prices(now=pre_open, fallback=valid_snapshot())
+        mstr, strc = snapshot["quotes"]["MSTR"], snapshot["quotes"]["STRC"]
+        self.assertEqual((mstr["price"], mstr["session"]), (163.05, "pre-market"))
+        self.assertEqual(current_prices.price_label(mstr), "pre-market 8:36 AM ET")
+        self.assertEqual((strc["price"], strc["session"]), (160.01, "close"))  # preferreds never pre-market
 
     def test_a_failed_yahoo_request_tries_the_query2_mirror_once(self):
         requested = []

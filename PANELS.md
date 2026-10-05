@@ -27,7 +27,11 @@ them, because Streamlit's own watcher only reloads sessions that were open at th
 **Prices** (`report/current_prices.py`). Before the open on a NYSE trading day (4:00 am
 ET to the open), MSTR and ASST take their latest pre-market trade (Yahoo 1-minute bars
 with extended hours, free); in the session every stock is live; otherwise (evenings,
-weekends, holidays) the close. A stock with no pre-market trade yet keeps its close.
+weekends, holidays) the close. Yahoo answers Streamlit Cloud with HTTP 429 at times (all
+morning on Oct 5, 2026), so a refused Yahoo request tries its query2 mirror, then CNBC's
+real-time quote (with its pre-market trade); a price that still fails keeps the page's last
+good quote, and the notice names it and the reason ("Saved quote for STRC (HTTP 429; CNBC
+...)"). A stock with no pre-market trade yet keeps its close.
 Preferreds never use pre-market prices. The Monday image stamps the price time under the
 handle ("Pre-market 8:11 AM ET · Mon Sep 28", or "Close · Fri Sep 25"), and each company
 card on the web shows its own.
