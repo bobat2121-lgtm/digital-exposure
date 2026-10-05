@@ -13,19 +13,19 @@
       "reportDate": "2026-09-14",
       "acceptedAt": "2026-09-28T08:00:16.000Z",
       "firstSeenAt": "2026-09-28T12:01:54.819Z",
-      "documentFetchedAt": "2026-09-28T12:01:54.960Z",
+      "documentFetchedAt": "2026-10-05T12:35:12.837Z",
       "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526403417/mstr-20260914.htm",
       "documents": [
         {
           "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526403417/mstr-20260914.htm",
-          "fetchedAt": "2026-09-28T12:01:54.960Z",
-          "sha256": "9d316dec52646c08c76bcc507cb7d9fdc63ff9529c1a5a15aff324ba17ce94fc"
+          "fetchedAt": "2026-10-05T12:35:12.837Z",
+          "sha256": "aba044fcb7ca7ab288526068aaa285a16f9b82bc95aa46a8ab111b0b4e73456d"
         }
       ],
       "status": "ready_for_review",
       "baseline": false,
       "extracted": {
-        "parserVersion": "sec-weekly-v4",
+        "parserVersion": "sec-weekly-v5",
         "periodStart": "2026-09-21",
         "periodEnd": "2026-09-27",
         "priorBalanceDate": null,
@@ -81,7 +81,7 @@
         "issues": [],
         "extractionValidated": true
       },
-      "attempts": 1,
+      "attempts": 2,
       "nextDocumentAttemptAt": 0,
       "error": null
     },
@@ -95,19 +95,19 @@
       "reportDate": "2026-09-28",
       "acceptedAt": "2026-09-28T07:59:37.000Z",
       "firstSeenAt": "2026-09-28T12:00:24.351Z",
-      "documentFetchedAt": "2026-09-28T12:00:24.408Z",
+      "documentFetchedAt": "2026-10-05T12:35:13.045Z",
       "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026063653/asst-20260928.htm",
       "documents": [
         {
           "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026063653/asst-20260928.htm",
-          "fetchedAt": "2026-09-28T12:00:24.408Z",
-          "sha256": "3b5989dfafd990eb1e921114aac7b50c82685576515ae01ab4c62a23d622b832"
+          "fetchedAt": "2026-10-05T12:35:13.045Z",
+          "sha256": "47f34d99828a3a23d1686ab04b02ffbe089e0ad825e21751c2eab291dc96eaa9"
         }
       ],
       "status": "ready_for_review",
       "baseline": false,
       "extracted": {
-        "parserVersion": "sec-weekly-v4",
+        "parserVersion": "sec-weekly-v5",
         "periodStart": "2026-09-21",
         "periodEnd": "2026-09-25",
         "priorBalanceDate": "2026-09-18",
@@ -148,7 +148,7 @@
         "issues": [],
         "extractionValidated": true
       },
-      "attempts": 1,
+      "attempts": 2,
       "nextDocumentAttemptAt": 0,
       "error": null
     },
@@ -162,19 +162,19 @@
       "reportDate": "2026-09-24",
       "acceptedAt": "2026-09-25T12:03:17.000Z",
       "firstSeenAt": "2026-09-28T10:45:22.074Z",
-      "documentFetchedAt": "2026-09-28T10:45:22.168Z",
+      "documentFetchedAt": "2026-10-05T12:35:12.893Z",
       "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526401636/mstr-20260924.htm",
       "documents": [
         {
           "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526401636/mstr-20260924.htm",
-          "fetchedAt": "2026-09-28T10:45:22.168Z",
-          "sha256": "36cb02d6719852ef81dbb753911523a042d728d2cf38df35b7be9742c889b9e1"
+          "fetchedAt": "2026-10-05T12:35:12.893Z",
+          "sha256": "7f69dd8464092fe6acbe8b5a084225ee781ab2b24f8c213384ee140702e4ead3"
         }
       ],
       "status": "not_weekly",
       "baseline": false,
       "extracted": {
-        "parserVersion": "sec-weekly-v4",
+        "parserVersion": "sec-weekly-v5",
         "periodStart": null,
         "periodEnd": null,
         "priorBalanceDate": null,
@@ -192,7 +192,7 @@
         "issues": [],
         "extractionValidated": false
       },
-      "attempts": 1,
+      "attempts": 2,
       "nextDocumentAttemptAt": 0,
       "error": null
     },
@@ -803,7 +803,7 @@
           "weekly_btc_purchases": 1800
         },
         "priorFacts": {
-          "cash_and_equivalents_usd": 171900000,
+          "cash_and_equivalents_usd": 183500000,
           "held_strc_fair_value_usd": 48571000,
           "held_strc_shares": 505000,
           "btc_holdings": 21356,
