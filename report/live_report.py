@@ -182,13 +182,22 @@ def _vwap(filing):
     return estimate
 
 
+def _same_facts(prior, row) -> bool:
+    """Both receipts read the same figures from the document (the parser version aside)."""
+    def facts(filing):
+        return {key: value for key, value in filing.get("extracted", {}).items() if key != "parserVersion"}
+    return facts(prior) == facts(row)
+
+
 def _merged_filings(feed, checkpoint):
     rows = {row["accession"]: row for row in checkpoint.get("filings", []) if _eligible(row)}
     for row in feed.get("filings", []):
         if _eligible(row):
             prior = rows.get(row["accession"])
             if prior and prior.get("documents") and row.get("documents"):
-                if prior["documents"][0].get("sha256") != row["documents"][0].get("sha256"):
+                # SEC serves a re-fetched document with different bytes (the Worker's parser upgrade
+                # re-fetched recent 8-Ks on Oct 5, 2026), so only a change in what it reports stops the page.
+                if prior["documents"][0].get("sha256") != row["documents"][0].get("sha256") and not _same_facts(prior, row):
                     raise ValueError("A verified filing document changed; reconciliation is required")
             rows[row["accession"]] = row
     return list(rows.values())

@@ -3,6 +3,29 @@
 Public report: [digital-credit-report.streamlit.app](https://digital-credit-report.streamlit.app/).
 Worker: [capital-report.alatimore06370.workers.dev](https://capital-report.alatimore06370.workers.dev/).
 
+## Quarter-end weeks: parser `sec-weekly-v5` — October 5, 2026
+
+Strategy's Oct 5 8-K reported the week in two parts, Sep 28–30 and Oct 1–4, because the
+quarter ended mid-week. Each part had its own issuance, BTC and repurchase tables, and the
+ending holdings moved to separate "As of" tables. Parser v4 took the first part's dates and
+the second part's figures, flagged "Multiple reporting periods" and left the filing `partial`,
+so the Monday edition stayed on the prior week. The same 8-K also stated USD Cash in millions
+("$833.4 million") and dropped "the payment of" from the USD Reserve dividend sentence.
+
+Parser `sec-weekly-v5` (deployed 8:34 am ET, version `f9f100dc-7abe-45b8-b3f1-a9c50ee80f77`)
+adds up parts that join day to day into one week (Sep 28–Oct 4: 334 BTC for $28.7m, STRC
+buybacks 1,773,802 shares for $176.3m), takes holdings and cost basis from the "As of" table
+on the balance date (848,000 BTC), and reads balances in billions or millions. Parts with a
+gap, an overlap or a missing table still go to review. Output on every earlier fixture is
+unchanged; the Oct 5 filing is a fixture (`test/fixtures/strategy-20261005.html`).
+
+The version bump made the Worker re-fetch the 8-Ks from the last 14 days. SEC served
+different bytes for the Sep 28 documents, so their hashes no longer matched
+`data/latest-report-filings.json` and `live_report` stopped the Monday tab with "A verified
+filing document changed". The checkpoint rows were refreshed (c1cf16e, 4de2ce3; the figures
+were identical), and `live_report` now stops only when the figures read from a re-fetched
+document change, not its bytes.
+
 ## Rates relay Action — September 30, 2026
 
 FRED's CSV service stalls for Streamlit Community Cloud, so the Coupon Sheet's ICE BofA IG

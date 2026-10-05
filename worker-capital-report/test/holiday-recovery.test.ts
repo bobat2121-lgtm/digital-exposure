@@ -72,7 +72,7 @@ describe("authenticated holiday recovery", () => {
     expect(await issuer.poll("MSTR")).toMatchObject({ outcome: "ok", fetched: 1 });
     const upgraded = await issuer.filing(record.accession);
     expect(upgraded).toMatchObject({ status: "ready_for_review", firstSeenAt: record.firstSeenAt, acceptedAt: record.acceptedAt,
-      extracted: { parserVersion: "sec-weekly-v4", facts: { btc_holdings: 845050, weekly_btc_purchases: 0, weekly_btc_sales: 0 } } });
+      extracted: { parserVersion: "sec-weekly-v5", facts: { btc_holdings: 845050, weekly_btc_purchases: 0, weekly_btc_sales: 0 } } });
     await evictDurableObject(issuer); await evictDurableObject(notifier);
     vi.setSystemTime(new Date(Date.now() + 30_000));
     expect(await issuer.poll("MSTR")).toMatchObject({ outcome: "ok", fetched: 0 });
@@ -103,8 +103,8 @@ describe("authenticated holiday recovery", () => {
     if (kind === "before_activation") record.firstSeenAt = "2026-09-07T23:59:59Z";
     if (kind === "too_old") record.acceptedAt = "2026-08-01T12:00:00Z";
     if (kind === "amendment") record.form = "8-K/A";
-    if (kind === "same_version") record.extracted!.parserVersion = "sec-weekly-v4";
-    if (kind === "newer_version") record.extracted!.parserVersion = "sec-weekly-v5";
+    if (kind === "same_version") record.extracted!.parserVersion = "sec-weekly-v5";
+    if (kind === "newer_version") record.extracted!.parserVersion = "sec-weekly-v6";
     await seed(record);
     const network = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(null, { status: 304 }));
     expect(await env.ISSUER_POLLER.getByName("MSTR").poll("MSTR")).toMatchObject({ fetched: 0 });

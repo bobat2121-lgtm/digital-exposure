@@ -103,9 +103,19 @@ class LiveReportTests(unittest.TestCase):
 
     def test_changed_document_hash_requires_reconciliation(self):
         changed = deepcopy(self.feed)
-        current_rows(changed)[0]["documents"][0]["sha256"] = "0" * 64
+        row = current_rows(changed)[0]
+        row["documents"][0]["sha256"] = "0" * 64
+        row["extracted"]["facts"]["btc_holdings"] += 1
         with self.assertRaisesRegex(ValueError, "document changed"):
             self.resolve(changed)
+
+    def test_refetched_document_with_the_same_facts_is_the_same_filing(self):
+        # A parser upgrade re-fetches the 8-K; SEC's bytes differ, the figures read from it do not.
+        refetched = deepcopy(self.feed)
+        for row in current_rows(refetched):
+            row["documents"][0]["sha256"] = "0" * 64
+            row["extracted"]["parserVersion"] = "sec-weekly-v5"
+        self.assertEqual(self.resolve(refetched).report, self.resolve().report)
 
     def test_amendment_is_visible_and_does_not_silently_overwrite(self):
         amended = deepcopy(self.feed)

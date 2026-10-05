@@ -20,6 +20,8 @@ The current Strategy parser extracts explicit weekly BTC purchases and sales, en
 
 The Strive parser extracts both balance dates, BTC, cash, STRC holdings, Class A/B and assumed-diluted share counts, SATA share counts, and net share changes. It does not label net share growth as actual gross issuance cash. Strive's common-capital VWAP estimate and SATA $100 assumption remain separate report calculations.
 
+Parser `sec-weekly-v5` (Oct 5, 2026) also reads a week reported in consecutive parts, as Strategy does when a quarter ends mid-week (Sep 28–30 and Oct 1–4, 2026): `periodStart`/`periodEnd` span the whole week, the parts' BTC purchases, BTC cost, issuance and repurchases are added up, and holdings and cost basis come from the "As of" table on the balance date. Parts must join day to day with every table present, or the filing stays `partial` for review. USD Reserve and USD Cash balances may be stated in billions or millions. Earlier parser behavior is otherwise unchanged.
+
 Parser `sec-weekly-v4` keeps `facts.weekly_btc_purchases` and optional `facts.weekly_btc_sales` as separate, nonnegative **gross BTC quantities**. Missing activity is unknown; an explicit zero remains zero. Supported inputs include labelled weekly quantity tables, period-scoped issuer prose, approximate trade/holdings quantities, and explicit statements of no BTC purchases/sales or ATM issuance. Dollar proceeds, equity/preferred sales, cumulative trades and decreases in holdings are not BTC sale quantities. Unknown layouts or malformed/conflicting quantities require review. Feed schema remains version 1; no price inputs change.
 
 The same parser also records dollar facts where Strategy's 8-K states them: `weekly_btc_cost_usd` (the BTC table's

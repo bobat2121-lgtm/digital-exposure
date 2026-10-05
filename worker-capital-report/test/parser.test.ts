@@ -5,7 +5,26 @@ import strive from "./fixtures/strive-20260831.html?raw";
 import strategyHoliday from "./fixtures/strategy-20260908.html?raw";
 import striveHoliday from "./fixtures/strive-20260908.html?raw";
 import strategyUsdCash from "./fixtures/strategy-20260921.html?raw";
+import strategyQuarterEnd from "./fixtures/strategy-20261005.html?raw";
 describe("actual SEC weekly HTML fixtures", () => {
+  it("adds up a quarter-end week reported in two parts (Sep 28–30 and Oct 1–4)", () => {
+    const result = extractWeekly(strategyQuarterEnd, "MSTR");
+    expect(result.issues).toEqual([]); expect(result.missing).toEqual([]); expect(result.extractionValidated).toBe(true);
+    expect(result.periodStart).toBe("2026-09-28"); expect(result.periodEnd).toBe("2026-10-04"); expect(result.balanceDate).toBe("2026-10-04");
+    expect(result.facts).toEqual({ weekly_btc_purchases: 334, weekly_btc_cost_usd: 28700000,
+      btc_holdings: 848000, btc_cost_basis_usd: 63970000000, btc_average_cost_usd: 75440.7,
+      common_issued_shares: 92894, common_issuance_proceeds_usd: 15700000, common_repurchased_shares: 0, common_repurchases_cash_usd: 0,
+      usd_reserve_usd: 4880000000, usd_cash_usd: 833400000, usd_reserve_dividends_interest_usd: 142500000 });
+    expect(result.securities.STRC).toEqual({ issuedShares: 0, netIssuanceProceedsUsd: 0, repurchasedShares: 1773802, repurchaseCashUsd: 176300000 });
+    for (const ticker of ["STRF", "STRK", "STRD"]) expect(result.securities[ticker]).toEqual({ issuedShares: 0, netIssuanceProceedsUsd: 0, repurchasedShares: 0, repurchaseCashUsd: 0 });
+  });
+  it("holds a two-part week for review when its parts do not join or one part's table is missing", () => {
+    const gap = extractWeekly(strategyQuarterEnd.replaceAll("October 1, 2026", "October 2, 2026"), "MSTR");
+    expect(gap.extractionValidated).toBe(false); expect(gap.issues).toContain("Multiple reporting periods require review");
+    const last = strategyQuarterEnd.lastIndexOf("Shares Repurchased");
+    const missing = extractWeekly(`${strategyQuarterEnd.slice(0, last)}Shares Withheld${strategyQuarterEnd.slice(last + "Shares Repurchased".length)}`, "MSTR");
+    expect(missing.extractionValidated).toBe(false); expect(missing.issues).toContain("Repurchase table missing for part of the reporting period");
+  });
   it("extracts Strategy's holiday zero-ATM and zero-BTC disclosure with approximate ending holdings", () => {
     const result = extractWeekly(strategyHoliday, "MSTR");
     expect(result.issues).toEqual([]); expect(result.missing).toEqual([]); expect(result.extractionValidated).toBe(true);
