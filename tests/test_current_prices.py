@@ -154,6 +154,47 @@ class CurrentPriceTests(unittest.TestCase):
                         save_current_prices(snapshot, path, now=NOW)
                 self.assertEqual(path.read_bytes(), original)
 
+    def test_with_a_fallback_a_failed_source_keeps_its_saved_quote_and_the_rest_stay_live(self):
+        # Oct 5, 2026: one refused request had turned every price on the page into a saved quote.
+        from urllib.error import HTTPError
+        earlier = valid_snapshot()
+        earlier["quotes"]["STRC"]["price"] = 97.0
+
+        def source(url):
+            symbol = next(symbol for symbol, value in current_prices.SOURCE_URLS.items() if value == url)
+            if symbol == "STRC":
+                raise HTTPError(url, 429, "Too Many Requests", None, None)
+            price = 150.0 if symbol == "MSTR" else 142.80
+            return btc_payload() if symbol == "BTC-USD" else yahoo_payload(symbol, price)
+
+        with patch("report.current_prices._fetch_json", side_effect=source):
+            snapshot = pull_current_prices(now=NOW, fallback=earlier)
+        self.assertEqual(snapshot["saved"], {"STRC": "HTTP 429"})
+        self.assertEqual(snapshot["quotes"]["STRC"], earlier["quotes"]["STRC"])
+        self.assertEqual(snapshot["quotes"]["MSTR"]["price"], 150.0)
+        with patch("report.current_prices._fetch_json", side_effect=OSError("offline")), \
+             self.assertRaises(OSError):
+            pull_current_prices(now=NOW, fallback=earlier)  # every source failed: no refresh at all
+
+    def test_a_failed_yahoo_request_tries_the_query2_mirror_once(self):
+        requested = []
+
+        def response(request, timeout):
+            requested.append(request.full_url)
+            if request.full_url.startswith(current_prices.YAHOO_HOST):
+                raise OSError("refused")
+            return BytesIO(json.dumps(yahoo_payload("MSTR")).encode("utf-8"))
+
+        with patch("report.current_prices.urlopen", side_effect=response):
+            payload = current_prices._fetch_json(current_prices.SOURCE_URLS["MSTR"])
+        self.assertEqual(payload["chart"]["result"][0]["meta"]["symbol"], "MSTR")
+        self.assertEqual(requested, [current_prices.SOURCE_URLS["MSTR"],
+                                     current_prices.SOURCE_URLS["MSTR"].replace("query1", "query2")])
+        with patch("report.current_prices.urlopen", side_effect=OSError("down")) as opened, \
+             self.assertRaises(OSError):
+            current_prices._fetch_json(current_prices.SOURCE_URLS["BTC-USD"])  # strategy.com has no mirror
+        self.assertEqual(opened.call_count, 1)
+
     def test_cache_rejects_incomplete_mislabeled_invalid_and_future_data_before_writing(self):
         invalid = []
         for field, value in (("price", math.nan), ("price", -1), ("symbol", "OTHER"),
