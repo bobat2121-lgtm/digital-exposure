@@ -812,13 +812,24 @@ def render_png(preview: MondayPreview, theme: themes.Theme = themes.DEFAULT, var
     return png, canvas.overflows
 
 
+def _stated_dividends_note(e) -> str:
+    """Strategy's 8-K dividends and interest beside DIVs. DIVs is what the cash change leaves, so it is net of
+    interest earned on cash as well as the 8-K's rounding (Oct 5, 2026: $142.5m stated, $117.3m DIVs, after
+    $22.2m of STRC buybacks were funded with interest earned)."""
+    text = f"Strategy's 8-K put the week's dividends and interest at {_money(e.stated_dividends, False)}"
+    gap = None if e.dividends is None else e.stated_dividends - e.dividends
+    if gap is not None and abs(gap) >= 50_000:
+        text += f", {_money(abs(gap), False)} {'more' if gap > 0 else 'less'} than DIVs"
+    return (text + ". DIVs is what the week's cash change leaves after buybacks and bitcoin, so it is net of other "
+            "income, such as interest earned on cash, and of the 8-K's rounding of balances to $0.01B.")
+
+
 def notes(preview: MondayPreview) -> list[str]:
     """Footnotes for the web page; the X image carries none."""
     sources = " · ".join(f"{e.ticker}: {e.coverage_source}" for e in preview.extras.values())
     windows = " · ".join(f"{e.ticker} since {_short(e.window['start'])}" for e in preview.extras.values() if e.window.get("start"))
     costs = " · ".join(f"{e.ticker}: {e.btc_cost_source}" for e in preview.extras.values() if e.btc_cost_source)
-    stated = " ".join(f"Strategy's 8-K put the week's dividends and interest at {_money(e.stated_dividends, False)}; the "
-                      "difference is rounding in its $0.01B balances." for e in preview.extras.values()
+    stated = " ".join(_stated_dividends_note(e) for e in preview.extras.values()
                       if e.ticker == "MSTR" and e.stated_dividends is not None)
     return [line for line in (
         "Capital raised = ATM issuance − repurchases, common and preferred. Cash is an existing balance, never counted as a raise. "
