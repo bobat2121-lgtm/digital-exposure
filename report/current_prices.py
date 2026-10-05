@@ -14,6 +14,7 @@ close. Preferreds never use pre-market prices. Each quote carries its ``session`
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, time, timedelta, timezone
 from functools import lru_cache
+from http.client import HTTPException
 import json
 from math import isfinite
 import os
@@ -223,7 +224,10 @@ def _validate_snapshot(snapshot: dict, now: datetime) -> dict:
     return {"schema_version": 1, "fetched_at": fetched.isoformat(), "quotes": quotes}
 
 
-def _fetch_json(url: str) -> dict:
+YAHOO_HOST, YAHOO_MIRROR = "https://query1.finance.yahoo.com/", "https://query2.finance.yahoo.com/"
+
+
+def _fetch_once(url: str) -> dict:
     request = Request(url, headers={
         "User-Agent": "Mozilla/5.0 (compatible; MondayCapitalReport/1.0)",
         "Accept": "application/json",
@@ -232,26 +236,76 @@ def _fetch_json(url: str) -> dict:
         return json.load(response)
 
 
-def pull_current_prices(*, now: datetime | None = None) -> dict:
-    """Fetch and validate all five prices, returning no partial update.
+def _fetch_json(url: str) -> dict:
+    """Yahoo serves the same chart API from query2, so a refused or failed query1 request tries it once."""
+    try:
+        return _fetch_once(url)
+    except (OSError, ValueError, HTTPException):
+        if not url.startswith(YAHOO_HOST):
+            raise
+        return _fetch_once(YAHOO_MIRROR + url[len(YAHOO_HOST):])
+
+
+def failure_reason(error: Exception) -> str:
+    """A short reason for the page's notice: 'HTTP 429', 'URLError: timed out'."""
+    code = getattr(error, "code", None)
+    if isinstance(code, int):
+        return f"HTTP {code}"
+    return f"{type(error).__name__}: {error}"[:120]
+
+
+def pull_current_prices(*, now: datetime | None = None, fallback: dict | None = None) -> dict:
+    """Fetch and validate all five prices.
+
+    Without ``fallback`` any failure raises and nothing partial is returned. With an earlier complete
+    snapshot as ``fallback`` (the page passes its last good copy), a source that fails keeps that
+    snapshot's quote, at its own earlier observation time, and the result lists it under ``"saved"``
+    with the reason, so one refused request no longer throws away the other live prices (Oct 5, 2026:
+    the page sat on saved quotes all morning). If every source fails it still raises.
 
     Call save_current_prices only after this function succeeds. No cache is
     modified during network requests or parsing.
     """
     if now is not None:
         _now(now)
+
+    def attempt(url):
+        try:
+            return _fetch_json(url), None
+        except Exception as error:  # reported per source below
+            return None, error
+
     with ThreadPoolExecutor(max_workers=5) as pool:
-        payloads = dict(zip(REQUIRED_SYMBOLS, pool.map(_fetch_json, (
-            SOURCE_URLS[symbol] for symbol in REQUIRED_SYMBOLS
-        ))))
+        results = dict(zip(REQUIRED_SYMBOLS, pool.map(attempt, (SOURCE_URLS[symbol] for symbol in REQUIRED_SYMBOLS))))
     fetched = _now(now)
-    quotes = {symbol: parse_yahoo_quote(payloads[symbol], symbol, fetched)
-              for symbol in YAHOO_SYMBOLS}
-    quotes["BTC-USD"] = parse_btc_quote(payloads["BTC-USD"], fetched)
+    quotes, failed = {}, {}
+    for symbol in REQUIRED_SYMBOLS:
+        payload, error = results[symbol]
+        try:
+            if error is not None:
+                raise error
+            quotes[symbol] = (parse_btc_quote(payload, fetched) if symbol == "BTC-USD"
+                              else parse_yahoo_quote(payload, symbol, fetched))
+        except Exception as problem:
+            if fallback is None:
+                raise
+            failed[symbol] = problem
+    if len(failed) == len(REQUIRED_SYMBOLS):
+        raise next(iter(failed.values()))
     if market_session(fetched) == "pre-market":
         quotes.update(_pre_market(fetched))
-    return _validate_snapshot({"schema_version": 1, "fetched_at": fetched.isoformat(),
-                               "quotes": quotes}, fetched)
+    saved = {}
+    if failed:
+        earlier = _validate_snapshot(fallback, fetched)["quotes"]
+        for symbol, problem in failed.items():
+            if symbol not in quotes:  # else a pre-market trade stood in for the failed close
+                quotes[symbol] = earlier[symbol]
+                saved[symbol] = failure_reason(problem)
+    snapshot = _validate_snapshot({"schema_version": 1, "fetched_at": fetched.isoformat(),
+                                   "quotes": quotes}, fetched)
+    if saved:
+        snapshot["saved"] = saved
+    return snapshot
 
 
 def load_current_prices(path: Path | None = None, *, now: datetime | None = None) -> dict | None:
