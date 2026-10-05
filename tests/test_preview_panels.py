@@ -194,6 +194,15 @@ class MondayPreviewTests(unittest.TestCase):
             self.assertAlmostEqual(extra.btc_cost + extra.dividends, extra.net_funding)
             self.assertFalse(extra.btc_cost_source.startswith("estimate"), extra.ticker)
 
+    def test_footnote_gives_the_gap_to_the_8k_dividends_and_why(self):
+        # Oct 5, 2026: $142.5m stated, $117.3m DIVs; $22.2m of buybacks were paid from interest earned.
+        from dataclasses import replace
+        note = monday_preview._stated_dividends_note(
+            replace(self.preview.extras["MSTR"], stated_dividends=142_500_000, dividends=117_300_000))
+        self.assertIn("$142.5m, $25.2m more than DIVs", note)
+        self.assertIn("interest earned on cash", note)
+        self.assertNotIn("the difference is rounding", " ".join(monday_preview.notes(self.preview)))
+
     def test_filed_bitcoin_cost_wins_over_the_transcribed_history(self):
         company = next(c for c in self.report.companies if c.ticker == "MSTR")
         cost, source = monday_preview._btc_cost("MSTR", company, {"weekly_btc_cost_usd": 1.0, "weekly_btc_purchases": 950},

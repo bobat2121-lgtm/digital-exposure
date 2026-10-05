@@ -139,7 +139,7 @@ def audit_monday(report, monday, extras, rows, now):
         if t == "MSTR" and e.stated_dividends is not None and e.dividends is not None:
             compare("monday", "MSTR.divs_8k", "MSTR DIVs vs 8-K dividends + interest", e.dividends, e.stated_dividends, 20e6,
                     warn_only=True, source="8-K: USD Reserve used for dividends and interest",
-                    detail="the 8-K rounds balances to $0.01B, so up to ~$20m of rounding lands in DIVs")
+                    detail="DIVs is net of interest earned on cash and the 8-K's $0.01B rounding (up to ~$20m)")
         if t == "MSTR":
             annual = number(strategy_btc.get("totalAnnualDividends"))
             compare("monday", "MSTR.btc_kpi", "MSTR BTC held vs strategy.com", cur.btc_holdings, number(strategy_btc.get("btcHoldings")),

@@ -59,6 +59,13 @@ def get(name: str, fetch, ttl: float, *, wait: float = 10.0, block: bool = False
         return deepcopy(entry.value), time.monotonic() - entry.at
 
 
+def last(name: str):
+    """A copy of the latest good value, or None, without starting a refresh."""
+    with _lock:
+        entry = _entries.get(name)
+        return deepcopy(entry.value) if entry is not None and entry.value is not None else None
+
+
 def warm(sources: dict) -> None:
     """Start fetching every source that has no copy yet: {name: fetch}. Returns at once."""
     with _lock:

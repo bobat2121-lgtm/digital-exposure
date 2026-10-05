@@ -30,12 +30,20 @@ TABS = {"monday": "Monday · Accretion Ledger", "wednesday": "Wednesday · Coupo
 TTL = {"extras": 900, "prices": 120, "feed": 120, "friday": 900, "treasury": 120}
 FIRST_WAIT = {"extras": 12, "prices": 8, "feed": 8, "friday": 30, "treasury": 6}
 STALE_QUOTES = 1800  # a price copy older than this is labelled as saved quotes
+SYMBOL_NAMES = {"EURUSD=X": "EUR/USD", "BTC-USD": "BTC"}
+
+
+def _pull_prices():
+    """Prices for the page. A source that fails keeps the page's last good quote for it (else the committed
+    snapshot's), so one refused request no longer turns every price into a saved quote."""
+    from panels import live
+    from report.current_prices import load_current_prices, pull_current_prices
+    return pull_current_prices(fallback=live.last("prices") or load_current_prices())
 
 
 def _fetchers():
     from friday.live_inputs import fetch_snapshot
     from panels.extras import fetch_live_treasury, load_extras
-    from report.current_prices import pull_current_prices
     from report.filing_monitor import load_monitor_snapshot
 
     def feed():
@@ -43,7 +51,7 @@ def _fetchers():
         if not snapshot.feed:
             raise ValueError("filing feed unavailable")
         return snapshot.feed
-    return {"extras": load_extras, "prices": pull_current_prices, "feed": feed, "friday": fetch_snapshot,
+    return {"extras": load_extras, "prices": _pull_prices, "feed": feed, "friday": fetch_snapshot,
             "treasury": fetch_live_treasury}
 
 
@@ -66,16 +74,25 @@ def _extras():
 
 
 def _prices(fresh: bool = False):
-    """(prices, saved?) — fresh waits for prices under a minute old: the X image uses them."""
+    """(prices, saved-quotes notice or "") — fresh waits for prices under a minute old: the X image uses them.
+    The notice names the prices that are saved and why the refresh failed."""
     from panels import live
-    from report.current_prices import load_current_prices, pull_current_prices
+    from report.current_prices import load_current_prices
     if fresh:
-        value, age = live.get("prices", pull_current_prices, 60, wait=8, block=True)
+        value, age = live.get("prices", _pull_prices, 60, wait=8, block=True)
     else:
         value, age = _live("prices")
+    error = (live.status().get("prices") or (None, ""))[1]
+    reason = f": {error}" if error else ""
     if value is None:
-        return load_current_prices(), True
-    return value, age > STALE_QUOTES
+        return load_current_prices(), f"Saved quotes (price refresh unavailable{reason})."
+    if age > STALE_QUOTES:
+        return value, f"Saved quotes (price refresh unavailable{reason})."
+    saved = value.get("saved") or {}
+    if saved:
+        names = ", ".join(f"{SYMBOL_NAMES.get(symbol, symbol)} ({why})" for symbol, why in saved.items())
+        return value, f"Saved quote for {names}; the other prices are live."
+    return value, ""
 
 
 def _treasury(fresh: bool = False) -> dict:
@@ -123,7 +140,7 @@ def monday_report():
     from panels.monday_preview import audit_rows, notes
     preview, notice, saved = _monday()
     return {"preview": preview, "audit": audit_rows(preview), "notes": notes(preview),
-            "notices": [line for line in (notice, "Saved quotes (price refresh unavailable)." if saved else "") if line]}
+            "notices": [line for line in (notice, saved) if line]}
 
 
 def wednesday_report(fresh: bool = False):
