@@ -187,8 +187,10 @@ then what it did per share.
       cost for the same dates. If neither exists, BTC bought × the week's average
       close is used and the audit flags it.
     - When Strategy's 8-K states its dividends and interest (Sep 14–20: $57.4m),
-      the footnote shows it. DIVs can differ by a few million because the 8-K
-      rounds balances to $0.01B.
+      the footnote shows it and the gap to DIVs. DIVs is what the week's cash
+      change leaves, so it is net of interest earned on cash as well as the 8-K's
+      $0.01B rounding (Sep 28–Oct 4: $142.5m stated, $117.3m DIVs, after $22.2m of
+      STRC buybacks were funded with interest earned).
   - **B · Ledger:** common ATM + preferred ATM = raised, as a short statement, with
     cash below.
   - **A · Headline:** common ATM and preferred ATM as two large tiles, then one
