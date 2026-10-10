@@ -1,0 +1,1110 @@
+{
+ "generated_at": "2026-10-09T21:11:50.198978-04:00",
+ "summary": {
+  "PASS": 101,
+  "WARN": 2,
+  "FAIL": 6
+ },
+ "monday_notice": null,
+ "monday_heads_up": [],
+ "checks": [
+  {
+   "panel": "sources",
+   "id": "strategy",
+   "label": "strategy.com KPIs",
+   "status": "PASS",
+   "value": "2026-10-09",
+   "reference": "\u2264 1 business days",
+   "detail": "0 business days old",
+   "source": "api.strategy.com"
+  },
+  {
+   "panel": "sources",
+   "id": "strive",
+   "label": "Strive dashboard",
+   "status": "PASS",
+   "value": "2026-10-09",
+   "reference": "\u2264 1 business days",
+   "detail": "0 business days old",
+   "source": "strive.com"
+  },
+  {
+   "panel": "sources",
+   "id": "onchain",
+   "label": "Checkonchain charts",
+   "status": "PASS",
+   "value": "2026-10-09",
+   "reference": "\u2264 2 business days",
+   "detail": "0 business days old",
+   "source": "checkonchain.com"
+  },
+  {
+   "panel": "sources",
+   "id": "yahoo.STRC",
+   "label": "Yahoo STRC",
+   "status": "PASS",
+   "value": "2026-10-09",
+   "reference": "\u2264 1 business days",
+   "detail": "0 business days old",
+   "source": "query1.finance.yahoo.com"
+  },
+  {
+   "panel": "sources",
+   "id": "yahoo.SATA",
+   "label": "Yahoo SATA",
+   "status": "PASS",
+   "value": "2026-10-09",
+   "reference": "\u2264 1 business days",
+   "detail": "0 business days old",
+   "source": "query1.finance.yahoo.com"
+  },
+  {
+   "panel": "sources",
+   "id": "yahoo.BTC-USD",
+   "label": "Yahoo BTC-USD",
+   "status": "PASS",
+   "value": "2026-10-09",
+   "reference": "\u2264 1 business days",
+   "detail": "0 business days old",
+   "source": "query1.finance.yahoo.com"
+  },
+  {
+   "panel": "sources",
+   "id": "yahoo.DX-Y.NYB",
+   "label": "Yahoo DX-Y.NYB",
+   "status": "PASS",
+   "value": "2026-10-09",
+   "reference": "\u2264 1 business days",
+   "detail": "0 business days old",
+   "source": "query1.finance.yahoo.com"
+  },
+  {
+   "panel": "sources",
+   "id": "fomc",
+   "label": "Fed FOMC calendar parsed",
+   "status": "PASS",
+   "value": "2026-10-28",
+   "reference": null,
+   "detail": "56 meetings",
+   "source": "federalreserve.gov"
+  },
+  {
+   "panel": "sources",
+   "id": "earnings.MSTR",
+   "label": "MSTR next earnings date",
+   "status": "PASS",
+   "value": "2026-10-29",
+   "reference": null,
+   "detail": "",
+   "source": "api.nasdaq.com"
+  },
+  {
+   "panel": "sources",
+   "id": "earnings.ASST",
+   "label": "ASST next earnings date",
+   "status": "PASS",
+   "value": "2026-11-09",
+   "reference": null,
+   "detail": "Nasdaq estimate, not shown; the calendar waits for the confirmed date",
+   "source": "api.nasdaq.com"
+  },
+  {
+   "panel": "sources",
+   "id": "snapshot",
+   "label": "No section fell back to the saved snapshot",
+   "status": "PASS",
+   "value": "none",
+   "reference": "none",
+   "detail": "",
+   "source": "panels.extras"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.sats",
+   "label": "MSTR sats per share",
+   "status": "PASS",
+   "value": 200914.0,
+   "reference": 200914.11468,
+   "detail": "gap 0.1147",
+   "source": "BTC held \u00f7 basic shares"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.nav_ps",
+   "label": "MSTR NAV per share",
+   "status": "PASS",
+   "value": 130.26,
+   "reference": 130.260476,
+   "detail": "gap 0.0004764",
+   "source": "(BTC \u00d7 price + cash \u2212 debt \u2212 preferred claims) \u00f7 basic shares"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.price_nav",
+   "label": "MSTR price / NAV",
+   "status": "PASS",
+   "value": 1.18,
+   "reference": 1.184857,
+   "detail": "gap 0.004857",
+   "source": "price \u00f7 NAV per share"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.amplification",
+   "label": "MSTR amplification (\u00d7) vs strategy.com",
+   "status": "PASS",
+   "value": 1.2532,
+   "reference": 1.2532,
+   "detail": "gap 0",
+   "source": "bitcoinKpis.amplification (BTC reserve \u00f7 net BTC reserve)"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.amp_model",
+   "label": "MSTR amplification: 8-K balances vs strategy.com",
+   "status": "PASS",
+   "value": 1.273661,
+   "reference": 1.2532,
+   "detail": "the weekly change uses this model; claims include accrued dividends, strategy.com uses notional \u00b7 gap 0.02046",
+   "source": "BTC value \u00f7 (BTC + cash \u2212 debt \u2212 preferred claims)"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.raised",
+   "label": "MSTR raised = common + preferred",
+   "status": "PASS",
+   "value": -160600000,
+   "reference": -160600000,
+   "detail": "gap 0",
+   "source": "ATM common + preferred"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.cash_change",
+   "label": "MSTR cash change",
+   "status": "PASS",
+   "value": -306600000,
+   "reference": -306600000,
+   "detail": "gap 0",
+   "source": "liquid assets this week \u2212 last week"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.funding",
+   "label": "MSTR funding = raised \u2212 cash change",
+   "status": "PASS",
+   "value": 146000000,
+   "reference": 146000000,
+   "detail": "gap 0",
+   "source": "waterfall arithmetic"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.btc_cost",
+   "label": "MSTR BTC (bitcoin cost)",
+   "status": "PASS",
+   "value": 28700000,
+   "reference": null,
+   "detail": "SEC 8-K aggregate purchase price",
+   "source": "SEC 8-K aggregate purchase price"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.btc_divs",
+   "label": "MSTR BTC + DIVs = funding",
+   "status": "PASS",
+   "value": 146000000,
+   "reference": 146000000,
+   "detail": "gap 0",
+   "source": "waterfall arithmetic"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.in_out",
+   "label": "MSTR waterfall: money in = money out",
+   "status": "PASS",
+   "value": 322300000.0,
+   "reference": 322300000.0,
+   "detail": "gap 0",
+   "source": "gross issuance, buybacks, cash change, BTC and DIVs"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.divs_8k",
+   "label": "MSTR DIVs vs 8-K dividends + interest",
+   "status": "WARN",
+   "value": 117300000,
+   "reference": 142500000,
+   "detail": "DIVs is net of interest earned on cash and the 8-K's $0.01B rounding (up to ~$20m) \u00b7 gap 2.52e+07",
+   "source": "8-K: USD Reserve used for dividends and interest"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.btc_kpi",
+   "label": "MSTR BTC held vs strategy.com",
+   "status": "WARN",
+   "value": 848000,
+   "reference": 848000.3,
+   "detail": "strategy.com updates after each purchase; a newer purchase shows as a gap \u00b7 gap 0.3",
+   "source": "api.strategy.com bitcoinKpis.btcHoldings"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.debt_kpi",
+   "label": "MSTR debt (carried forward) vs strategy.com",
+   "status": "PASS",
+   "value": 6753.703,
+   "reference": 6714.0,
+   "detail": "debt is carried forward from the last reviewed reconciliation \u00b7 gap 0.59%",
+   "source": "api.strategy.com mstrKpiData.debt ($m)"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.shares_kpi",
+   "label": "MSTR shares vs strategy.com market cap \u00f7 price",
+   "status": "PASS",
+   "value": 422070894,
+   "reference": 422068161.20254,
+   "detail": "roll-forward misses non-ATM issuance such as employee awards \u00b7 gap 0.00%",
+   "source": "mstrKpiData.marketCap \u00f7 ufPrice (market cap rounded to $1m)"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.pref_kpi",
+   "label": "MSTR preferred claims vs strategy.com preferred notional",
+   "status": "PASS",
+   "value": 14005.328475,
+   "reference": 13946.0,
+   "detail": "claims include accrued dividends and STRF's price floor; a new series would open a large gap \u00b7 gap 0.43%",
+   "source": "mstrKpiData.pref ($m)"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.usd_cover",
+   "label": "MSTR USD cover months vs strategy.com",
+   "status": "PASS",
+   "value": 43.351675,
+   "reference": 43.351675,
+   "detail": "gap 0",
+   "source": "bitcoinKpis.usdMonthsOfDividends"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.coverage",
+   "label": "MSTR coverage years vs strategy.com",
+   "status": "PASS",
+   "value": 47.910133,
+   "reference": 47.9086,
+   "detail": "BTC price timing differs \u00b7 gap 0.00%",
+   "source": "bitcoinKpis.totalYearsOfCoverage"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.breakeven",
+   "label": "MSTR BTC break-even vs strategy.com",
+   "status": "PASS",
+   "value": 2.257541,
+   "reference": 2.2575,
+   "detail": "BTC price timing differs \u00b7 gap 4.144e-05",
+   "source": "bitcoinKpis.btcBreakevenArr"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.cover_formula",
+   "label": "MSTR (reserve + USD cash) \u00f7 monthly dividends",
+   "status": "PASS",
+   "value": 43.369893,
+   "reference": 43.351675,
+   "detail": "8-K balance date vs strategy.com today \u00b7 gap 0.01822",
+   "source": "8-K balances \u00f7 strategy.com annual dividends"
+  },
+  {
+   "panel": "monday",
+   "id": "MSTR.edition",
+   "label": "MSTR balance date",
+   "status": "PASS",
+   "value": "2026-10-04",
+   "reference": null,
+   "detail": "",
+   "source": "SEC 8-K feed"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.sats",
+   "label": "ASST sats per share",
+   "status": "PASS",
+   "value": 28407.0,
+   "reference": 28406.753861,
+   "detail": "gap 0.2461",
+   "source": "BTC held \u00f7 fully diluted shares"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.nav_ps",
+   "label": "ASST NAV per share",
+   "status": "PASS",
+   "value": 13.67,
+   "reference": 13.671616,
+   "detail": "gap 0.001616",
+   "source": "(BTC \u00d7 price + cash \u2212 debt \u2212 preferred claims) \u00f7 fully diluted shares"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.price_nav",
+   "label": "ASST price / NAV",
+   "status": "PASS",
+   "value": 2.03,
+   "reference": 2.03341,
+   "detail": "gap 0.00341",
+   "source": "price \u00f7 NAV per share"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.amplification",
+   "label": "ASST amplification (\u00d7), Strive's formula",
+   "status": "PASS",
+   "value": 1.554878,
+   "reference": 1.554878,
+   "detail": "gap 0",
+   "source": "1 + (debt + SATA notional) \u00f7 BTC value"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.amp_dashboard",
+   "label": "ASST amplification vs Strive's dashboard ratio",
+   "status": "PASS",
+   "value": 55.487776,
+   "reference": 55.496449,
+   "detail": "BTC price timing differs; a gap over 1 pp means different SATA shares or BTC held \u00b7 gap 0.008673",
+   "source": "strive.com dashboard (debt + SATA notional) \u00f7 BTC NAV, 2026-10-10"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.raised",
+   "label": "ASST raised = common + preferred",
+   "status": "PASS",
+   "value": 229075348.691282,
+   "reference": 229075348.691282,
+   "detail": "gap 0",
+   "source": "ATM common + preferred"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.cash_change",
+   "label": "ASST cash change",
+   "status": "PASS",
+   "value": 36462775.0,
+   "reference": 36462775.0,
+   "detail": "gap 0",
+   "source": "liquid assets this week \u2212 last week"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.funding",
+   "label": "ASST funding = raised \u2212 cash change",
+   "status": "PASS",
+   "value": 192612573.691282,
+   "reference": 192612573.691282,
+   "detail": "gap 0",
+   "source": "waterfall arithmetic"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.btc_cost",
+   "label": "ASST BTC (bitcoin cost)",
+   "status": "PASS",
+   "value": 168844627,
+   "reference": null,
+   "detail": "strive.com dashboard purchase cost",
+   "source": "strive.com dashboard purchase cost"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.btc_divs",
+   "label": "ASST BTC + DIVs = funding",
+   "status": "PASS",
+   "value": 192612573.691282,
+   "reference": 192612573.691282,
+   "detail": "gap 0",
+   "source": "waterfall arithmetic"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.in_out",
+   "label": "ASST waterfall: money in = money out",
+   "status": "PASS",
+   "value": 229075348.691282,
+   "reference": 229075348.691282,
+   "detail": "gap 0",
+   "source": "gross issuance, buybacks, cash change, BTC and DIVs"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.cash",
+   "label": "ASST cash vs Strive dashboard",
+   "status": "PASS",
+   "value": 284700000,
+   "reference": 284700000.0,
+   "detail": "gap 0",
+   "source": "strive.com dashboard cashDebt"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.strc_held",
+   "label": "ASST STRC held vs Strive dashboard",
+   "status": "PASS",
+   "value": 50325775.0,
+   "reference": 50202000.0,
+   "detail": "filing fair value vs dashboard mark \u00b7 gap 0.25%",
+   "source": "strive.com dashboard cashDebt"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.debt",
+   "label": "ASST debt vs Strive dashboard",
+   "status": "PASS",
+   "value": 0,
+   "reference": 0.0,
+   "detail": "gap 0",
+   "source": "strive.com dashboard cashDebt"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.shares",
+   "label": "ASST Class A + B vs Strive dashboard",
+   "status": "PASS",
+   "value": 100938986,
+   "reference": 100938986.0,
+   "detail": "gap 0",
+   "source": "strive.com dashboard shares"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.diluted_shares",
+   "label": "ASST per-share denominator vs Strive dashboard diluted shares",
+   "status": "PASS",
+   "value": 103714772,
+   "reference": 103714772.0,
+   "detail": "8-K Assumed Fully Diluted Shares; NAV/share and BTC/share divide by it \u00b7 gap 0",
+   "source": "strive.com dashboard shares.fully_diluted_shares"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.nav_dashboard",
+   "label": "ASST NAV per share vs Strive's dashboard formula",
+   "status": "PASS",
+   "value": 13.671616,
+   "reference": 13.671724,
+   "detail": "residual: STRC marked live vs the 8-K's fair value; SATA claim $100.01 vs $100 \u00b7 gap 0.00%",
+   "source": "(BTC \u00d7 price + cash + securities \u2212 debt \u2212 SATA notional) \u00f7 fully diluted, strive.com inputs"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.btc",
+   "label": "ASST BTC held vs Strive dashboard",
+   "status": "PASS",
+   "value": 29462,
+   "reference": 29462.021457,
+   "detail": "gap 0.02146",
+   "source": "strive.com dashboard transactions"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.deployed_vs_cost",
+   "label": "ASST deployed vs BTC cost (rest = dividends, fees)",
+   "status": "PASS",
+   "value": 192612574,
+   "reference": 168864417,
+   "detail": "other uses +23.7m",
+   "source": "strive.com transactions cost"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.coverage_feed",
+   "label": "ASST coverage years vs Strive treasury feed",
+   "status": "PASS",
+   "value": 15.773704,
+   "reference": 15.8,
+   "detail": "BTC price timing differs \u00b7 gap 0.17%",
+   "source": "strive.com/api/treasury totalDividendCoverage"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.cover",
+   "label": "ASST dividend reserve months vs dashboard",
+   "status": "PASS",
+   "value": 18,
+   "reference": 18.0,
+   "detail": "gap 0",
+   "source": "strive.com dashboard"
+  },
+  {
+   "panel": "monday",
+   "id": "ASST.edition",
+   "label": "ASST balance date",
+   "status": "PASS",
+   "value": "2026-10-02",
+   "reference": null,
+   "detail": "",
+   "source": "SEC 8-K feed"
+  },
+  {
+   "panel": "monday",
+   "id": "edition_age",
+   "label": "Monday edition age",
+   "status": "PASS",
+   "value": "2026-10-04",
+   "reference": "\u2264 9 days",
+   "detail": "5 days since the newest balance date",
+   "source": "completeness gate"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRC.eff",
+   "label": "STRC effective yield = rate \u00f7 price",
+   "status": "PASS",
+   "value": 12.04,
+   "reference": 12.041543,
+   "detail": "gap 0.001543",
+   "source": "strategy.com strcKpiData currentDividend, ufPrice"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRC.eff_kpi",
+   "label": "STRC effective yield vs strategy.com effYield",
+   "status": "PASS",
+   "value": 12.04,
+   "reference": 12.04,
+   "detail": "gap 0",
+   "source": "strcKpiData.effYield"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRF.eff",
+   "label": "STRF effective yield = rate \u00f7 price",
+   "status": "PASS",
+   "value": 9.69,
+   "reference": 9.688984,
+   "detail": "gap 0.001016",
+   "source": "strfKpiData currentDividend, ufPrice"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRK.eff",
+   "label": "STRK effective yield = rate \u00f7 price",
+   "status": "PASS",
+   "value": 10.5,
+   "reference": 10.498688,
+   "detail": "gap 0.001312",
+   "source": "strkKpiData currentDividend, ufPrice"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRD.eff",
+   "label": "STRD effective yield = rate \u00f7 price",
+   "status": "PASS",
+   "value": 13.72,
+   "reference": 13.724952,
+   "detail": "gap 0.004952",
+   "source": "strdKpiData currentDividend, ufPrice"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRE.eff",
+   "label": "STRE effective yield = rate \u00f7 price",
+   "status": "PASS",
+   "value": 12.66,
+   "reference": 12.658228,
+   "detail": "gap 0.001772",
+   "source": "streKpiData currentDividend, ufPrice"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRD.quote",
+   "label": "STRD price is a current trade",
+   "status": "PASS",
+   "value": "2026-10-09",
+   "reference": null,
+   "detail": "quoted 2026-10-09",
+   "source": "strategy.com timeStamp and volume"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRE.quote",
+   "label": "STRE price is a current trade",
+   "status": "PASS",
+   "value": "2026-10-08",
+   "reference": null,
+   "detail": "NOT TRADED: labelled, spreads omitted",
+   "source": "strategy.com timeStamp and volume"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRC.quote",
+   "label": "STRC price is a current trade",
+   "status": "PASS",
+   "value": "2026-10-09",
+   "reference": null,
+   "detail": "quoted 2026-10-09",
+   "source": "strategy.com timeStamp and volume"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRK.quote",
+   "label": "STRK price is a current trade",
+   "status": "PASS",
+   "value": "2026-10-09",
+   "reference": null,
+   "detail": "quoted 2026-10-09",
+   "source": "strategy.com timeStamp and volume"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRF.quote",
+   "label": "STRF price is a current trade",
+   "status": "PASS",
+   "value": "2026-10-09",
+   "reference": null,
+   "detail": "quoted 2026-10-09",
+   "source": "strategy.com timeStamp and volume"
+  },
+  {
+   "panel": "wednesday",
+   "id": "SATA.rate",
+   "label": "SATA stated rate vs daily dividend \u00d7 business days \u00d7 12",
+   "status": "PASS",
+   "value": 13.0,
+   "reference": 13.0,
+   "detail": "gap 0",
+   "source": "strive.com preferredDividends and the federal business-day calendar"
+  },
+  {
+   "panel": "wednesday",
+   "id": "SATA.rate_feed",
+   "label": "SATA stated rate vs Strive treasury feed",
+   "status": "PASS",
+   "value": 13.0,
+   "reference": 13.0,
+   "detail": "gap 0",
+   "source": "strive.com/api/treasury dividendRate"
+  },
+  {
+   "panel": "wednesday",
+   "id": "SATA.next_rate",
+   "label": "SATA announced next rate",
+   "status": "PASS",
+   "value": "unchanged",
+   "reference": null,
+   "detail": "pending payments match the current rate",
+   "source": "strive.com dashboard preferredDividends (pending)"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRC.spread.SOFR",
+   "label": "STRC spread over SOFR",
+   "status": "PASS",
+   "value": 817.0,
+   "reference": 817.0,
+   "detail": "gap 0",
+   "source": "(effective yield \u2212 FRED level) \u00d7 100"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRC.spread.3M bill",
+   "label": "STRC spread over 3M bill",
+   "status": "PASS",
+   "value": 779.0,
+   "reference": 779.0,
+   "detail": "gap 0",
+   "source": "(effective yield \u2212 FRED level) \u00d7 100"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRC.spread.10Y",
+   "label": "STRC spread over 10Y",
+   "status": "PASS",
+   "value": 680.0,
+   "reference": 680.0,
+   "detail": "gap 0",
+   "source": "(effective yield \u2212 FRED level) \u00d7 100"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRC.spread.IG corp",
+   "label": "STRC spread over IG corp",
+   "status": "PASS",
+   "value": 610.0,
+   "reference": 610.0,
+   "detail": "gap 0",
+   "source": "(effective yield \u2212 FRED level) \u00d7 100"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRC.spread.HY corp",
+   "label": "STRC spread over HY corp",
+   "status": "PASS",
+   "value": 393.0,
+   "reference": 393.0,
+   "detail": "gap 0",
+   "source": "(effective yield \u2212 FRED level) \u00d7 100"
+  },
+  {
+   "panel": "wednesday",
+   "id": "SATA.spread.SOFR",
+   "label": "SATA spread over SOFR",
+   "status": "PASS",
+   "value": 924.806256,
+   "reference": 924.806256,
+   "detail": "gap 0",
+   "source": "(effective yield \u2212 FRED level) \u00d7 100"
+  },
+  {
+   "panel": "wednesday",
+   "id": "SATA.spread.3M bill",
+   "label": "SATA spread over 3M bill",
+   "status": "PASS",
+   "value": 886.806256,
+   "reference": 886.806256,
+   "detail": "gap 0",
+   "source": "(effective yield \u2212 FRED level) \u00d7 100"
+  },
+  {
+   "panel": "wednesday",
+   "id": "SATA.spread.10Y",
+   "label": "SATA spread over 10Y",
+   "status": "PASS",
+   "value": 787.806256,
+   "reference": 787.806256,
+   "detail": "gap 0",
+   "source": "(effective yield \u2212 FRED level) \u00d7 100"
+  },
+  {
+   "panel": "wednesday",
+   "id": "SATA.spread.IG corp",
+   "label": "SATA spread over IG corp",
+   "status": "PASS",
+   "value": 717.806256,
+   "reference": 717.806256,
+   "detail": "gap 0",
+   "source": "(effective yield \u2212 FRED level) \u00d7 100"
+  },
+  {
+   "panel": "wednesday",
+   "id": "SATA.spread.HY corp",
+   "label": "SATA spread over HY corp",
+   "status": "PASS",
+   "value": 500.806256,
+   "reference": 500.806256,
+   "detail": "gap 0",
+   "source": "(effective yield \u2212 FRED level) \u00d7 100"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRC.adv",
+   "label": "STRC 30-day $ volume vs strategy.com average volume",
+   "status": "PASS",
+   "value": 151.702713,
+   "reference": 151.4,
+   "detail": "gap 0.20%",
+   "source": "Yahoo close \u00d7 volume vs strcKpiData.averageVolume ($m)"
+  },
+  {
+   "panel": "wednesday",
+   "id": "fred.SOFR",
+   "label": "FRED SOFR latest observation",
+   "status": "PASS",
+   "value": "2026-10-08",
+   "reference": "\u2264 2 business days",
+   "detail": "1 business days old",
+   "source": "fred.stlouisfed.org"
+  },
+  {
+   "panel": "wednesday",
+   "id": "fred.DGS3MO",
+   "label": "FRED DGS3MO latest observation",
+   "status": "PASS",
+   "value": "2026-10-09",
+   "reference": "\u2264 2 business days",
+   "detail": "0 business days old",
+   "source": "fred.stlouisfed.org"
+  },
+  {
+   "panel": "wednesday",
+   "id": "fred.DGS10",
+   "label": "FRED DGS10 latest observation",
+   "status": "PASS",
+   "value": "2026-10-09",
+   "reference": "\u2264 2 business days",
+   "detail": "0 business days old",
+   "source": "fred.stlouisfed.org"
+  },
+  {
+   "panel": "wednesday",
+   "id": "fred.BAMLC0A0CMEY",
+   "label": "FRED BAMLC0A0CMEY latest observation",
+   "status": "PASS",
+   "value": "2026-10-08",
+   "reference": "\u2264 2 business days",
+   "detail": "1 business days old",
+   "source": "fred.stlouisfed.org"
+  },
+  {
+   "panel": "wednesday",
+   "id": "fred.BAMLH0A0HYM2EY",
+   "label": "FRED BAMLH0A0HYM2EY latest observation",
+   "status": "PASS",
+   "value": "2026-10-08",
+   "reference": "\u2264 2 business days",
+   "detail": "1 business days old",
+   "source": "fred.stlouisfed.org"
+  },
+  {
+   "panel": "wednesday",
+   "id": "ledger.weeks",
+   "label": "Flow ledger has four complete filing weeks",
+   "status": "PASS",
+   "value": 4,
+   "reference": 4,
+   "detail": "",
+   "source": "SEC 8-K feed"
+  },
+  {
+   "panel": "wednesday",
+   "id": "ledger.asst_atm",
+   "label": "Flow ledger ASST ATM priced every week",
+   "status": "PASS",
+   "value": 4,
+   "reference": 4,
+   "detail": "",
+   "source": "8-K net share change \u00d7 data/asst-vwap-<filed>.json"
+  },
+  {
+   "panel": "wednesday",
+   "id": "calendar.future",
+   "label": "Calendar lists only upcoming dates",
+   "status": "PASS",
+   "value": 0,
+   "reference": 0,
+   "detail": "",
+   "source": "strategy.com KPIs"
+  },
+  {
+   "panel": "wednesday",
+   "id": "MSTR.cover_weeks",
+   "label": "Strategy USD cover weekly history",
+   "status": "PASS",
+   "value": 12,
+   "reference": "12",
+   "detail": "2026-07-19 to 2026-10-04",
+   "source": "(USD Reserve + USD Cash) \u00f7 current monthly dividends; weekly 8-K balances"
+  },
+  {
+   "panel": "wednesday",
+   "id": "ASST.cover_weeks",
+   "label": "Strive USD cover weekly history",
+   "status": "PASS",
+   "value": 12,
+   "reference": "12",
+   "detail": "2026-07-24 to 2026-10-02",
+   "source": "Strive dashboard dividend reserve"
+  },
+  {
+   "panel": "wednesday",
+   "id": "STRC.history",
+   "label": "STRC spread chart covers 12 weeks",
+   "status": "PASS",
+   "value": "84 days",
+   "reference": "\u2265 80 days",
+   "detail": "60 closes from 2026-07-17",
+   "source": "Yahoo closes, stated rate history, FRED 3M bill"
+  },
+  {
+   "panel": "wednesday",
+   "id": "SATA.history",
+   "label": "SATA spread chart covers 12 weeks",
+   "status": "PASS",
+   "value": "84 days",
+   "reference": "\u2265 80 days",
+   "detail": "60 closes from 2026-07-17",
+   "source": "Yahoo closes, stated rate history, FRED 3M bill"
+  },
+  {
+   "panel": "friday",
+   "id": "sma50w",
+   "label": "50W SMA of Friday closes",
+   "status": "PASS",
+   "value": 77698.123594,
+   "reference": 77698.123594,
+   "detail": "gap 0",
+   "source": "recomputed from the same Friday closes"
+  },
+  {
+   "panel": "friday",
+   "id": "rsi",
+   "label": "Weekly RSI(14) vs exponential form",
+   "status": "PASS",
+   "value": 62.600745,
+   "reference": 62.600745,
+   "detail": "gap 7.105e-15",
+   "source": "independent smoothing; seeds differ slightly"
+  },
+  {
+   "panel": "friday",
+   "id": "mvrv",
+   "label": "MVRV vs BTC mark \u00f7 realized price",
+   "status": "PASS",
+   "value": 1.529842,
+   "reference": 1.528795,
+   "detail": "Checkonchain uses its daily close \u00b7 gap 0.07%",
+   "source": "Checkonchain realized price"
+  },
+  {
+   "panel": "friday",
+   "id": "zone",
+   "label": "200W zone matches its extension",
+   "status": "PASS",
+   "value": "CHEAP",
+   "reference": "CHEAP",
+   "detail": "+24.5% vs 200W",
+   "source": "zone thresholds 0/50/100/150%"
+  },
+  {
+   "panel": "friday",
+   "id": "tally",
+   "label": "Checklist tally equals its cells",
+   "status": "PASS",
+   "value": {
+    "BULL": 4,
+    "NEUTRAL": 3,
+    "BEAR": 0
+   },
+   "reference": {
+    "BULL": 4,
+    "NEUTRAL": 3,
+    "BEAR": 0
+   },
+   "detail": "",
+   "source": "derived"
+  },
+  {
+   "panel": "friday",
+   "id": "week",
+   "label": "Week shown is the latest completed Friday",
+   "status": "PASS",
+   "value": "2026-10-09",
+   "reference": "2026-10-09",
+   "detail": "rolls to the current week after 4:00 pm ET Friday",
+   "source": "exchange calendar"
+  },
+  {
+   "panel": "friday",
+   "id": "macro.dxy",
+   "label": "DXY latest observation",
+   "status": "PASS",
+   "value": "2026-10-09",
+   "reference": "\u2264 2 business days",
+   "detail": "0 business days old",
+   "source": "Yahoo"
+  },
+  {
+   "panel": "friday",
+   "id": "macro.tnx",
+   "label": "US 10Y latest observation",
+   "status": "PASS",
+   "value": "2026-10-09",
+   "reference": "\u2264 2 business days",
+   "detail": "0 business days old",
+   "source": "Yahoo"
+  },
+  {
+   "panel": "friday",
+   "id": "macro.gap",
+   "label": "Fed funds \u2212 2Y latest observation",
+   "status": "PASS",
+   "value": "2026-10-08",
+   "reference": "\u2264 2 business days",
+   "detail": "1 business days old",
+   "source": "FRED DFF, DGS2"
+  },
+  {
+   "panel": "friday",
+   "id": "turnover.MSTR",
+   "label": "MSTR weekly turnover available",
+   "status": "FAIL",
+   "value": null,
+   "reference": null,
+   "detail": "no weekly volume",
+   "source": "Yahoo volume \u00f7 shares"
+  },
+  {
+   "panel": "friday",
+   "id": "turnover.ASST",
+   "label": "ASST weekly turnover available",
+   "status": "FAIL",
+   "value": null,
+   "reference": null,
+   "detail": "no weekly volume",
+   "source": "Yahoo volume \u00f7 shares"
+  },
+  {
+   "panel": "friday",
+   "id": "turnover.STRC",
+   "label": "STRC weekly turnover available",
+   "status": "FAIL",
+   "value": null,
+   "reference": null,
+   "detail": "no weekly volume",
+   "source": "Yahoo volume \u00f7 shares"
+  },
+  {
+   "panel": "friday",
+   "id": "turnover.SATA",
+   "label": "SATA weekly turnover available",
+   "status": "FAIL",
+   "value": null,
+   "reference": null,
+   "detail": "no weekly volume",
+   "source": "Yahoo volume \u00f7 shares"
+  },
+  {
+   "panel": "friday",
+   "id": "inputs",
+   "label": "Monday balance inputs loaded for Friday",
+   "status": "PASS",
+   "value": "current",
+   "reference": "current",
+   "detail": "",
+   "source": "friday.live_inputs"
+  },
+  {
+   "panel": "friday",
+   "id": "ASST.nav_basis",
+   "label": "ASST NAV per fully diluted share, as Strive's dashboard",
+   "status": "PASS",
+   "value": 103714772,
+   "reference": null,
+   "detail": "",
+   "source": "8-K Assumed Fully Diluted Shares"
+  },
+  {
+   "panel": "friday",
+   "id": "MSTR.price_nav",
+   "label": "MSTR price / NAV drawn on the image",
+   "status": "FAIL",
+   "value": "\u2014",
+   "reference": null,
+   "detail": "blank tile: no NAV inputs",
+   "source": "derived"
+  },
+  {
+   "panel": "friday",
+   "id": "ASST.price_nav",
+   "label": "ASST price / NAV drawn on the image",
+   "status": "FAIL",
+   "value": "\u2014",
+   "reference": null,
+   "detail": "blank tile: no NAV inputs",
+   "source": "derived"
+  }
+ ]
+}
