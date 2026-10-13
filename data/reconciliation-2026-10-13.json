@@ -1,0 +1,3017 @@
+{
+  "edition": "2026-10-13",
+  "retrievedAt": "2026-10-13T12:33:12.821053+00:00",
+  "update_type": "manual data-only reconciliation",
+  "source_manifest": [
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526419726/mstr-20261012.htm",
+      "fetched_at": "2026-10-13T12:31:34.471855+00:00",
+      "sha256": "19f2d236ebaefcbabb5e0666122dcf28a89853187553b9a560758c379371269f"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065595/asst-20261013.htm",
+      "fetched_at": "2026-10-13T12:31:34.415231+00:00",
+      "sha256": "53be5e0e6e40940df19a3d08b2457b71e76a573f61d6f892b3a49c7d64b630d5"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065594/asst-20261012.htm",
+      "fetched_at": "2026-10-13T12:31:34.439444+00:00",
+      "sha256": "d5962d5a48af2dcdbd0e32d4806a1d2e22c1468ed285a015bfa92e816f4d4dc6"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526419726/mstr-ex99_1.htm",
+      "fetched_at": "2026-10-13T12:31:43.800727+00:00",
+      "sha256": "aca5bee113b3cd4d2ee0885d608e06747994f1bf2e1b5aed3ff9199f9c6b0f05",
+      "bytes": 132403
+    },
+    {
+      "url": "https://www.strategy.com/shares",
+      "fetched_at": "2026-10-13T12:31:44.617358+00:00",
+      "sha256": "3ed2a206049c5d568f35cde8bc3474209d54cbe01937472b65c7e7f1426a0ad3",
+      "bytes": 116279
+    },
+    {
+      "url": "https://api.strategy.com/btc/credit",
+      "fetched_at": "2026-10-13T12:31:44.627718+00:00",
+      "sha256": "0217e79ba798bca8d673b43de7d42d7c5fbf96d093ff17d2666ff6b1cbfd111f",
+      "bytes": 5495
+    },
+    {
+      "url": "https://api.strategy.com/btc/strcKpiData",
+      "fetched_at": "2026-10-13T12:31:44.517005+00:00",
+      "sha256": "ecc210d672c01d984dd33c1d48da4005a1fadff35b17e55e86046533b524d7b7",
+      "bytes": 4285
+    },
+    {
+      "url": "https://www.strive.com/treasury/api/dashboard/base-data",
+      "fetched_at": "2026-10-13T12:31:20.725473+00:00",
+      "sha256": "3e193257e7c25d775119e4a57cfd2ec05289e48480c512e6d0acfa81072562fb",
+      "retrieval_time_basis": "Local capture completion timestamp after response bytes were saved."
+    }
+  ],
+  "filings": {
+    "ASST": {
+      "ticker": "ASST",
+      "issuer": "Strive",
+      "cik": "0001920406",
+      "accession": "0001628280-26-065595",
+      "form": "8-K",
+      "filedDate": "2026-10-13",
+      "reportDate": "2026-10-13",
+      "acceptedAt": "2026-10-13T12:00:51.000Z",
+      "firstSeenAt": "2026-10-13T12:01:46.764Z",
+      "documentFetchedAt": "2026-10-13T12:01:46.870Z",
+      "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065595/asst-20261013.htm",
+      "documents": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065595/asst-20261013.htm",
+          "fetchedAt": "2026-10-13T12:01:46.870Z",
+          "sha256": "53be5e0e6e40940df19a3d08b2457b71e76a573f61d6f892b3a49c7d64b630d5"
+        }
+      ],
+      "status": "ready_for_review",
+      "baseline": false,
+      "extracted": {
+        "parserVersion": "sec-weekly-v5",
+        "periodStart": "2026-10-05",
+        "periodEnd": "2026-10-09",
+        "priorBalanceDate": "2026-10-02",
+        "balanceDate": "2026-10-09",
+        "facts": {
+          "weekly_btc_purchases": 3311,
+          "cash_and_equivalents_usd": 310300000,
+          "held_strc_fair_value_usd": 50328000,
+          "held_strc_shares": 505000,
+          "btc_holdings": 32773,
+          "common_shares_class_a": 101169907,
+          "common_shares_class_b": 9217297,
+          "effective_common_shares": 110387204,
+          "net_common_shares_change": 9448218,
+          "options": 796642,
+          "unvested_employee_awards": 1932252,
+          "assumed_diluted_shares": 113116098,
+          "traditional_warrant_shares": 15255900,
+          "sata_shares": 14030176,
+          "net_sata_shares_change": 532094
+        },
+        "priorFacts": {
+          "cash_and_equivalents_usd": 284700000,
+          "held_strc_fair_value_usd": 50202000,
+          "held_strc_shares": 505000,
+          "btc_holdings": 29462,
+          "common_shares_class_a": 91708804,
+          "common_shares_class_b": 9230182,
+          "effective_common_shares": 100938986,
+          "options": 843534,
+          "unvested_employee_awards": 1932252,
+          "assumed_diluted_shares": 103714772,
+          "traditional_warrant_shares": 23249706,
+          "sata_shares": 13498082
+        },
+        "securities": {},
+        "missing": [],
+        "issues": [],
+        "extractionValidated": true
+      },
+      "attempts": 1,
+      "nextDocumentAttemptAt": 0,
+      "error": null
+    },
+    "MSTR": {
+      "ticker": "MSTR",
+      "issuer": "Strategy",
+      "cik": "0001050446",
+      "accession": "0001193125-26-419726",
+      "form": "8-K",
+      "filedDate": "2026-10-13",
+      "reportDate": "2026-10-12",
+      "acceptedAt": "2026-10-13T12:00:15.000Z",
+      "firstSeenAt": "2026-10-13T12:01:15.557Z",
+      "documentFetchedAt": "2026-10-13T12:01:15.617Z",
+      "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526419726/mstr-20261012.htm",
+      "documents": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526419726/mstr-20261012.htm",
+          "fetchedAt": "2026-10-13T12:01:15.617Z",
+          "sha256": "19f2d236ebaefcbabb5e0666122dcf28a89853187553b9a560758c379371269f"
+        }
+      ],
+      "status": "ready_for_review",
+      "baseline": false,
+      "extracted": {
+        "parserVersion": "manual-exhibit-review-2026-10-13",
+        "periodStart": "2026-10-05",
+        "periodEnd": "2026-10-11",
+        "priorBalanceDate": null,
+        "balanceDate": "2026-10-11",
+        "facts": {
+          "btc_holdings": 848250,
+          "btc_cost_basis_usd": 64000000000,
+          "btc_average_cost_usd": 75444,
+          "weekly_btc_purchases": 250,
+          "weekly_btc_cost_usd": 21500000,
+          "usd_reserve_usd": 4880000000,
+          "usd_cash_usd": 640500000,
+          "common_issued_shares": 125183,
+          "common_issuance_proceeds_usd": 21000000,
+          "common_repurchased_shares": 0,
+          "common_repurchases_cash_usd": 0
+        },
+        "priorFacts": {},
+        "securities": {
+          "STRF": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "STRC": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 1932145,
+            "repurchaseCashUsd": 192400000
+          },
+          "STRK": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "STRD": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "MSTR": {
+            "issuedShares": 125183,
+            "netIssuanceProceedsUsd": 21000000,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          }
+        },
+        "missing": [],
+        "issues": [],
+        "extractionValidated": true
+      },
+      "attempts": 1,
+      "nextDocumentAttemptAt": 0,
+      "error": null,
+      "manualReview": {
+        "reviewedAt": "2026-10-13T12:33:12.821053+00:00",
+        "basis": "Manually transcribed and verified Exhibit 99.1 incorporated into the October 13 8-K. The live collector classified the cover filing as not_weekly. No collector, parser, or report code was changed.",
+        "sourceDocuments": [
+          {
+            "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526419726/mstr-ex99_1.htm",
+            "fetched_at": "2026-10-13T12:31:43.800727+00:00",
+            "sha256": "aca5bee113b3cd4d2ee0885d608e06747994f1bf2e1b5aed3ff9199f9c6b0f05",
+            "bytes": 132403
+          }
+        ],
+        "reported_weekly_average_btc_price_usd": 86194,
+        "limitations": "Disclosed amounts retain issuer rounding. BTC sales and USD Reserve dividend/interest usage are not separately stated and are not filled with zero."
+      }
+    }
+  },
+  "strategy_exhibit_tables": [
+    [
+      "",
+      "",
+      "During Period October 5, 2026 to October 11, 2026",
+      "",
+      "As of October 11, 2026",
+      ""
+    ],
+    [
+      "Security",
+      "",
+      "Shares Sold",
+      "",
+      "Notional Value (in millions) (1)",
+      "",
+      "Net Proceeds (in millions) (2)",
+      "",
+      "Available for Issuance and Sale (in millions)",
+      ""
+    ],
+    [
+      "STRF Stock",
+      "",
+      "",
+      "-",
+      "",
+      "$",
+      "-",
+      "",
+      "$",
+      "-",
+      "",
+      "$",
+      "1,619.3",
+      ""
+    ],
+    [
+      "10.00% Series A Perpetual Strife Preferred Stock",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "STRC Stock",
+      "",
+      "",
+      "-",
+      "",
+      "$",
+      "-",
+      "",
+      "$",
+      "-",
+      "",
+      "$",
+      "17,510.8",
+      ""
+    ],
+    [
+      "Variable Rate Series A Perpetual Stretch Preferred Stock",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "STRK Stock",
+      "",
+      "",
+      "-",
+      "",
+      "$",
+      "-",
+      "",
+      "$",
+      "-",
+      "",
+      "$",
+      "2,100.0",
+      ""
+    ],
+    [
+      "8.00% Series A Perpetual Strike Preferred Stock",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "STRD Stock",
+      "",
+      "",
+      "-",
+      "",
+      "$",
+      "-",
+      "",
+      "$",
+      "-",
+      "",
+      "$",
+      "4,014.8",
+      ""
+    ],
+    [
+      "10.00% Series A Perpetual Stride Preferred Stock",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "MSTR Stock",
+      "",
+      "",
+      "125,183",
+      "",
+      "$",
+      "-",
+      "",
+      "$               21.0 (3)",
+      "",
+      "$",
+      "18,807.6",
+      ""
+    ],
+    [
+      "Class A Common Stock",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Total",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "$",
+      "21.0",
+      "",
+      "",
+      ""
+    ],
+    [
+      "During Period October 5, 2026 to October 11, 2026",
+      "",
+      "As of October 11, 2026",
+      ""
+    ],
+    [
+      "BTC Purchased (1)",
+      "",
+      "Aggregate Purchase Price (in millions) (2)",
+      "",
+      "Average Purchase Price (2)",
+      "",
+      "Aggregate BTC Holdings",
+      "",
+      "Aggregate Purchase Price (in billions) (2)",
+      "",
+      "Average Purchase Price (2)",
+      ""
+    ],
+    [
+      "",
+      "250",
+      "",
+      "$",
+      "21.5",
+      "",
+      "$",
+      "86,194",
+      "",
+      "",
+      "848,250",
+      "",
+      "$",
+      "64.00",
+      "",
+      "$",
+      "75,444",
+      ""
+    ],
+    [
+      "",
+      "",
+      "During Period October 5, 2026 to October 11, 2026",
+      ""
+    ],
+    [
+      "Security",
+      "",
+      "Shares Repurchased",
+      "",
+      "Aggregate Purchase Price (in millions)",
+      ""
+    ],
+    [
+      "STRF Stock (1)",
+      "",
+      "",
+      "-",
+      "",
+      "$",
+      "-",
+      ""
+    ],
+    [
+      "10.00% Series A Perpetual Strife Preferred Stock",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "STRC Stock (1)",
+      "",
+      "",
+      "1,932,145",
+      "",
+      "$",
+      "192.4",
+      ""
+    ],
+    [
+      "Variable Rate Series A Perpetual Stretch Preferred Stock",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "STRK Stock (1)",
+      "",
+      "",
+      "-",
+      "",
+      "$",
+      "-",
+      ""
+    ],
+    [
+      "8.00% Series A Perpetual Strike Preferred Stock",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "STRD Stock (1)",
+      "",
+      "",
+      "-",
+      "",
+      "$",
+      "-",
+      ""
+    ],
+    [
+      "10.00% Series A Perpetual Stride Preferred Stock",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "MSTR Stock (2)",
+      "",
+      "",
+      "-",
+      "",
+      "$",
+      "-",
+      ""
+    ],
+    [
+      "Class A Common Stock",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Total",
+      "",
+      "",
+      "1,932,145",
+      "",
+      "$",
+      "192.4",
+      ""
+    ]
+  ],
+  "strategy_shares": {
+    "source": "https://www.strategy.com/shares",
+    "balance_date": "2026-10-11",
+    "class_a_thousands": 402558,
+    "class_b_thousands": 19640,
+    "basic_shares": 422198000,
+    "published_basic_thousands": 422199,
+    "basis": "Dated issuer Class A 402,558,000 + Class B 19,640,000, rounded to thousands. Uses the established A+B convention (422,198,000); the separately rounded issuer Basic Shares row is 422,199,000.",
+    "difference_from_prior_plus_atm": 1923
+  },
+  "strategy_debt": {
+    "balance_date": "2026-10-11",
+    "total_usd": 6753703000,
+    "convertible_notes_usd": 6713659000,
+    "other_debt_usd": 40044000,
+    "basis": "The reconciled June 30 principal carried forward (see strategy_assumptions); the split lets the automatic reconciliation compare strategy.com's convertible-note list (api.strategy.com/btc/credit, $6,713.75M on Sep 27, 2026) and catch a new tranche or repurchase.",
+    "source_balance_date": "2026-06-30",
+    "current_issuer_convertible_notes_usd": 6713750000
+  },
+  "strategy_claims": {
+    "STRF": {
+      "shares": 12839689,
+      "currency": "USD",
+      "base_preference_per_share": 103.412,
+      "base_claims": 1327777918.868,
+      "annual_dividend_per_share": 10.0,
+      "accrued_30_360_days": 11,
+      "estimated_accrued_dividends": 3923238.3055555555,
+      "estimated_native_claims": 1331701157.1735556
+    },
+    "STRC": {
+      "shares": 87921436,
+      "currency": "USD",
+      "base_preference_per_share": 100.0,
+      "base_claims": 8792143600.0,
+      "annual_dividend_per_share": 12.0,
+      "accrued_30_360_days": 11,
+      "estimated_accrued_dividends": 32237859.866666667,
+      "estimated_native_claims": 8824381459.866667
+    },
+    "STRK": {
+      "shares": 14020744,
+      "currency": "USD",
+      "base_preference_per_share": 100.0,
+      "base_claims": 1402074400.0,
+      "annual_dividend_per_share": 8.0,
+      "accrued_30_360_days": 11,
+      "estimated_accrued_dividends": 3427292.9777777777,
+      "estimated_native_claims": 1405501692.9777777
+    },
+    "STRD": {
+      "shares": 14024221,
+      "currency": "USD",
+      "base_preference_per_share": 100.0,
+      "base_claims": 1402422100.0,
+      "annual_dividend_per_share": 10.0,
+      "accrued_30_360_days": 11,
+      "estimated_accrued_dividends": 4285178.638888889,
+      "estimated_native_claims": 1406707278.6388888
+    },
+    "STRE": {
+      "shares": 7750000,
+      "currency": "EUR",
+      "base_preference_per_share": 100.0,
+      "base_claims": 775000000.0,
+      "annual_dividend_per_share": 10.0,
+      "accrued_30_360_days": 11,
+      "estimated_accrued_dividends": 2368055.5555555555,
+      "estimated_native_claims": 777368055.5555556
+    }
+  },
+  "strategy_claim_totals": {
+    "USD": 12968291588.656889,
+    "EUR": 777368055.5555556
+  },
+  "strategy_dividend_schedule": [
+    {
+      "period": "Aug 2025",
+      "recordDate": "2025-08-15",
+      "payDate": "2025-08-31",
+      "cashAmount": 0.8,
+      "rate": 9,
+      "note": "Accrued from July 29, 2025 through August 31, 2025."
+    },
+    {
+      "period": "Sep 2025",
+      "recordDate": "2025-09-15",
+      "payDate": "2025-09-30",
+      "cashAmount": 0.83333333,
+      "rate": 10
+    },
+    {
+      "period": "Oct 2025",
+      "recordDate": "2025-10-15",
+      "payDate": "2025-10-31",
+      "cashAmount": 0.85416667,
+      "rate": 10.25
+    },
+    {
+      "period": "Nov 2025",
+      "recordDate": "2025-11-15",
+      "payDate": "2025-11-30",
+      "cashAmount": 0.875,
+      "rate": 10.5
+    },
+    {
+      "period": "Dec 2025",
+      "recordDate": "2025-12-15",
+      "payDate": "2025-12-31",
+      "cashAmount": 0.89583333,
+      "rate": 10.75
+    },
+    {
+      "period": "Jan 2026",
+      "recordDate": "2026-01-15",
+      "payDate": "2026-01-31",
+      "cashAmount": 0.916666667,
+      "rate": 11
+    },
+    {
+      "period": "Feb 2026",
+      "recordDate": "2026-02-15",
+      "payDate": "2026-02-28",
+      "cashAmount": 0.94,
+      "rate": 11.25
+    },
+    {
+      "period": "Mar 2026",
+      "recordDate": "2026-03-15",
+      "payDate": "2026-03-31",
+      "cashAmount": 0.96,
+      "rate": 11.5
+    },
+    {
+      "period": "Apr 2026",
+      "recordDate": "2026-04-15",
+      "payDate": "2026-04-30",
+      "cashAmount": 0.96,
+      "rate": 11.5
+    },
+    {
+      "period": "May 2026",
+      "recordDate": "2026-05-15",
+      "payDate": "2026-05-31",
+      "cashAmount": 0.96,
+      "rate": 11.5
+    },
+    {
+      "period": "Jun 2026",
+      "recordDate": "2026-06-15",
+      "payDate": "2026-06-30",
+      "cashAmount": 0.96,
+      "rate": 11.5
+    },
+    {
+      "period": "Jun 2026 #2",
+      "recordDate": "2026-06-30",
+      "payDate": "2026-07-15",
+      "cashAmount": 0.48,
+      "rate": 11.5,
+      "note": "June 2026 #2 is the first dividend period under STRC\u2019s new semi-monthly cadence."
+    },
+    {
+      "period": "Jul 2026 #1",
+      "recordDate": "2026-07-15",
+      "payDate": "2026-07-31",
+      "cashAmount": 0.5,
+      "rate": 12
+    },
+    {
+      "period": "Jul 2026 #2",
+      "recordDate": "2026-07-31",
+      "payDate": "2026-08-15",
+      "cashAmount": 0.5,
+      "rate": 12
+    },
+    {
+      "period": "Aug 2026 #1",
+      "recordDate": "2026-08-15",
+      "payDate": "2026-08-31",
+      "cashAmount": 0.5,
+      "rate": 12
+    },
+    {
+      "period": "Aug 2026 #2",
+      "recordDate": "2026-08-31",
+      "payDate": "2026-09-15",
+      "cashAmount": 0.5,
+      "rate": 12
+    },
+    {
+      "period": "Sep 2026 #1",
+      "recordDate": "2026-09-15",
+      "payDate": "2026-09-30",
+      "cashAmount": 0.5,
+      "rate": 12
+    },
+    {
+      "period": "Sep 2026 #2",
+      "recordDate": "2026-09-30",
+      "payDate": "2026-10-15",
+      "cashAmount": 0.5,
+      "rate": 12
+    },
+    {
+      "period": "Oct 2026 #1",
+      "recordDate": "2026-10-15",
+      "payDate": "2026-10-31",
+      "cashAmount": 0.5,
+      "isUpcoming": true,
+      "rate": 12
+    },
+    {
+      "period": "Oct 2026 #2",
+      "recordDate": "2026-10-31",
+      "payDate": "2026-11-15",
+      "cashAmount": 0.5,
+      "isUpcoming": true,
+      "rate": 12,
+      "note": "Subject to the proposed STRC daily-dividend transition; if approved and effective, daily record dates are expected to begin Nov. 1, 2026."
+    }
+  ],
+  "strategy_assumptions": "Debt carries the reviewed June 30 principal, corroborated by the current convertible note list. Preferred counts roll through disclosed repurchases; ordinary 30/360 accrual is 11 days since September 30. Scheduled Strategy payments assumed paid; no unreported issuance assumed. See reconciliation-2026-10-13.json.",
+  "preferred_price_windows": {
+    "STRF": {
+      "source": {
+        "url": "https://query1.finance.yahoo.com/v8/finance/chart/STRF?interval=1d&range=6mo&includePrePost=false&events=splits",
+        "fetched_at": "2026-10-13T12:32:21.521295+00:00",
+        "sha256": "6b2efba47280a94722005e3eb558c8e57dc2f0c5ca1635fd1cd0243ea7e7b9e6"
+      },
+      "closes": [
+        {
+          "date": "2026-09-25",
+          "close": 103.66
+        },
+        {
+          "date": "2026-09-28",
+          "close": 103.55
+        },
+        {
+          "date": "2026-09-29",
+          "close": 103.83
+        },
+        {
+          "date": "2026-09-30",
+          "close": 103.49
+        },
+        {
+          "date": "2026-10-01",
+          "close": 103.28
+        },
+        {
+          "date": "2026-10-02",
+          "close": 103.4
+        },
+        {
+          "date": "2026-10-05",
+          "close": 103.4
+        },
+        {
+          "date": "2026-10-06",
+          "close": 103.42
+        },
+        {
+          "date": "2026-10-07",
+          "close": 103.05
+        },
+        {
+          "date": "2026-10-08",
+          "close": 103.04
+        }
+      ],
+      "mean": 103.412,
+      "base_preference": 103.412,
+      "basis": "Unadjusted closes; last ten sessions before the balance business day. SATA also tests the prior close."
+    },
+    "STRC": {
+      "source": {
+        "url": "https://query1.finance.yahoo.com/v8/finance/chart/STRC?interval=1d&range=6mo&includePrePost=false&events=splits",
+        "fetched_at": "2026-10-13T12:32:21.577746+00:00",
+        "sha256": "cb8259732f0786fd6152d043e1609381ee6d936a5e1c0f01413ca03ab10c26ea"
+      },
+      "closes": [
+        {
+          "date": "2026-09-25",
+          "close": 98.54
+        },
+        {
+          "date": "2026-09-28",
+          "close": 99.1
+        },
+        {
+          "date": "2026-09-29",
+          "close": 99.56
+        },
+        {
+          "date": "2026-09-30",
+          "close": 99.35
+        },
+        {
+          "date": "2026-10-01",
+          "close": 99.5
+        },
+        {
+          "date": "2026-10-02",
+          "close": 99.41
+        },
+        {
+          "date": "2026-10-05",
+          "close": 99.48
+        },
+        {
+          "date": "2026-10-06",
+          "close": 99.47
+        },
+        {
+          "date": "2026-10-07",
+          "close": 99.43
+        },
+        {
+          "date": "2026-10-08",
+          "close": 99.45
+        }
+      ],
+      "mean": 99.329,
+      "base_preference": 100.0,
+      "basis": "Unadjusted closes; last ten sessions before the balance business day. SATA also tests the prior close."
+    },
+    "STRK": {
+      "source": {
+        "url": "https://query1.finance.yahoo.com/v8/finance/chart/STRK?interval=1d&range=6mo&includePrePost=false&events=splits",
+        "fetched_at": "2026-10-13T12:32:21.633831+00:00",
+        "sha256": "0f2f788112d342f0a3c364a0a1abf60b83710cf77e1b994354fc8796310f16c8"
+      },
+      "closes": [
+        {
+          "date": "2026-09-25",
+          "close": 74.89
+        },
+        {
+          "date": "2026-09-28",
+          "close": 75.15
+        },
+        {
+          "date": "2026-09-29",
+          "close": 74.66
+        },
+        {
+          "date": "2026-09-30",
+          "close": 74.16
+        },
+        {
+          "date": "2026-10-01",
+          "close": 75.02
+        },
+        {
+          "date": "2026-10-02",
+          "close": 76.25
+        },
+        {
+          "date": "2026-10-05",
+          "close": 76.85
+        },
+        {
+          "date": "2026-10-06",
+          "close": 75.77
+        },
+        {
+          "date": "2026-10-07",
+          "close": 75.29
+        },
+        {
+          "date": "2026-10-08",
+          "close": 75.33
+        }
+      ],
+      "mean": 75.337,
+      "base_preference": 100.0,
+      "basis": "Unadjusted closes; last ten sessions before the balance business day. SATA also tests the prior close."
+    },
+    "STRD": {
+      "source": {
+        "url": "https://query1.finance.yahoo.com/v8/finance/chart/STRD?interval=1d&range=6mo&includePrePost=false&events=splits",
+        "fetched_at": "2026-10-13T12:32:21.560291+00:00",
+        "sha256": "b0d8b943179fa75d8a482caaf91c4b3552340d6f0c69bab27f19d96e8e908f58"
+      },
+      "closes": [
+        {
+          "date": "2026-09-25",
+          "close": 73.72
+        },
+        {
+          "date": "2026-09-28",
+          "close": 72.55
+        },
+        {
+          "date": "2026-09-29",
+          "close": 72.98
+        },
+        {
+          "date": "2026-09-30",
+          "close": 72.61
+        },
+        {
+          "date": "2026-10-01",
+          "close": 73.16
+        },
+        {
+          "date": "2026-10-02",
+          "close": 73.38
+        },
+        {
+          "date": "2026-10-05",
+          "close": 73.65
+        },
+        {
+          "date": "2026-10-06",
+          "close": 72.48
+        },
+        {
+          "date": "2026-10-07",
+          "close": 72.33
+        },
+        {
+          "date": "2026-10-08",
+          "close": 72.2
+        }
+      ],
+      "mean": 72.906,
+      "base_preference": 100.0,
+      "basis": "Unadjusted closes; last ten sessions before the balance business day. SATA also tests the prior close."
+    },
+    "SATA": {
+      "source": {
+        "url": "https://query1.finance.yahoo.com/v8/finance/chart/SATA?interval=1d&range=6mo&includePrePost=false&events=splits",
+        "fetched_at": "2026-10-13T12:32:21.607962+00:00",
+        "sha256": "4f56ebdaa85ceedfabb1e63125091705555b2ae50fd5b4682e1e0c3a25e686bd"
+      },
+      "closes": [
+        {
+          "date": "2026-09-25",
+          "close": 100.01
+        },
+        {
+          "date": "2026-09-28",
+          "close": 100.01
+        },
+        {
+          "date": "2026-09-29",
+          "close": 100.01
+        },
+        {
+          "date": "2026-09-30",
+          "close": 100.01
+        },
+        {
+          "date": "2026-10-01",
+          "close": 100.01
+        },
+        {
+          "date": "2026-10-02",
+          "close": 100.01
+        },
+        {
+          "date": "2026-10-05",
+          "close": 100.01
+        },
+        {
+          "date": "2026-10-06",
+          "close": 100.01
+        },
+        {
+          "date": "2026-10-07",
+          "close": 99.42
+        },
+        {
+          "date": "2026-10-08",
+          "close": 98.82
+        }
+      ],
+      "mean": 99.832,
+      "base_preference": 100.0,
+      "basis": "Unadjusted closes; last ten sessions before the balance business day. SATA also tests the prior close."
+    }
+  },
+  "strive_cash_debt": {
+    "date": "2026-10-09",
+    "cash": 310300000,
+    "debt": 0,
+    "dividend_reserve_months": 18,
+    "marketable_securities": 50328000
+  },
+  "strive_paid_dividends": [
+    {
+      "payDate": "2026-10-05",
+      "recordDate": "2026-10-02",
+      "cashAmount": 0.0516,
+      "status": "paid"
+    },
+    {
+      "payDate": "2026-10-06",
+      "recordDate": "2026-10-05",
+      "cashAmount": 0.0516,
+      "status": "paid"
+    },
+    {
+      "payDate": "2026-10-07",
+      "recordDate": "2026-10-06",
+      "cashAmount": 0.0516,
+      "status": "paid"
+    },
+    {
+      "payDate": "2026-10-08",
+      "recordDate": "2026-10-07",
+      "cashAmount": 0.0516,
+      "status": "paid"
+    },
+    {
+      "payDate": "2026-10-09",
+      "recordDate": "2026-10-08",
+      "cashAmount": 0.0516,
+      "status": "paid"
+    }
+  ],
+  "strive_claims": {
+    "date": "2026-10-09",
+    "shares": 14030176,
+    "base_preference": 100,
+    "estimated_preferred_claims": 1403017600.0,
+    "ordinary_accrued_unpaid_dividends": 0,
+    "basis": "SATA claims use $100 per share: both certificate branches are at the floor. All five weekly dividends are marked paid by the issuer. Common capital retains the net-share-change times same-week VWAP estimate, before fees; includes warrant exercises and is not reported financing proceeds. See reconciliation-2026-10-13.json."
+  },
+  "asst_vwap": {
+    "symbol": "ASST",
+    "edition_date": "2026-10-13",
+    "value": 29.03651947345548,
+    "method": "hlc3_5m",
+    "label": "5-minute VWAP estimate",
+    "window": "prior_week",
+    "session_start": "2026-10-05",
+    "session_end": "2026-10-09",
+    "sessiondates": [
+      "2026-10-05",
+      "2026-10-06",
+      "2026-10-07",
+      "2026-10-08",
+      "2026-10-09"
+    ],
+    "bar_count": 390,
+    "total_volume": 39483259.0,
+    "weighted_numerator": 1146456418.8289864,
+    "daily": [
+      {
+        "date": "2026-10-05",
+        "value": 30.433063751842653,
+        "bar_count": 78,
+        "total_volume": 9155603.0,
+        "weighted_numerator": 278633049.78556186
+      },
+      {
+        "date": "2026-10-06",
+        "value": 30.037536410175754,
+        "bar_count": 78,
+        "total_volume": 7071340.0,
+        "weighted_numerator": 212405632.7187322
+      },
+      {
+        "date": "2026-10-07",
+        "value": 28.25916637312222,
+        "bar_count": 78,
+        "total_volume": 7706204.0,
+        "weighted_numerator": 217770900.94121996
+      },
+      {
+        "date": "2026-10-08",
+        "value": 27.96769097241172,
+        "bar_count": 78,
+        "total_volume": 7353519.0,
+        "weighted_numerator": 205660946.95175806
+      },
+      {
+        "date": "2026-10-09",
+        "value": 28.30272143947057,
+        "bar_count": 78,
+        "total_volume": 8196593.0,
+        "weighted_numerator": 231985888.4317144
+      }
+    ],
+    "request_urls": [
+      "https://query1.finance.yahoo.com/v8/finance/chart/ASST?period1=1791172800&period2=1791604800&interval=5m&includePrePost=false&includeAdjustedClose=false"
+    ],
+    "fetched_at": "2026-10-13T12:32:24.759909+00:00",
+    "excluded_bar_count": 1,
+    "source_note": "Yahoo Finance unadjusted 5-minute HLC3 weighted by bar volume; an estimate, not reported trade VWAP or company issuance proceeds. Only retrieved regular-session bars are included, with no claim of full SIP coverage. Bars exclude the bar beginning at the close; closing-auction coverage follows the source's timestamps, and volume may differ from end-of-day daily bars.",
+    "fallback_reason": "Missing or nonfinite price/volume in an eligible minute.",
+    "display_note": "5-minute VWAP estimate \u00b7 before fees"
+  },
+  "asst_net_common_capital_estimate": 274343365.9464526,
+  "asst_net_preferred_capital_estimate": 53209400,
+  "comparison_marks": {
+    "source": "data/release-prices/2026-10-05.json",
+    "snapshot": {
+      "schema_version": 1,
+      "fetched_at": "2026-10-05T13:20:14.689393+00:00",
+      "quotes": {
+        "MSTR": {
+          "symbol": "MSTR",
+          "price": 164.54,
+          "as_of": "2026-10-05T13:20:12+00:00",
+          "session": "pre-market",
+          "source_url": "https://query1.finance.yahoo.com/v8/finance/chart/MSTR?interval=1m&range=1d&includePrePost=true"
+        },
+        "ASST": {
+          "symbol": "ASST",
+          "price": 30.64,
+          "as_of": "2026-10-05T13:19:30+00:00",
+          "session": "pre-market",
+          "source_url": "https://query1.finance.yahoo.com/v8/finance/chart/ASST?interval=1m&range=1d&includePrePost=true"
+        },
+        "STRC": {
+          "symbol": "STRC",
+          "price": 99.41,
+          "as_of": "2026-10-02T20:00:00+00:00",
+          "session": "close",
+          "source_url": "https://query1.finance.yahoo.com/v8/finance/chart/STRC?interval=1d&range=5d"
+        },
+        "EURUSD=X": {
+          "symbol": "EURUSD=X",
+          "price": 1.121,
+          "as_of": "2026-10-05T13:19:49+00:00",
+          "session": "close",
+          "source_url": "https://query1.finance.yahoo.com/v8/finance/chart/EURUSD%3DX?interval=1d&range=5d"
+        },
+        "BTC-USD": {
+          "symbol": "BTC-USD",
+          "price": 86148.71,
+          "as_of": "2026-10-05T13:19:54.841000+00:00",
+          "session": "live",
+          "source_url": "https://api.strategy.com/btc/bitcoinKpis"
+        }
+      }
+    },
+    "ASST_prior_STRC_mark": 99.409900990099,
+    "ASST_mark_basis": "Existing filed fair value $50,202,000 / 505,000 shares, preserved."
+  },
+  "other_disclosures_reviewed": [
+    {
+      "accession": "0001628280-26-065594",
+      "basis": "SATA $100 minimum issuance price and Business Day amendment; 13% rate retained for November. No change to the October 9 balances or current 13% rate."
+    }
+  ],
+  "panel_supporting_inputs": {
+    "fetched_at": "2026-10-13T12:32:32.633905+00:00",
+    "errors": [],
+    "stale": [],
+    "treasury_live": {},
+    "strategy": {
+      "btc": {
+        "latestPrice": 83261,
+        "btcHoldings": 848250.0,
+        "mNav": 1.1753,
+        "amplification": 1.2504,
+        "debtByBN": 1.6934,
+        "prefByBN": 19.4657,
+        "debtPrefByBN": 28.9721,
+        "totalAnnualDividends": 1557187846.5,
+        "btcYearsOfDividends": 45.355064561570224,
+        "usdMonthsOfDividends": 42.5228081177424,
+        "totalYearsOfCoverage": 48.8986,
+        "btcBreakevenArr": 2.2048,
+        "bitcoinHurdleArr": 10.6031,
+        "realizedPrice": 49273,
+        "ma200w": 66469,
+        "fearGreedIndex": {
+          "value": 57,
+          "classification": "Greed"
+        },
+        "etfNetFlows7d": -554,
+        "futuresBasis3m": 5.3,
+        "btcDominanceExStables": 66.1,
+        "netBtcReserve": 56482443812.5,
+        "totalReserve": 76144355312.5
+      },
+      "as_of": "2026-10-13T12:32:21.308000+00:00",
+      "mstr": {
+        "ufPrice": 152.68,
+        "timeStamp": "10/12/2026 04:00 PM",
+        "debt": "6,714",
+        "pref": "13,748",
+        "entVal": "79,405",
+        "marketCap": "64,461",
+        "btcCor": 83.1436
+      },
+      "preferreds": {
+        "STRC": {
+          "ufPrice": 99.88,
+          "timeStamp": "10/12/2026 04:00 PM",
+          "effYield": 12.01,
+          "taxEqvEffYield": 19.07,
+          "marketCredit": 6.87,
+          "currentDividend": 12,
+          "notional": 8792143600,
+          "vwap1mo": 98.9806,
+          "impliedVolatility": 8.8278,
+          "averageVolume": "150.4",
+          "dailyVolume": "153.3",
+          "sharesVolume": 1535158.772631,
+          "nextRecordDate": "2026-10-15",
+          "nextPayoutDate": "2026-10-31",
+          "riskFreeRate": 4.23,
+          "marketCap": 8781.6,
+          "dividendHistory": [
+            {
+              "period": "Aug 2025",
+              "recordDate": "2025-08-15",
+              "payDate": "2025-08-31",
+              "cashAmount": 0.8,
+              "rate": 9
+            },
+            {
+              "period": "Sep 2025",
+              "recordDate": "2025-09-15",
+              "payDate": "2025-09-30",
+              "cashAmount": 0.83333333,
+              "rate": 10
+            },
+            {
+              "period": "Oct 2025",
+              "recordDate": "2025-10-15",
+              "payDate": "2025-10-31",
+              "cashAmount": 0.85416667,
+              "rate": 10.25
+            },
+            {
+              "period": "Nov 2025",
+              "recordDate": "2025-11-15",
+              "payDate": "2025-11-30",
+              "cashAmount": 0.875,
+              "rate": 10.5
+            },
+            {
+              "period": "Dec 2025",
+              "recordDate": "2025-12-15",
+              "payDate": "2025-12-31",
+              "cashAmount": 0.89583333,
+              "rate": 10.75
+            },
+            {
+              "period": "Jan 2026",
+              "recordDate": "2026-01-15",
+              "payDate": "2026-01-31",
+              "cashAmount": 0.916666667,
+              "rate": 11
+            },
+            {
+              "period": "Feb 2026",
+              "recordDate": "2026-02-15",
+              "payDate": "2026-02-28",
+              "cashAmount": 0.94,
+              "rate": 11.25
+            },
+            {
+              "period": "Mar 2026",
+              "recordDate": "2026-03-15",
+              "payDate": "2026-03-31",
+              "cashAmount": 0.96,
+              "rate": 11.5
+            },
+            {
+              "period": "Apr 2026",
+              "recordDate": "2026-04-15",
+              "payDate": "2026-04-30",
+              "cashAmount": 0.96,
+              "rate": 11.5
+            },
+            {
+              "period": "May 2026",
+              "recordDate": "2026-05-15",
+              "payDate": "2026-05-31",
+              "cashAmount": 0.96,
+              "rate": 11.5
+            },
+            {
+              "period": "Jun 2026",
+              "recordDate": "2026-06-15",
+              "payDate": "2026-06-30",
+              "cashAmount": 0.96,
+              "rate": 11.5
+            },
+            {
+              "period": "Jun 2026 #2",
+              "recordDate": "2026-06-30",
+              "payDate": "2026-07-15",
+              "cashAmount": 0.48,
+              "rate": 11.5
+            },
+            {
+              "period": "Jul 2026 #1",
+              "recordDate": "2026-07-15",
+              "payDate": "2026-07-31",
+              "cashAmount": 0.5,
+              "rate": 12
+            },
+            {
+              "period": "Jul 2026 #2",
+              "recordDate": "2026-07-31",
+              "payDate": "2026-08-15",
+              "cashAmount": 0.5,
+              "rate": 12
+            },
+            {
+              "period": "Aug 2026 #1",
+              "recordDate": "2026-08-15",
+              "payDate": "2026-08-31",
+              "cashAmount": 0.5,
+              "rate": 12
+            },
+            {
+              "period": "Aug 2026 #2",
+              "recordDate": "2026-08-31",
+              "payDate": "2026-09-15",
+              "cashAmount": 0.5,
+              "rate": 12
+            },
+            {
+              "period": "Sep 2026 #1",
+              "recordDate": "2026-09-15",
+              "payDate": "2026-09-30",
+              "cashAmount": 0.5,
+              "rate": 12
+            },
+            {
+              "period": "Sep 2026 #2",
+              "recordDate": "2026-09-30",
+              "payDate": "2026-10-15",
+              "cashAmount": 0.5,
+              "rate": 12
+            },
+            {
+              "period": "Oct 2026 #1",
+              "recordDate": "2026-10-15",
+              "payDate": "2026-10-31",
+              "cashAmount": 0.5,
+              "rate": 12
+            },
+            {
+              "period": "Oct 2026 #2",
+              "recordDate": "2026-10-31",
+              "payDate": "2026-11-15",
+              "cashAmount": 0.5,
+              "rate": 12
+            }
+          ]
+        },
+        "STRF": {
+          "ufPrice": 103.445,
+          "timeStamp": "10/12/2026 04:00 PM",
+          "effYield": 9.67,
+          "taxEqvEffYield": 15.34,
+          "marketCredit": 4.44,
+          "currentDividend": 10,
+          "notional": 1283968900,
+          "vwap1mo": null,
+          "impliedVolatility": 36.6259,
+          "averageVolume": "5.7",
+          "dailyVolume": "1.1",
+          "sharesVolume": 10348.152063,
+          "nextRecordDate": "2026-12-15",
+          "nextPayoutDate": "2026-12-31",
+          "riskFreeRate": 4.23,
+          "marketCap": 1328.2,
+          "dividendHistory": [
+            {
+              "period": "Q2 2025",
+              "recordDate": "2025-06-15",
+              "payDate": "2025-06-30",
+              "cashAmount": 2.6388888,
+              "rate": null
+            },
+            {
+              "period": "Q3 2025",
+              "recordDate": "2025-09-15",
+              "payDate": "2025-09-30",
+              "cashAmount": 2.5,
+              "rate": null
+            },
+            {
+              "period": "Q4 2025",
+              "recordDate": "2025-12-15",
+              "payDate": "2025-12-31",
+              "cashAmount": 2.5,
+              "rate": null
+            },
+            {
+              "period": "Q1 2026",
+              "recordDate": "2026-03-15",
+              "payDate": "2026-03-31",
+              "cashAmount": 2.5,
+              "rate": null
+            },
+            {
+              "period": "Q2 2026",
+              "recordDate": "2026-06-15",
+              "payDate": "2026-06-30",
+              "cashAmount": 2.5,
+              "rate": null
+            },
+            {
+              "period": "Q3 2026",
+              "recordDate": "2026-09-15",
+              "payDate": "2026-09-30",
+              "cashAmount": 2.5,
+              "rate": null
+            },
+            {
+              "period": "Q4 2026",
+              "recordDate": "2026-12-15",
+              "payDate": "2026-12-31",
+              "cashAmount": 2.5,
+              "rate": null
+            }
+          ]
+        },
+        "STRK": {
+          "ufPrice": 75.51,
+          "timeStamp": "10/12/2026 04:00 PM",
+          "effYield": 10.59,
+          "taxEqvEffYield": 16.82,
+          "marketCredit": 5.39,
+          "currentDividend": 8,
+          "notional": 1402074400,
+          "vwap1mo": null,
+          "impliedVolatility": null,
+          "averageVolume": "7.3",
+          "dailyVolume": "4.7",
+          "sharesVolume": 62415.260218,
+          "nextRecordDate": "2026-12-15",
+          "nextPayoutDate": "2026-12-31",
+          "riskFreeRate": 4.23,
+          "marketCap": 1058.7,
+          "dividendHistory": [
+            {
+              "period": "Q1 2025",
+              "recordDate": "2025-03-15",
+              "payDate": "2025-03-31",
+              "cashAmount": 1.24,
+              "rate": null
+            },
+            {
+              "period": "Q2 2025",
+              "recordDate": "2025-06-15",
+              "payDate": "2025-06-30",
+              "cashAmount": 2,
+              "rate": null
+            },
+            {
+              "period": "Q3 2025",
+              "recordDate": "2025-09-15",
+              "payDate": "2025-09-30",
+              "cashAmount": 2,
+              "rate": null
+            },
+            {
+              "period": "Q4 2025",
+              "recordDate": "2025-12-15",
+              "payDate": "2025-12-31",
+              "cashAmount": 2,
+              "rate": null
+            },
+            {
+              "period": "Q1 2026",
+              "recordDate": "2026-03-15",
+              "payDate": "2026-03-31",
+              "cashAmount": 2,
+              "rate": null
+            },
+            {
+              "period": "Q2 2026",
+              "recordDate": "2026-06-15",
+              "payDate": "2026-06-30",
+              "cashAmount": 2,
+              "rate": null
+            },
+            {
+              "period": "Q3 2026",
+              "recordDate": "2026-09-15",
+              "payDate": "2026-09-30",
+              "cashAmount": 2,
+              "rate": null
+            },
+            {
+              "period": "Q4 2026",
+              "recordDate": "2026-12-15",
+              "payDate": "2026-12-31",
+              "cashAmount": 2,
+              "rate": null
+            }
+          ]
+        },
+        "STRD": {
+          "ufPrice": 73.1,
+          "timeStamp": "10/12/2026 04:00 PM",
+          "effYield": 13.68,
+          "taxEqvEffYield": 21.71,
+          "marketCredit": 8.57,
+          "currentDividend": 10,
+          "notional": 1402422100,
+          "vwap1mo": null,
+          "impliedVolatility": 13.8889,
+          "averageVolume": "6.9",
+          "dailyVolume": "3.7",
+          "sharesVolume": 49969.461527,
+          "nextRecordDate": "2026-12-15",
+          "nextPayoutDate": "2026-12-31",
+          "riskFreeRate": 4.23,
+          "marketCap": 1025.2,
+          "dividendHistory": [
+            {
+              "period": "Q3 2025",
+              "recordDate": "2025-09-15",
+              "payDate": "2025-09-30",
+              "cashAmount": 3.05555556,
+              "rate": null
+            },
+            {
+              "period": "Q4 2025",
+              "recordDate": "2025-12-15",
+              "payDate": "2025-12-31",
+              "cashAmount": 2.5,
+              "rate": null
+            },
+            {
+              "period": "Q1 2026",
+              "recordDate": "2026-03-15",
+              "payDate": "2026-03-31",
+              "cashAmount": 2.5,
+              "rate": null
+            },
+            {
+              "period": "Q2 2026",
+              "recordDate": "2026-06-15",
+              "payDate": "2026-06-30",
+              "cashAmount": 2.5,
+              "rate": null
+            },
+            {
+              "period": "Q3 2026",
+              "recordDate": "2026-09-15",
+              "payDate": "2026-09-30",
+              "cashAmount": 2.5,
+              "rate": null
+            },
+            {
+              "period": "Q4 2026",
+              "recordDate": "2026-12-15",
+              "payDate": "2026-12-31",
+              "cashAmount": 2.5,
+              "rate": null
+            }
+          ]
+        },
+        "STRE": {
+          "ufPrice": 79,
+          "timeStamp": "10/12/2026 07:57 AM",
+          "effYield": 12.66,
+          "taxEqvEffYield": 20.09,
+          "marketCredit": 9.29,
+          "currentDividend": 10,
+          "notional": 867302500,
+          "vwap1mo": null,
+          "impliedVolatility": null,
+          "averageVolume": "0.0",
+          "dailyVolume": "0.0",
+          "sharesVolume": 0,
+          "nextRecordDate": "2026-12-15",
+          "nextPayoutDate": "2026-12-31",
+          "riskFreeRate": null,
+          "marketCap": 612.3,
+          "dividendHistory": [
+            {
+              "period": "Q4 2025",
+              "recordDate": "2025-12-15",
+              "payDate": "2025-12-31",
+              "cashAmount": 1.33,
+              "rate": null
+            },
+            {
+              "period": "Q1 2026",
+              "recordDate": "2026-03-15",
+              "payDate": "2026-03-31",
+              "cashAmount": 2.5,
+              "rate": null
+            },
+            {
+              "period": "Q2 2026",
+              "recordDate": "2026-06-15",
+              "payDate": "2026-06-30",
+              "cashAmount": 2.5,
+              "rate": null
+            },
+            {
+              "period": "Q3 2026",
+              "recordDate": "2026-09-15",
+              "payDate": "2026-09-30",
+              "cashAmount": 2.5,
+              "rate": null
+            },
+            {
+              "period": "Q4 2026",
+              "recordDate": "2026-12-15",
+              "payDate": "2026-12-31",
+              "cashAmount": 2.5,
+              "rate": null
+            }
+          ]
+        }
+      },
+      "credit": {
+        "Convert 2028": {
+          "btcFloor": 212.0668,
+          "notional": 1010000000,
+          "isPreferred": false,
+          "duration": 0.92
+        },
+        "Convert 2030 B": {
+          "btcFloor": 632.0011,
+          "notional": 2000000000,
+          "isPreferred": false,
+          "duration": 1.38
+        },
+        "Convert 2029": {
+          "btcFloor": 946.9519,
+          "notional": 1500000000,
+          "isPreferred": false,
+          "duration": 1.64
+        },
+        "Convert 2030 A": {
+          "btcFloor": 1241.6932,
+          "notional": 800000000,
+          "isPreferred": false,
+          "duration": 1.93
+        },
+        "Convert 2031": {
+          "btcFloor": 1241.6932,
+          "notional": 603750000,
+          "isPreferred": false,
+          "duration": 1.93
+        },
+        "Convert 2032": {
+          "btcFloor": 1409.667,
+          "notional": 800000000,
+          "isPreferred": false,
+          "duration": 2.67
+        },
+        "STRF": {
+          "btcFloor": 2923.335,
+          "notional": 1283968900,
+          "isPreferred": true,
+          "duration": 10.59
+        },
+        "STRC": {
+          "btcFloor": 13288.3731,
+          "notional": 8792143600,
+          "isPreferred": true,
+          "duration": 8.41
+        },
+        "STRE": {
+          "btcFloor": 14310.8341,
+          "notional": 867302500,
+          "isPreferred": true,
+          "duration": 8.15
+        },
+        "STRK": {
+          "btcFloor": 15963.7364,
+          "notional": 1402074400,
+          "isPreferred": true,
+          "duration": 9.69
+        },
+        "STRD": {
+          "btcFloor": 17617.0486,
+          "notional": 1402422100,
+          "isPreferred": true,
+          "duration": 7.56
+        }
+      }
+    },
+    "strive": {
+      "as_of": "2026-10-13T12:31:33.767000+00:00",
+      "cash": [
+        {
+          "date": "2026-10-09",
+          "cash": 310300000,
+          "debt": 0,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 50328000
+        },
+        {
+          "date": "2026-10-02",
+          "cash": 284700000,
+          "debt": 0,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 50202000
+        },
+        {
+          "date": "2026-09-30",
+          "cash": 284722000,
+          "debt": 0,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 50172000
+        },
+        {
+          "date": "2026-09-25",
+          "cash": 248800000,
+          "debt": 0,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 49763000
+        },
+        {
+          "date": "2026-09-18",
+          "cash": 229600000,
+          "debt": 0,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 49748000
+        },
+        {
+          "date": "2026-09-11",
+          "cash": 204200000,
+          "debt": 0,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 49813000
+        },
+        {
+          "date": "2026-09-04",
+          "cash": 202600000,
+          "debt": 0,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 49364000
+        },
+        {
+          "date": "2026-08-28",
+          "cash": 183500000,
+          "debt": 0,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 49152000
+        },
+        {
+          "date": "2026-08-21",
+          "cash": 171900000,
+          "debt": 0,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 48571000
+        },
+        {
+          "date": "2026-08-14",
+          "cash": 154800000,
+          "debt": 0,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 47864000
+        },
+        {
+          "date": "2026-08-07",
+          "cash": 154900000,
+          "debt": 0,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 47980000
+        },
+        {
+          "date": "2026-07-31",
+          "cash": 151300000,
+          "debt": 0,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 45177000
+        },
+        {
+          "date": "2026-07-24",
+          "cash": 154000000,
+          "debt": 0,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 43879000
+        },
+        {
+          "date": "2026-07-17",
+          "cash": 157400000,
+          "debt": 0,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 43071000
+        },
+        {
+          "date": "2026-07-10",
+          "cash": 154100000,
+          "debt": 0,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 44177000
+        },
+        {
+          "date": "2026-07-02",
+          "cash": 153400000,
+          "debt": 0,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 44379000
+        },
+        {
+          "date": "2026-06-29",
+          "cash": 144500000,
+          "debt": 0,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 44738000
+        },
+        {
+          "date": "2026-04-15",
+          "cash": 140173979,
+          "debt": 10000000,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 0
+        },
+        {
+          "date": "2026-04-01",
+          "cash": 138250358,
+          "debt": 10000000,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 0
+        },
+        {
+          "date": "2026-03-16",
+          "cash": 137362674,
+          "debt": 10000000,
+          "dividend_reserve_months": 18,
+          "marketable_securities": 0
+        }
+      ],
+      "shares": [
+        {
+          "date": "2026-10-09",
+          "class_a_common": 101169907,
+          "class_b_common": 9217297,
+          "traditional_warrants": 15255900,
+          "fully_diluted_shares": 113116098,
+          "options_legacy": 796642,
+          "rsu_rsa": 1932252
+        },
+        {
+          "date": "2026-10-02",
+          "class_a_common": 91708804,
+          "class_b_common": 9230182,
+          "traditional_warrants": 23249706,
+          "fully_diluted_shares": 103714772,
+          "options_legacy": 843534,
+          "rsu_rsa": 1932252
+        },
+        {
+          "date": "2026-09-30",
+          "class_a_common": 88814706,
+          "class_b_common": 9198036,
+          "traditional_warrants": 25349806,
+          "fully_diluted_shares": 100716638,
+          "options_legacy": 850234,
+          "rsu_rsa": 1853662
+        },
+        {
+          "date": "2026-09-25",
+          "class_a_common": 88453685,
+          "class_b_common": 9198036,
+          "traditional_warrants": 25349806,
+          "fully_diluted_shares": 100776795,
+          "options_legacy": 856234,
+          "rsu_rsa": 2268840
+        },
+        {
+          "date": "2026-09-18",
+          "class_a_common": 87804613,
+          "class_b_common": 9198036,
+          "traditional_warrants": 25810455,
+          "fully_diluted_shares": 100144713,
+          "options_legacy": 873224,
+          "rsu_rsa": 2268840
+        },
+        {
+          "date": "2026-09-11",
+          "class_a_common": 85730853,
+          "class_b_common": 9237911,
+          "traditional_warrants": 26596010,
+          "fully_diluted_shares": 98139091,
+          "options_legacy": 901487,
+          "rsu_rsa": 2268840
+        },
+        {
+          "date": "2026-09-04",
+          "class_a_common": 85696647,
+          "class_b_common": 9237911,
+          "traditional_warrants": 26596010,
+          "fully_diluted_shares": 98148551,
+          "options_legacy": 945153,
+          "rsu_rsa": 2268840
+        },
+        {
+          "date": "2026-08-28",
+          "class_a_common": 83470035,
+          "class_b_common": 9792535,
+          "traditional_warrants": 26596010,
+          "fully_diluted_shares": 96523351,
+          "options_legacy": 991941,
+          "rsu_rsa": 2268840
+        },
+        {
+          "date": "2026-08-21",
+          "class_a_common": 79890888,
+          "class_b_common": 9792535,
+          "traditional_warrants": 26596010,
+          "fully_diluted_shares": 92949226,
+          "options_legacy": 996963,
+          "rsu_rsa": 2268840
+        },
+        {
+          "date": "2026-08-14",
+          "class_a_common": 76244588,
+          "class_b_common": 9792535,
+          "traditional_warrants": 26596010,
+          "fully_diluted_shares": 89302926,
+          "options_legacy": 996963,
+          "rsu_rsa": 2268840
+        },
+        {
+          "date": "2026-08-07",
+          "class_a_common": 75647438,
+          "class_b_common": 9792535,
+          "traditional_warrants": 26596010,
+          "fully_diluted_shares": 88705776,
+          "options_legacy": 996963,
+          "rsu_rsa": 2268840
+        },
+        {
+          "date": "2026-07-31",
+          "class_a_common": 74417438,
+          "class_b_common": 9792535,
+          "traditional_warrants": 26596010,
+          "fully_diluted_shares": 86804205,
+          "options_legacy": 996963,
+          "rsu_rsa": 1597269
+        },
+        {
+          "date": "2026-07-24",
+          "class_a_common": 74307438,
+          "class_b_common": 9792535,
+          "traditional_warrants": 26596010,
+          "fully_diluted_shares": 86694972,
+          "options_legacy": 997730,
+          "rsu_rsa": 1597269
+        },
+        {
+          "date": "2026-07-17",
+          "class_a_common": 73869961,
+          "class_b_common": 9800012,
+          "traditional_warrants": 26596010,
+          "fully_diluted_shares": 86281135,
+          "options_legacy": 997730,
+          "rsu_rsa": 1613432
+        },
+        {
+          "date": "2026-07-10",
+          "class_a_common": 73426164,
+          "class_b_common": 9803347,
+          "traditional_warrants": 26596010,
+          "fully_diluted_shares": 85937812,
+          "options_legacy": 1004282,
+          "rsu_rsa": 1704019
+        },
+        {
+          "date": "2026-07-02",
+          "class_a_common": 72945813,
+          "class_b_common": 9780018,
+          "traditional_warrants": 26596010,
+          "fully_diluted_shares": 85434132,
+          "options_legacy": 1004282,
+          "rsu_rsa": 1704019
+        },
+        {
+          "date": "2026-06-30",
+          "class_a_common": 72164809,
+          "class_b_common": 9780018,
+          "traditional_warrants": 26596010,
+          "fully_diluted_shares": 84653128,
+          "options_legacy": 1004282,
+          "rsu_rsa": 1704019
+        },
+        {
+          "date": "2026-03-31",
+          "class_a_common": 59286628,
+          "class_b_common": 9872157,
+          "traditional_warrants": 26596010,
+          "fully_diluted_shares": 71985609,
+          "options_legacy": 1055750,
+          "rsu_rsa": 1672666
+        },
+        {
+          "date": "2025-12-31",
+          "class_a_common": 34936745,
+          "class_b_common": 9776540,
+          "traditional_warrants": 26594435,
+          "fully_diluted_shares": 44766899,
+          "options_legacy": 0,
+          "rsu_rsa": 0
+        },
+        {
+          "date": "2025-09-30",
+          "class_a_common": 22440880,
+          "class_b_common": 10901774,
+          "traditional_warrants": 27281481,
+          "fully_diluted_shares": 42204977,
+          "options_legacy": 0,
+          "rsu_rsa": 0
+        }
+      ],
+      "transactions": [
+        {
+          "transaction_date": "2026-10-09",
+          "type": "purchase",
+          "btc_amount": 3310.63645825,
+          "cost": 279750000,
+          "total_btc_holdings": 32772.6579155,
+          "cost_basis": 84500.36829107949,
+          "total_cost_basis": 2931150258.7599998
+        },
+        {
+          "transaction_date": "2026-10-02",
+          "type": "purchase",
+          "btc_amount": 1461.53227042,
+          "cost": 123789417,
+          "total_btc_holdings": 29462.021457249997,
+          "cost_basis": 84698.38094264362,
+          "total_cost_basis": 2651400258.7599998
+        },
+        {
+          "transaction_date": "2026-09-30",
+          "type": "purchase",
+          "btc_amount": 538.70214126,
+          "cost": 45075000,
+          "total_btc_holdings": 28000.489186829996,
+          "cost_basis": 83673.32621803138,
+          "total_cost_basis": 2527610841.7599998
+        },
+        {
+          "transaction_date": "2026-09-25",
+          "type": "purchase",
+          "btc_amount": 1106.60648278,
+          "cost": 94500000,
+          "total_btc_holdings": 27461.787045569996,
+          "cost_basis": 85396.21036974095,
+          "total_cost_basis": 2482535841.7599998
+        },
+        {
+          "transaction_date": "2026-09-18",
+          "type": "purchase",
+          "btc_amount": 1355.13485435,
+          "cost": 107700000,
+          "total_btc_holdings": 26355.180562789996,
+          "cost_basis": 79475.4851550616,
+          "total_cost_basis": 2388035841.7599998
+        },
+        {
+          "transaction_date": "2026-09-11",
+          "type": "purchase",
+          "btc_amount": 468.95129536,
+          "cost": 36556433,
+          "total_btc_holdings": 25000.045708439997,
+          "cost_basis": 77953.58145228431,
+          "total_cost_basis": 2280335841.7599998
+        },
+        {
+          "transaction_date": "2026-09-04",
+          "type": "purchase",
+          "btc_amount": 1374.85942164,
+          "cost": 109000000,
+          "total_btc_holdings": 24531.094413079998,
+          "cost_basis": 79280.8328505175,
+          "total_cost_basis": 2243779408.7599998
+        },
+        {
+          "transaction_date": "2026-08-28",
+          "type": "purchase",
+          "btc_amount": 1800.29666081,
+          "cost": 143000000,
+          "total_btc_holdings": 23156.234991439997,
+          "cost_basis": 79431.35323911594,
+          "total_cost_basis": 2134779408.7599998
+        },
+        {
+          "transaction_date": "2026-08-21",
+          "type": "purchase",
+          "btc_amount": 1110.21962841,
+          "cost": 81500000,
+          "total_btc_holdings": 21355.938330629997,
+          "cost_basis": 73408.89848679774,
+          "total_cost_basis": 1991779408.7599998
+        },
+        {
+          "transaction_date": "2026-08-14",
+          "type": "purchase",
+          "btc_amount": 79.07509656,
+          "cost": 5000000,
+          "total_btc_holdings": 20245.718702219998,
+          "cost_basis": 63231.03249334812,
+          "total_cost_basis": 1910279408.7599998
+        },
+        {
+          "transaction_date": "2026-08-07",
+          "type": "purchase",
+          "btc_amount": 146.57688739,
+          "cost": 9500000,
+          "total_btc_holdings": 20166.64360566,
+          "cost_basis": 64812.40098053907,
+          "total_cost_basis": 1905279408.7599998
+        },
+        {
+          "transaction_date": "2026-07-31",
+          "type": "purchase",
+          "btc_amount": 20,
+          "cost": 1273696,
+          "total_btc_holdings": 20020.066718269998,
+          "cost_basis": 63684.8,
+          "total_cost_basis": 1895779408.7599998
+        },
+        {
+          "transaction_date": "2026-07-24",
+          "type": "purchase",
+          "btc_amount": 79,
+          "cost": 5192146,
+          "total_btc_holdings": 20000.066718269998,
+          "cost_basis": 65723.3670886076,
+          "total_cost_basis": 1894505712.7599998
+        },
+        {
+          "transaction_date": "2026-07-17",
+          "type": "purchase",
+          "btc_amount": 21.03745348,
+          "cost": 1330000,
+          "total_btc_holdings": 19921.066718269998,
+          "cost_basis": 63220.57949002295,
+          "total_cost_basis": 1889313566.7599998
+        },
+        {
+          "transaction_date": "2026-07-10",
+          "type": "purchase",
+          "btc_amount": 18.35133343,
+          "cost": 1175000,
+          "total_btc_holdings": 19900.02926479,
+          "cost_basis": 64028.04485472204,
+          "total_cost_basis": 1887983566.7599998
+        },
+        {
+          "transaction_date": "2026-07-02",
+          "type": "purchase",
+          "btc_amount": 17.76,
+          "cost": 1062936,
+          "total_btc_holdings": 19881.67793136,
+          "cost_basis": 59849.99999999999,
+          "total_cost_basis": 1886808566.7599998
+        },
+        {
+          "transaction_date": "2026-06-18",
+          "type": "purchase",
+          "btc_amount": 758.54654107,
+          "cost": 49950000,
+          "total_btc_holdings": 19863.91793136,
+          "cost_basis": 65849.61804656166,
+          "total_cost_basis": 1885745630.7599998
+        },
+        {
+          "transaction_date": "2026-06-12",
+          "type": "purchase",
+          "btc_amount": 73.06032459,
+          "cost": 4650000,
+          "total_btc_holdings": 19105.371390289998,
+          "cost_basis": 63646.03532895419,
+          "total_cost_basis": 1835795630.7599998
+        },
+        {
+          "transaction_date": "2026-06-05",
+          "type": "purchase",
+          "btc_amount": 32.0756214,
+          "cost": 2050000,
+          "total_btc_holdings": 19032.3110657,
+          "cost_basis": 63911.46641979007,
+          "total_cost_basis": 1831145630.7599998
+        },
+        {
+          "transaction_date": "2026-06-01",
+          "type": "purchase",
+          "btc_amount": 2499.900789,
+          "cost": 185222123.37,
+          "total_btc_holdings": 19000.2354443,
+          "cost_basis": 74091.78963621665,
+          "total_cost_basis": 1829095630.7599998
+        },
+        {
+          "transaction_date": "2026-05-22",
+          "type": "purchase",
+          "btc_amount": 1109.5884149,
+          "cost": 85425850,
+          "total_btc_holdings": 16500.3346553,
+          "cost_basis": 76988.77246091189,
+          "total_cost_basis": 1643873507.3899999
+        },
+        {
+          "transaction_date": "2026-05-18",
+          "type": "purchase",
+          "btc_amount": 381.61126775,
+          "cost": 30280000,
+          "total_btc_holdings": 15390.746240400002,
+          "cost_basis": 79347.76186912002,
+          "total_cost_basis": 1558447657.3899999
+        },
+        {
+          "transaction_date": "2026-05-12",
+          "type": "purchase",
+          "btc_amount": 8.68291074,
+          "cost": 695000,
+          "total_btc_holdings": 15009.134972650001,
+          "cost_basis": 80042.28314801263,
+          "total_cost_basis": 1528167657.3899999
+        },
+        {
+          "transaction_date": "2026-05-01",
+          "type": "purchase",
+          "btc_amount": 443.93244937,
+          "cost": 33875000,
+          "total_btc_holdings": 15000.45206191,
+          "cost_basis": 76306.65442022361,
+          "total_cost_basis": 1527472657.3899999
+        },
+        {
+          "transaction_date": "2026-04-24",
+          "type": "purchase",
+          "btc_amount": 788.61367799,
+          "cost": 61425000,
+          "total_btc_holdings": 14556.51961254,
+          "cost_basis": 77889.84862215248,
+          "total_cost_basis": 1493597657.3899999
+        },
+        {
+          "transaction_date": "2026-04-13",
+          "type": "purchase",
+          "btc_amount": 26.95990866,
+          "cost": 1950000,
+          "total_btc_holdings": 13767.905934549999,
+          "cost_basis": 72329.62190607065,
+          "total_cost_basis": 1432172657.3899999
+        },
+        {
+          "transaction_date": "2026-04-02",
+          "type": "purchase",
+          "btc_amount": 113.01107742,
+          "cost": 7750000,
+          "total_btc_holdings": 13740.94602589,
+          "cost_basis": 68577.34814081555,
+          "total_cost_basis": 1430222657.3899999
+        },
+        {
+          "transaction_date": "2026-03-17",
+          "type": "purchase",
+          "btc_amount": 317.00264498,
+          "cost": 23000000,
+          "total_btc_holdings": 13627.93494847,
+          "cost_basis": 72554.59966730275,
+          "total_cost_basis": 1422472657.3899999
+        },
+        {
+          "transaction_date": "2026-03-11",
+          "type": "purchase",
+          "btc_amount": 179.11582462,
+          "cost": 13000000,
+          "total_btc_holdings": 13310.932303489999,
+          "cost_basis": 72578.73517083105,
+          "total_cost_basis": 1399472657.3899999
+        },
+        {
+          "transaction_date": "2026-01-28",
+          "type": "purchase",
+          "btc_amount": 333.88517237,
+          "cost": 30000000,
+          "total_btc_holdings": 13131.81647887,
+          "cost_basis": 89851.24971873575,
+          "total_cost_basis": 1386472657.3899999
+        },
+        {
+          "transaction_date": "2026-01-16",
+          "type": "purchase",
+          "btc_amount": 5048.09590786,
+          "cost": 482214414,
+          "total_btc_holdings": 12797.931306499999,
+          "cost_basis": 95524.01990801744,
+          "total_cost_basis": 1356472657.3899999
+        },
+        {
+          "transaction_date": "2026-01-13",
+          "type": "purchase",
+          "btc_amount": 123.02156715,
+          "cost": 11264000,
+          "total_btc_holdings": 7749.83539864,
+          "cost_basis": 91561.18118919607,
+          "total_cost_basis": 874258243.39
+        },
+        {
+          "transaction_date": "2025-12-31",
+          "type": "purchase",
+          "btc_amount": 101.79313278,
+          "cost": 9622000,
+          "total_btc_holdings": 7626.81383149,
+          "cost_basis": 94525.04051324866,
+          "total_cost_basis": 862994243.39
+        },
+        {
+          "transaction_date": "2025-11-09",
+          "type": "purchase",
+          "btc_amount": 1567.1634842,
+          "cost": 162066141.39,
+          "total_btc_holdings": 7525.02069871,
+          "cost_basis": 103413.67893262963,
+          "total_cost_basis": 853372243.39
+        },
+        {
+          "transaction_date": "2025-10-28",
+          "type": "purchase",
+          "btc_amount": 72.26357451,
+          "cost": 8259999,
+          "total_btc_holdings": 5957.85721451,
+          "cost_basis": 114303.76999766269,
+          "total_cost_basis": 691306102
+        },
+        {
+          "transaction_date": "2025-09-14",
+          "type": "purchase",
+          "btc_amount": 5816.59364,
+          "cost": 675000000,
+          "total_btc_holdings": 5885.59364,
+          "cost_basis": 116047.3022144968,
+          "total_cost_basis": 683046103
+        },
+        {
+          "transaction_date": "2025-09-12",
+          "type": "purchase",
+          "btc_amount": 69,
+          "cost": 8046103,
+          "total_btc_holdings": 69,
+          "cost_basis": 116610.1884057971,
+          "total_cost_basis": 8046103
+        }
+      ],
+      "sata_dividends": [
+        {
+          "payDate": "2026-10-29",
+          "recordDate": "2026-10-28",
+          "cashAmount": 0.0516,
+          "status": "pending"
+        },
+        {
+          "payDate": "2026-10-28",
+          "recordDate": "2026-10-27",
+          "cashAmount": 0.0516,
+          "status": "pending"
+        },
+        {
+          "payDate": "2026-10-27",
+          "recordDate": "2026-10-26",
+          "cashAmount": 0.0516,
+          "status": "pending"
+        },
+        {
+          "payDate": "2026-10-26",
+          "recordDate": "2026-10-23",
+          "cashAmount": 0.0516,
+          "status": "pending"
+        },
+        {
+          "payDate": "2026-10-23",
+          "recordDate": "2026-10-22",
+          "cashAmount": 0.0516,
+          "status": "pending"
+        },
+        {
+          "payDate": "2026-10-22",
+          "recordDate": "2026-10-21",
+          "cashAmount": 0.0516,
+          "status": "pending"
+        },
+        {
+          "payDate": "2026-10-21",
+          "recordDate": "2026-10-20",
+          "cashAmount": 0.0516,
+          "status": "pending"
+        },
+        {
+          "payDate": "2026-10-20",
+          "recordDate": "2026-10-19",
+          "cashAmount": 0.0516,
+          "status": "pending"
+        },
+        {
+          "payDate": "2026-10-19",
+          "recordDate": "2026-10-16",
+          "cashAmount": 0.0516,
+          "status": "pending"
+        },
+        {
+          "payDate": "2026-10-16",
+          "recordDate": "2026-10-15",
+          "cashAmount": 0.0516,
+          "status": "pending"
+        },
+        {
+          "payDate": "2026-10-15",
+          "recordDate": "2026-10-14",
+          "cashAmount": 0.0516,
+          "status": "pending"
+        },
+        {
+          "payDate": "2026-10-14",
+          "recordDate": "2026-10-13",
+          "cashAmount": 0.0516,
+          "status": "pending"
+        },
+        {
+          "payDate": "2026-10-13",
+          "recordDate": "2026-10-09",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-10-09",
+          "recordDate": "2026-10-08",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-10-08",
+          "recordDate": "2026-10-07",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-10-07",
+          "recordDate": "2026-10-06",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-10-06",
+          "recordDate": "2026-10-05",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-10-05",
+          "recordDate": "2026-10-02",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-10-02",
+          "recordDate": "2026-10-01",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-10-01",
+          "recordDate": "2026-09-30",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-30",
+          "recordDate": "2026-09-29",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-29",
+          "recordDate": "2026-09-28",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-28",
+          "recordDate": "2026-09-25",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-25",
+          "recordDate": "2026-09-24",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-24",
+          "recordDate": "2026-09-23",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-23",
+          "recordDate": "2026-09-22",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-22",
+          "recordDate": "2026-09-21",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-21",
+          "recordDate": "2026-09-18",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-18",
+          "recordDate": "2026-09-17",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-17",
+          "recordDate": "2026-09-16",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-16",
+          "recordDate": "2026-09-15",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-15",
+          "recordDate": "2026-09-14",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-14",
+          "recordDate": "2026-09-11",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-11",
+          "recordDate": "2026-09-10",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-10",
+          "recordDate": "2026-09-09",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-09",
+          "recordDate": "2026-09-08",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-08",
+          "recordDate": "2026-09-04",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-04",
+          "recordDate": "2026-09-03",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-03",
+          "recordDate": "2026-09-02",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-02",
+          "recordDate": "2026-09-01",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-09-01",
+          "recordDate": "2026-08-31",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-31",
+          "recordDate": "2026-08-28",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-28",
+          "recordDate": "2026-08-27",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-27",
+          "recordDate": "2026-08-26",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-26",
+          "recordDate": "2026-08-25",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-25",
+          "recordDate": "2026-08-24",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-24",
+          "recordDate": "2026-08-21",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-21",
+          "recordDate": "2026-08-20",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-20",
+          "recordDate": "2026-08-19",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-19",
+          "recordDate": "2026-08-18",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-18",
+          "recordDate": "2026-08-17",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-17",
+          "recordDate": "2026-08-14",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-14",
+          "recordDate": "2026-08-13",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-13",
+          "recordDate": "2026-08-12",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-12",
+          "recordDate": "2026-08-11",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-11",
+          "recordDate": "2026-08-10",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-10",
+          "recordDate": "2026-08-07",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-06",
+          "recordDate": "2026-08-05",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-05",
+          "recordDate": "2026-08-04",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-04",
+          "recordDate": "2026-08-03",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-08-03",
+          "recordDate": "2026-07-31",
+          "cashAmount": 0.0516,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-31",
+          "recordDate": "2026-07-30",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-30",
+          "recordDate": "2026-07-29",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-29",
+          "recordDate": "2026-07-28",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-28",
+          "recordDate": "2026-07-27",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-27",
+          "recordDate": "2026-07-24",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-24",
+          "recordDate": "2026-07-23",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-23",
+          "recordDate": "2026-07-22",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-22",
+          "recordDate": "2026-07-21",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-21",
+          "recordDate": "2026-07-20",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-20",
+          "recordDate": "2026-07-17",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-17",
+          "recordDate": "2026-07-16",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-16",
+          "recordDate": "2026-07-15",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-15",
+          "recordDate": "2026-07-14",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-14",
+          "recordDate": "2026-07-13",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-13",
+          "recordDate": "2026-07-10",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-10",
+          "recordDate": "2026-07-09",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-09",
+          "recordDate": "2026-07-08",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-08",
+          "recordDate": "2026-07-07",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-07",
+          "recordDate": "2026-07-06",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-06",
+          "recordDate": "2026-07-02",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-02",
+          "recordDate": "2026-07-01",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-07-01",
+          "recordDate": "2026-06-30",
+          "cashAmount": 0.0493,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-06-30",
+          "recordDate": "2026-06-29",
+          "cashAmount": 0.0542,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-06-29",
+          "recordDate": "2026-06-26",
+          "cashAmount": 0.0542,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-06-26",
+          "recordDate": "2026-06-25",
+          "cashAmount": 0.0542,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-06-25",
+          "recordDate": "2026-06-24",
+          "cashAmount": 0.0542,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-06-24",
+          "recordDate": "2026-06-23",
+          "cashAmount": 0.0542,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-06-23",
+          "recordDate": "2026-06-22",
+          "cashAmount": 0.0542,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-06-22",
+          "recordDate": "2026-06-18",
+          "cashAmount": 0.0542,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-06-18",
+          "recordDate": "2026-06-17",
+          "cashAmount": 0.0542,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-06-17",
+          "recordDate": "2026-06-16",
+          "cashAmount": 0.0542,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-06-16",
+          "recordDate": "2026-06-15",
+          "cashAmount": 0.0542,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-06-15",
+          "recordDate": "2026-06-01",
+          "cashAmount": 1.0833,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-05-15",
+          "recordDate": "2026-05-01",
+          "cashAmount": 1.0833,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-04-15",
+          "recordDate": "2026-04-01",
+          "cashAmount": 1.0625,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-03-15",
+          "recordDate": "2026-03-01",
+          "cashAmount": 1.0417,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-02-15",
+          "recordDate": "2026-02-01",
+          "cashAmount": 1.0208,
+          "status": "paid"
+        },
+        {
+          "payDate": "2026-01-15",
+          "recordDate": "2026-01-01",
+          "cashAmount": 1.0208,
+          "status": "paid"
+        },
+        {
+          "payDate": "2025-12-15",
+          "recordDate": "2025-12-01",
+          "cashAmount": 1.1333,
+          "status": "paid"
+        }
+      ],
+      "sata_daily_dividend": 0.0516,
+      "sata_rate_pct": 13.0,
+      "sata_rate_source": "strive.com/api/treasury dividendRate",
+      "treasury_feed": {
+        "asOf": "2026-10-09",
+        "reserveMonths": 18,
+        "totalDividendCoverage": 17,
+        "dividendRate": 0.13,
+        "btcHoldings": 32772.65791549999,
+        "cash": 310300000,
+        "marketableSecurities": 50328000,
+        "debt": 0
+      },
+      "sata_rate_as_of": "2026-10-13",
+      "dashboard_amplification": {
+        "date": "2026-10-13",
+        "btc_nav": 2730290130.940305,
+        "sata_notional": 1403017600.0,
+        "debt": 0,
+        "amplification_pct": 51.387124910304095
+      }
+    }
+  },
+  "rounding": "Filing quantities and dollar totals are preserved as disclosed. Strive dashboard has fractional BTC; the existing panel prices the filed BTC quantity at the issuer dashboard average cost. No report formula changed."
+}

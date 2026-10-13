@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "2026-10-05.1",
+  "revision": "2026-10-13.1",
   "basis": "Dated supplemental inputs; NAV estimates use ending preferred shares and ordinary accrued dividends. No supplement automatically rolls into a newer balance date.",
   "balances": {
     "MSTR": {
@@ -111,6 +111,22 @@
           "https://api.strategy.com/btc/strcKpiData",
           "https://query1.finance.yahoo.com/v8/finance/chart/"
         ]
+      },
+      "2026-10-11": {
+        "btc_holdings": 848250,
+        "effective_common_shares": 422198000,
+        "debt_principal": 6753703000,
+        "preferred_claims_usd": 12968291588.656889,
+        "preferred_claims_eur": 777368055.5555556,
+        "share_basis": "Dated issuer Class A 402,558,000 + Class B 19,640,000, rounded to thousands. Uses the established A+B convention (422,198,000); the separately rounded issuer Basic Shares row is 422,199,000.",
+        "sources": [
+          "https://www.sec.gov/Archives/edgar/data/1050446/000119312526419726/mstr-20261012.htm",
+          "https://www.sec.gov/Archives/edgar/data/1050446/000119312526419726/mstr-ex99_1.htm",
+          "https://www.strategy.com/shares",
+          "https://api.strategy.com/btc/credit",
+          "https://api.strategy.com/btc/strcKpiData"
+        ],
+        "limitations": "Debt carries the reviewed June 30 principal, corroborated by the current convertible note list. Preferred counts roll through disclosed repurchases; ordinary 30/360 accrual is 11 days since September 30. Scheduled Strategy payments assumed paid; no unreported issuance assumed. See reconciliation-2026-10-13.json."
       }
     },
     "ASST": {
@@ -171,6 +187,17 @@
         "sources": [
           "https://query1.finance.yahoo.com/v8/finance/chart/SATA"
         ]
+      },
+      "2026-10-09": {
+        "debt_principal": 0,
+        "preferred_claims_usd": 1403017600.0,
+        "preferred_claims_eur": 0,
+        "sources": [
+          "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065595/asst-20261013.htm",
+          "https://www.strive.com/treasury/api/dashboard/base-data",
+          "https://query1.finance.yahoo.com/v8/finance/chart/SATA?interval=1d&range=6mo&includePrePost=false&events=splits"
+        ],
+        "limitations": "SATA claims use $100 per share: both certificate branches are at the floor. All five weekly dividends are marked paid by the issuer. Common capital retains the net-share-change times same-week VWAP estimate, before fees; includes warrant exercises and is not reported financing proceeds. See reconciliation-2026-10-13.json."
       }
     }
   },
@@ -179,14 +206,16 @@
     "2026-09-07": 79207.14,
     "2026-09-13": 77471.9,
     "2026-09-20": 85149.67,
-    "2026-09-27": 83539.0234375
+    "2026-09-27": 83539.0234375,
+    "2026-10-04": 86148.71
   },
   "comparison_release_dates": {
     "2026-08-30": "2026-08-31",
     "2026-09-07": "2026-09-08",
     "2026-09-13": "2026-09-14",
     "2026-09-20": "2026-09-21",
-    "2026-09-27": "2026-09-28"
+    "2026-09-27": "2026-09-28",
+    "2026-10-04": "2026-10-05"
   },
   "balance_marks": {
     "2026-08-30": {
@@ -227,6 +256,9 @@
     },
     "2026-10-02": {
       "STRC": 99.409900990099
+    },
+    "2026-10-04": {
+      "EURUSD=X": 1.121
     }
   },
   "preferred_audit_files": [
@@ -234,6 +266,7 @@
     "strive-supplements-2026-09-08.json",
     "reconciliation-2026-09-14.json",
     "reconciliation-2026-09-21.json",
-    "reconciliation-2026-09-28.json"
+    "reconciliation-2026-09-28.json",
+    "reconciliation-2026-10-13.json"
   ]
 }

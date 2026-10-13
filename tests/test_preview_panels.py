@@ -37,7 +37,11 @@ def assert_phone_ready(case, png):
 
 
 def offline_extras():
-    return extras_module.load_extras(offline=True)
+    extras = extras_module.load_extras(offline=True)
+    # Keep issuer data aligned with the September edition above as the live
+    # fallback snapshot advances. Captured from the September 25 snapshot.
+    extras.update(json.loads((ROOT / "tests/fixtures/preview-issuers-2026-09-25.json").read_text()))
+    return extras
 
 
 def no_network(test):
