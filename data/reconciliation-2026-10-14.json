@@ -1,0 +1,449 @@
+{
+  "edition": "2026-10-14",
+  "retrievedAt": "2026-10-14T16:26:03.485150+00:00",
+  "update_type": "manual combined Strive edition",
+  "strategy_reference": "reconciliation-2026-10-13.json",
+  "source_manifest": [
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065816/asst-20261014.htm",
+      "fetched_at": "2026-10-14T16:24:28.999531+00:00",
+      "sha256": "aef7fd361cba1c650bc166bc8f21583da5eeaaf6dffe359f2cc719eb17fb0d2e"
+    },
+    {
+      "url": "https://www.strive.com/treasury/api/dashboard/base-data",
+      "fetched_at": "2026-10-14T16:24:28.799166+00:00",
+      "sha256": "af0909934b001a62597f6a898825ef3bed3cb5cb7404ea3ddf696649732f94c0"
+    },
+    {
+      "url": "https://strive.com/api/treasury",
+      "fetched_at": "2026-10-14T16:24:52.976892+00:00",
+      "sha256": "d178070179cc24f033c52d268c732dd30ab4d056fd0efc50b7ca8f59aae70592",
+      "hash_basis": "JSON serialized API response"
+    },
+    {
+      "url": "https://www.strive.com/treasury/api/dashboard/calculated?fromDate=2026-10-09&toDate=2026-10-14",
+      "fetched_at": "2026-10-14T16:24:53.452691+00:00",
+      "sha256": "af2d26e32fd97b9dc91f14c10e70ffcc9b173b7b31a24c7c8963a9aae3779cea",
+      "hash_basis": "JSON serialized API response"
+    },
+    {
+      "url": "https://query1.finance.yahoo.com/v8/finance/chart/SATA?range=1mo&interval=1d",
+      "fetched_at": "2026-10-14T16:24:49.101804+00:00",
+      "sha256": "61bae6492cb1b9bcf13b551bc650bfa256576a1b5327cbf6e87b788e539819af",
+      "hash_basis": "JSON serialized API response"
+    }
+  ],
+  "filing_acceptance": {
+    "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065816/0001628280-26-065816-index.html",
+    "accepted_ET": "2026-10-14T07:59:29-04:00",
+    "sha256": "f3f83692ad44a6349c890875d989c8e11f40dc32945e57f49b9d8401b2f06d7d"
+  },
+  "reported_oct14": {
+    "btc_purchases": 2822,
+    "average_btc_price_approx": 83266,
+    "warrants_exercised": 273493909,
+    "class_a_shares_issued": 13674703,
+    "expected_gross_proceeds_usd": 369200000,
+    "remaining_traditional_warrants": 0
+  },
+  "combined_filing": {
+    "ticker": "ASST",
+    "issuer": "Strive",
+    "cik": "0001920406",
+    "accession": "0001628280-26-065816",
+    "form": "8-K",
+    "filedDate": "2026-10-14",
+    "reportDate": "2026-10-14",
+    "acceptedAt": "2026-10-14T11:59:29+00:00",
+    "firstSeenAt": "2026-10-14T16:24:28.999531+00:00",
+    "documentFetchedAt": "2026-10-14T16:24:28.999531+00:00",
+    "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065816/asst-20261014.htm",
+    "documents": [
+      {
+        "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065816/asst-20261014.htm",
+        "fetchedAt": "2026-10-14T16:24:28.999531+00:00",
+        "sha256": "aef7fd361cba1c650bc166bc8f21583da5eeaaf6dffe359f2cc719eb17fb0d2e"
+      }
+    ],
+    "status": "ready_for_review",
+    "baseline": false,
+    "extracted": {
+      "parserVersion": "manual-combined-period-2026-10-14",
+      "periodStart": "2026-10-05",
+      "periodEnd": "2026-10-13",
+      "priorBalanceDate": "2026-10-02",
+      "balanceDate": "2026-10-13",
+      "facts": {
+        "weekly_btc_purchases": 6133,
+        "btc_holdings": 35595,
+        "cash_and_equivalents_usd": 310300000,
+        "held_strc_fair_value_usd": 50330000,
+        "held_strc_shares": 505000,
+        "common_shares_class_a": 114844610,
+        "common_shares_class_b": 9117297,
+        "effective_common_shares": 123961907,
+        "assumed_diluted_shares": 126690801,
+        "options": 796642,
+        "unvested_employee_awards": 1932252,
+        "traditional_warrant_shares": 0,
+        "sata_shares": 14030176,
+        "net_common_shares_change": 23022921,
+        "net_sata_shares_change": 532094
+      },
+      "priorFacts": {
+        "cash_and_equivalents_usd": 284700000,
+        "held_strc_fair_value_usd": 50202000,
+        "held_strc_shares": 505000,
+        "btc_holdings": 29462,
+        "common_shares_class_a": 91708804,
+        "common_shares_class_b": 9230182,
+        "effective_common_shares": 100938986,
+        "options": 843534,
+        "unvested_employee_awards": 1932252,
+        "assumed_diluted_shares": 103714772,
+        "traditional_warrant_shares": 23249706,
+        "sata_shares": 13498082
+      },
+      "securities": {},
+      "missing": [],
+      "issues": [],
+      "extractionValidated": true
+    },
+    "manualReview": {
+      "reviewedAt": "2026-10-14T16:26:03.485150+00:00",
+      "basis": "User-requested combined reporting period; manually reconciled two SEC announcements plus dated issuer dashboard. The October 14 8-K alone is not a complete balance sheet. No filing ingestion changes.",
+      "combinedPeriods": [
+        {
+          "start": "2026-10-05",
+          "end": "2026-10-09",
+          "btc_purchases": 3311,
+          "accession": "0001628280-26-065595",
+          "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065595/asst-20261013.htm"
+        },
+        {
+          "start": "2026-10-12",
+          "end": "2026-10-13",
+          "btc_purchases": 2822,
+          "accession": "0001628280-26-065816",
+          "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065816/asst-20261014.htm"
+        }
+      ],
+      "sourceDocuments": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065595/asst-20261013.htm",
+          "fetchedAt": "2026-10-13T12:01:46.870Z",
+          "sha256": "53be5e0e6e40940df19a3d08b2457b71e76a573f61d6f892b3a49c7d64b630d5"
+        },
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065816/asst-20261014.htm",
+          "fetched_at": "2026-10-14T16:24:28.999531+00:00",
+          "sha256": "aef7fd361cba1c650bc166bc8f21583da5eeaaf6dffe359f2cc719eb17fb0d2e"
+        },
+        {
+          "url": "https://www.strive.com/treasury/api/dashboard/base-data",
+          "fetched_at": "2026-10-14T16:24:28.799166+00:00",
+          "sha256": "af0909934b001a62597f6a898825ef3bed3cb5cb7404ea3ddf696649732f94c0"
+        },
+        {
+          "url": "https://strive.com/api/treasury",
+          "fetched_at": "2026-10-14T16:24:52.976892+00:00",
+          "sha256": "d178070179cc24f033c52d268c732dd30ab4d056fd0efc50b7ca8f59aae70592",
+          "hash_basis": "JSON serialized API response"
+        },
+        {
+          "url": "https://www.strive.com/treasury/api/dashboard/calculated?fromDate=2026-10-09&toDate=2026-10-14",
+          "fetched_at": "2026-10-14T16:24:53.452691+00:00",
+          "sha256": "af2d26e32fd97b9dc91f14c10e70ffcc9b173b7b31a24c7c8963a9aae3779cea",
+          "hash_basis": "JSON serialized API response"
+        }
+      ],
+      "panelNote": "Strive combines 3,311 BTC bought Oct 5\u20139 and 2,822 BTC bought Oct 12\u201313: 6,133 BTC total, compared with Oct 2. Oct 13 cash and shares use Strive\u2019s dashboard; SATA and STRC share counts retain the latest disclosed amounts. Common capital is an Oct 5\u201313 VWAP estimate. RESIDUAL includes estimation and settlement differences, not just dividends: the 8-K describes $369.2m of warrant proceeds as expected, while the dashboard still lists $310.3m cash.",
+      "unsettledProceeds": true,
+      "field_sources": {
+        "purchases": "Sum of both 8-K disclosed integer amounts",
+        "btc_holdings": "Oct 9 8-K holdings plus new purchase, corroborated by rounded issuer dashboard",
+        "cash_and_share_counts": "Oct 13 issuer dashboard entries, not a newly filed balance table",
+        "sata_shares": "Oct 9 8-K count unchanged; corroborated by Oct 13 issuer notional $1,403,017,600",
+        "held_strc_shares": "Latest filed count 505,000 carried explicitly; Oct 13 issuer fair value $50.330m corroborates",
+        "priorFacts": "Oct 2 comparative column in Oct 13 8-K"
+      },
+      "limitations": "Issuer dashboard Class B count is 100,000 below Oct 9; use its dated A+B total rather than assuming only warrant issuance. Cash is the issuer dashboard balance, without adding expected proceeds. No SATS offering proceeds or shares assumed.",
+      "balanceSource": "Strive issuer dashboard dated Oct 13; Oct 2 comparator from SEC 8-K"
+    }
+  },
+  "issuer_shares": {
+    "id": "454364f5-6fa4-4598-8d33-332028c78ac6",
+    "date": "2026-10-13",
+    "issued_shares": 123961907,
+    "fully_diluted_shares": 126690801,
+    "source_url": "https://www.sec.gov/ix?doc=/Archives/edgar/data/0001920406/000162828026065816/asst-20261014.htm",
+    "user_id": "f8441511-911d-4032-8cba-4b643e41fb53",
+    "created_at": "2026-10-14T12:01:16.220247+00:00",
+    "updated_at": "2026-10-14T12:01:16.220247+00:00",
+    "warrants": 0,
+    "warrant_strike_price": null,
+    "options_legacy": 796642,
+    "convertible_bonds": 0,
+    "warrants_in_assumed": true,
+    "warrants_in_effective": false,
+    "options_in_assumed": true,
+    "options_in_effective": true,
+    "convertible_bonds_in_assumed": true,
+    "convertible_bonds_in_effective": true,
+    "class_a_common": 114844610,
+    "class_b_common": 9117297,
+    "pre_funded_warrants": 0,
+    "traditional_warrants": 0,
+    "rsu_rsa": 1932252
+  },
+  "issuer_cash_debt": {
+    "id": "3fdd0ee6-074d-4ef1-9766-8867f9c73553",
+    "date": "2026-10-13",
+    "cash": 310300000,
+    "debt": 0,
+    "description": null,
+    "user_id": "f8441511-911d-4032-8cba-4b643e41fb53",
+    "created_at": "2026-10-14T12:01:40.464424+00:00",
+    "updated_at": "2026-10-14T12:01:40.464424+00:00",
+    "dividend_reserve_months": 18,
+    "marketable_securities": 50330000
+  },
+  "issuer_btc_transactions": [
+    {
+      "id": "41cb11f8-5bc9-47c2-8c13-35a58dd5da73",
+      "type": "purchase",
+      "currency": "USD",
+      "transaction_date": "2026-10-13",
+      "btc_amount": 2822.27090114,
+      "cost": 235000000,
+      "source_url": "https://www.sec.gov/ix?doc=/Archives/edgar/data/0001920406/000162828026065816/asst-20261014.htm",
+      "user_id": "f8441511-911d-4032-8cba-4b643e41fb53",
+      "created_at": "2026-10-14T12:01:05.922566+00:00",
+      "updated_at": "2026-10-14T12:01:05.922566+00:00",
+      "sec_filing_as_of_date": "2026-10-13",
+      "cost_basis": 83266.28032237318,
+      "total_cost_basis": 3166150258.7599998,
+      "total_btc_holdings": 35594.92881664
+    },
+    {
+      "id": "9e204613-3b3f-469d-a36e-b09068fba457",
+      "type": "purchase",
+      "currency": "USD",
+      "transaction_date": "2026-10-09",
+      "btc_amount": 3310.63645825,
+      "cost": 279750000,
+      "source_url": "https://www.sec.gov/ix?doc=/Archives/edgar/data/0001920406/000162828026065595/asst-20261013.htm",
+      "user_id": "f8441511-911d-4032-8cba-4b643e41fb53",
+      "created_at": "2026-10-13T12:02:04.219846+00:00",
+      "updated_at": "2026-10-13T13:08:40.057629+00:00",
+      "sec_filing_as_of_date": "2026-10-09",
+      "cost_basis": 84500.36829107949,
+      "total_cost_basis": 2931150258.7599998,
+      "total_btc_holdings": 32772.6579155
+    }
+  ],
+  "issuer_calculated_balance": {
+    "date": "2026-10-13",
+    "btcHoldings": 35594.92881664,
+    "btcPrice": 83101.99,
+    "sharePrice": null,
+    "hasDirectSharePrice": false,
+    "avgBtcAcquired": 67.67096733201521,
+    "btcNav": 2958009418.5711293,
+    "costBasis": 3166150258.7599998,
+    "marketCap": null,
+    "enterpriseValue": null,
+    "marketCapVsNav": null,
+    "debtBtcNavRatio": 0,
+    "navPerBasicShare": 23.348257294317126,
+    "evMnav": null,
+    "debt": 0,
+    "cash": 310300000,
+    "marketableSecurities": 50330000,
+    "sharesOutstanding": 126690801,
+    "preferredStockMarketCap": 1403017600
+  },
+  "rounding": "Sum disclosed purchases 3,311 + 2,822 = 6,133. Rounded holdings 32,773 + 2,822 = 35,595. Dashboard fractional holdings 35,594.92881664. Existing cost method weights dashboard costs across both purchases and applies to disclosed quantity.",
+  "preferred_price_window": {
+    "closes": [
+      {
+        "date": "2026-09-29",
+        "close": 100.01
+      },
+      {
+        "date": "2026-09-30",
+        "close": 100.01
+      },
+      {
+        "date": "2026-10-01",
+        "close": 100.01
+      },
+      {
+        "date": "2026-10-02",
+        "close": 100.01
+      },
+      {
+        "date": "2026-10-05",
+        "close": 100.01
+      },
+      {
+        "date": "2026-10-06",
+        "close": 100.01
+      },
+      {
+        "date": "2026-10-07",
+        "close": 99.42
+      },
+      {
+        "date": "2026-10-08",
+        "close": 98.82
+      },
+      {
+        "date": "2026-10-09",
+        "close": 99.1
+      },
+      {
+        "date": "2026-10-12",
+        "close": 99.4
+      }
+    ],
+    "mean": 99.68,
+    "base_preference": 100
+  },
+  "sata_paid_dividends": [
+    {
+      "payDate": "2026-10-07",
+      "recordDate": "2026-10-06",
+      "cashAmount": 0.0516,
+      "status": "paid"
+    },
+    {
+      "payDate": "2026-10-09",
+      "recordDate": "2026-10-08",
+      "cashAmount": 0.0516,
+      "status": "paid"
+    },
+    {
+      "payDate": "2026-10-13",
+      "recordDate": "2026-10-09",
+      "cashAmount": 0.0516,
+      "status": "paid"
+    },
+    {
+      "payDate": "2026-10-05",
+      "recordDate": "2026-10-02",
+      "cashAmount": 0.0516,
+      "status": "paid"
+    },
+    {
+      "payDate": "2026-10-06",
+      "recordDate": "2026-10-05",
+      "cashAmount": 0.0516,
+      "status": "paid"
+    },
+    {
+      "payDate": "2026-10-08",
+      "recordDate": "2026-10-07",
+      "cashAmount": 0.0516,
+      "status": "paid"
+    }
+  ],
+  "sata_claims": 1403017600,
+  "vwap": {
+    "symbol": "ASST",
+    "edition_date": "2026-10-14",
+    "value": 28.624010483423362,
+    "method": "hlc3_5m",
+    "label": "5-minute VWAP estimate",
+    "window": "combined_period",
+    "session_start": "2026-10-05",
+    "session_end": "2026-10-13",
+    "sessiondates": [
+      "2026-10-05",
+      "2026-10-06",
+      "2026-10-07",
+      "2026-10-08",
+      "2026-10-09",
+      "2026-10-12",
+      "2026-10-13"
+    ],
+    "bar_count": 546,
+    "total_volume": 55775647.0,
+    "weighted_numerator": 1596522704.4477208,
+    "daily": [
+      {
+        "date": "2026-10-05",
+        "value": 30.433063751842653,
+        "bar_count": 78,
+        "total_volume": 9155603.0,
+        "weighted_numerator": 278633049.78556186
+      },
+      {
+        "date": "2026-10-06",
+        "value": 30.037536410175754,
+        "bar_count": 78,
+        "total_volume": 7071340.0,
+        "weighted_numerator": 212405632.7187322
+      },
+      {
+        "date": "2026-10-07",
+        "value": 28.25916637312222,
+        "bar_count": 78,
+        "total_volume": 7706204.0,
+        "weighted_numerator": 217770900.94121996
+      },
+      {
+        "date": "2026-10-08",
+        "value": 27.96769097241172,
+        "bar_count": 78,
+        "total_volume": 7353519.0,
+        "weighted_numerator": 205660946.95175806
+      },
+      {
+        "date": "2026-10-09",
+        "value": 28.30272143947057,
+        "bar_count": 78,
+        "total_volume": 8196593.0,
+        "weighted_numerator": 231985888.4317144
+      },
+      {
+        "date": "2026-10-12",
+        "value": 27.539991900187296,
+        "bar_count": 78,
+        "total_volume": 5259305.0,
+        "weighted_numerator": 144841217.10061455
+      },
+      {
+        "date": "2026-10-13",
+        "value": 27.66453116668476,
+        "bar_count": 78,
+        "total_volume": 11033083.0,
+        "weighted_numerator": 305225068.5181198
+      }
+    ],
+    "request_urls": [
+      "https://query1.finance.yahoo.com/v8/finance/chart/ASST?period1=1791172800&period2=1791604800&interval=5m&includePrePost=false&includeAdjustedClose=false",
+      "https://query1.finance.yahoo.com/v8/finance/chart/ASST?period1=1791777600&period2=1791950400&interval=5m&includePrePost=false&includeAdjustedClose=false"
+    ],
+    "fetched_at": "2026-10-14T16:25:34.349259+00:00",
+    "excluded_bar_count": 0,
+    "source_note": "Yahoo Finance unadjusted 5-minute HLC3 weighted by bar volume; an estimate, not reported trade VWAP or company issuance proceeds. Only retrieved regular-session bars are included, with no claim of full SIP coverage. Bars exclude the bar beginning at the close; closing-auction coverage follows the source's timestamps, and volume may differ from end-of-day daily bars.",
+    "display_note": "5-minute VWAP \u00b7 Oct 5\u201313 \u00b7 before fees"
+  },
+  "common_capital_estimate": 659008332.0630279,
+  "preferred_capital_estimate": 53209400,
+  "comparison_basis": "Oct 2 Strive balances and existing comparison marks retained; Oct 4 Strategy comparison unchanged.",
+  "timing_limitations": "Strive combines 3,311 BTC bought Oct 5\u20139 and 2,822 BTC bought Oct 12\u201313: 6,133 BTC total, compared with Oct 2. Oct 13 cash and shares use Strive\u2019s dashboard; SATA and STRC share counts retain the latest disclosed amounts. Common capital is an Oct 5\u201313 VWAP estimate. RESIDUAL includes estimation and settlement differences, not just dividends: the 8-K describes $369.2m of warrant proceeds as expected, while the dashboard still lists $310.3m cash.",
+  "validation": {
+    "live_publication_admission": "passed with DCR_AUTO_RECONCILE=0",
+    "regression_tests": "90 model/reconciliation/display tests and 14 Monday preview tests passed; default Streamlit page test passed",
+    "manual_checks": [
+      "6,133 purchases equal change from 29,462 to 35,595 BTC",
+      "Prior comparison remains Oct 2; Strategy remains Oct 11 with 250 purchased",
+      "Four-week baselines remain Sep 11 Strive and Sep 13 Strategy",
+      "Both active export styles rendered without overflow",
+      "Historical filings, balances, and comparison marks preserved"
+    ],
+    "ingestion_code": "unchanged"
+  }
+}

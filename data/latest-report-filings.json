@@ -1,8 +1,133 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-13T12:33:12.821053+00:00",
+  "generatedAt": "2026-10-14T16:26:03.485150+00:00",
   "publicationMode": "reported_facts_for_review",
   "filings": [
+    {
+      "ticker": "ASST",
+      "issuer": "Strive",
+      "cik": "0001920406",
+      "accession": "0001628280-26-065816",
+      "form": "8-K",
+      "filedDate": "2026-10-14",
+      "reportDate": "2026-10-14",
+      "acceptedAt": "2026-10-14T11:59:29+00:00",
+      "firstSeenAt": "2026-10-14T16:24:28.999531+00:00",
+      "documentFetchedAt": "2026-10-14T16:24:28.999531+00:00",
+      "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065816/asst-20261014.htm",
+      "documents": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065816/asst-20261014.htm",
+          "fetchedAt": "2026-10-14T16:24:28.999531+00:00",
+          "sha256": "aef7fd361cba1c650bc166bc8f21583da5eeaaf6dffe359f2cc719eb17fb0d2e"
+        }
+      ],
+      "status": "ready_for_review",
+      "baseline": false,
+      "extracted": {
+        "parserVersion": "manual-combined-period-2026-10-14",
+        "periodStart": "2026-10-05",
+        "periodEnd": "2026-10-13",
+        "priorBalanceDate": "2026-10-02",
+        "balanceDate": "2026-10-13",
+        "facts": {
+          "weekly_btc_purchases": 6133,
+          "btc_holdings": 35595,
+          "cash_and_equivalents_usd": 310300000,
+          "held_strc_fair_value_usd": 50330000,
+          "held_strc_shares": 505000,
+          "common_shares_class_a": 114844610,
+          "common_shares_class_b": 9117297,
+          "effective_common_shares": 123961907,
+          "assumed_diluted_shares": 126690801,
+          "options": 796642,
+          "unvested_employee_awards": 1932252,
+          "traditional_warrant_shares": 0,
+          "sata_shares": 14030176,
+          "net_common_shares_change": 23022921,
+          "net_sata_shares_change": 532094
+        },
+        "priorFacts": {
+          "cash_and_equivalents_usd": 284700000,
+          "held_strc_fair_value_usd": 50202000,
+          "held_strc_shares": 505000,
+          "btc_holdings": 29462,
+          "common_shares_class_a": 91708804,
+          "common_shares_class_b": 9230182,
+          "effective_common_shares": 100938986,
+          "options": 843534,
+          "unvested_employee_awards": 1932252,
+          "assumed_diluted_shares": 103714772,
+          "traditional_warrant_shares": 23249706,
+          "sata_shares": 13498082
+        },
+        "securities": {},
+        "missing": [],
+        "issues": [],
+        "extractionValidated": true
+      },
+      "manualReview": {
+        "reviewedAt": "2026-10-14T16:26:03.485150+00:00",
+        "basis": "User-requested combined reporting period; manually reconciled two SEC announcements plus dated issuer dashboard. The October 14 8-K alone is not a complete balance sheet. No filing ingestion changes.",
+        "combinedPeriods": [
+          {
+            "start": "2026-10-05",
+            "end": "2026-10-09",
+            "btc_purchases": 3311,
+            "accession": "0001628280-26-065595",
+            "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065595/asst-20261013.htm"
+          },
+          {
+            "start": "2026-10-12",
+            "end": "2026-10-13",
+            "btc_purchases": 2822,
+            "accession": "0001628280-26-065816",
+            "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065816/asst-20261014.htm"
+          }
+        ],
+        "sourceDocuments": [
+          {
+            "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065595/asst-20261013.htm",
+            "fetchedAt": "2026-10-13T12:01:46.870Z",
+            "sha256": "53be5e0e6e40940df19a3d08b2457b71e76a573f61d6f892b3a49c7d64b630d5"
+          },
+          {
+            "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065816/asst-20261014.htm",
+            "fetched_at": "2026-10-14T16:24:28.999531+00:00",
+            "sha256": "aef7fd361cba1c650bc166bc8f21583da5eeaaf6dffe359f2cc719eb17fb0d2e"
+          },
+          {
+            "url": "https://www.strive.com/treasury/api/dashboard/base-data",
+            "fetched_at": "2026-10-14T16:24:28.799166+00:00",
+            "sha256": "af0909934b001a62597f6a898825ef3bed3cb5cb7404ea3ddf696649732f94c0"
+          },
+          {
+            "url": "https://strive.com/api/treasury",
+            "fetched_at": "2026-10-14T16:24:52.976892+00:00",
+            "sha256": "d178070179cc24f033c52d268c732dd30ab4d056fd0efc50b7ca8f59aae70592",
+            "hash_basis": "JSON serialized API response"
+          },
+          {
+            "url": "https://www.strive.com/treasury/api/dashboard/calculated?fromDate=2026-10-09&toDate=2026-10-14",
+            "fetched_at": "2026-10-14T16:24:53.452691+00:00",
+            "sha256": "af2d26e32fd97b9dc91f14c10e70ffcc9b173b7b31a24c7c8963a9aae3779cea",
+            "hash_basis": "JSON serialized API response"
+          }
+        ],
+        "panelNote": "Strive combines 3,311 BTC bought Oct 5\u20139 and 2,822 BTC bought Oct 12\u201313: 6,133 BTC total, compared with Oct 2. Oct 13 cash and shares use Strive\u2019s dashboard; SATA and STRC share counts retain the latest disclosed amounts. Common capital is an Oct 5\u201313 VWAP estimate. RESIDUAL includes estimation and settlement differences, not just dividends: the 8-K describes $369.2m of warrant proceeds as expected, while the dashboard still lists $310.3m cash.",
+        "unsettledProceeds": true,
+        "field_sources": {
+          "purchases": "Sum of both 8-K disclosed integer amounts",
+          "btc_holdings": "Oct 9 8-K holdings plus new purchase, corroborated by rounded issuer dashboard",
+          "cash_and_share_counts": "Oct 13 issuer dashboard entries, not a newly filed balance table",
+          "sata_shares": "Oct 9 8-K count unchanged; corroborated by Oct 13 issuer notional $1,403,017,600",
+          "held_strc_shares": "Latest filed count 505,000 carried explicitly; Oct 13 issuer fair value $50.330m corroborates",
+          "priorFacts": "Oct 2 comparative column in Oct 13 8-K"
+        },
+        "limitations": "Issuer dashboard Class B count is 100,000 below Oct 9; use its dated A+B total rather than assuming only warrant issuance. Cash is the issuer dashboard balance, without adding expected proceeds. No SATS offering proceeds or shares assumed.",
+        "balanceSource": "Strive issuer dashboard dated Oct 13; Oct 2 comparator from SEC 8-K"
+      }
+    },
     {
       "ticker": "MSTR",
       "issuer": "Strategy",
@@ -1137,5 +1262,5 @@
       "error": null
     }
   ],
-  "reconciledAt": "2026-10-13T12:33:12.821053+00:00"
+  "reconciledAt": "2026-10-14T16:26:03.485150+00:00"
 }

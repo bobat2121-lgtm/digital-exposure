@@ -74,6 +74,8 @@ class CompanyExtras:
     btc_cost: float | None = None               # the week's bitcoin purchases (− sale proceeds)
     btc_cost_source: str = ""
     dividends: float | None = None              # the rest of the week's funding: dividends, interest, fees
+    residual_label: str = "DIVs"                 # manual combined editions can include unsettled proceeds
+    balance_source: str = "SEC 8-K"
     stated_dividends: float | None = None       # Strategy's 8-K figure for dividends and interest, if given
     reserve_months: float | None = None
     target_months: float | None = None
@@ -155,10 +157,16 @@ def _facts(rows, ticker, balance):
 
 def _weekly_snapshots(rows, supplements, prices, ticker, through):
     """Complete dated balances at today's marks, newest last."""
+    # A manually combined edition replaces its component for the weekly window;
+    # the source filing remains available for earlier as-of views and baselines.
+    combined_sources = {period["accession"] for row in rows
+                        if row["ticker"] == ticker and row["extracted"]["balanceDate"] <= through
+                        for period in row.get("manualReview", {}).get("combinedPeriods", [])
+                        if period.get("accession") and period["accession"] != row["accession"]}
     out = {}
     for row in sorted(rows, key=lambda item: item.get("acceptedAt", "")):
         extraction = row["extracted"]
-        if row["ticker"] != ticker or extraction["balanceDate"] > through:
+        if row["ticker"] != ticker or extraction["balanceDate"] > through or row["accession"] in combined_sources:
             continue
         snapshot = lr._snapshot(ticker, extraction["balanceDate"], extraction["facts"], supplements, prices)
         if lr._complete(snapshot):
@@ -351,7 +359,7 @@ def funding_flows(e: CompanyExtras) -> tuple[list, list] | None:
         elif e.btc_cost < 0:
             money_in.append(("BTC SOLD", -e.btc_cost, "btc"))
         if (e.dividends or 0) > 0:
-            money_out.append(("DIVs", e.dividends, "divs"))
+            money_out.append((e.residual_label, e.dividends, "divs"))
         elif (e.dividends or 0) < 0:  # rounding in the reported balances, when it outweighs the uses
             money_in.append(("OTHER", -e.dividends, "other"))
     if drawn < 0:
@@ -378,8 +386,13 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
     config = json.loads(CONFIG.read_text(encoding="utf-8")) if CONFIG.exists() else {}
     windows = _windows(report, rows, supplements, prices)
     result = {}
+    edition_notes = []
     for company in report.companies:
         ticker = company.ticker
+        review = next((row.get("manualReview", {}) for row in rows if row["ticker"] == ticker
+                       and row["extracted"]["balanceDate"] == company.balance_date), {})
+        if review.get("panelNote"):
+            edition_notes.append(review["panelNote"])
         facts = _facts(rows, ticker, company.balance_date)
         prior_facts = _facts(rows, ticker, company.prior_balance_date) if company.prior_balance_date else {}
         bitcoin = btc_value(company.current, report.current_btc_price)
@@ -443,6 +456,8 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
             amplification_change_pp=amp - prior_amp if amp is not None and prior_amp is not None else None,
             btc_cost=btc_cost, btc_cost_source=cost_source, stated_dividends=stated,
             dividends=funding - btc_cost if funding is not None and btc_cost is not None else None,
+            residual_label="RESIDUAL" if review.get("unsettledProceeds") else "DIVs",
+            balance_source=review.get("balanceSource", "SEC 8-K"),
             preferred_pct=current.preferred_claims / bitcoin * 100 if bitcoin and current.preferred_claims is not None else None,
             debt_pct=current.debt_principal / bitcoin * 100 if bitcoin and current.debt_principal is not None else None,
             net_leverage_pct=(current.debt_principal - liquid) / bitcoin * 100 if bitcoin and liquid is not None and current.debt_principal is not None else None,
@@ -456,8 +471,8 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
     period = report.capital_period_label.split("·")[-1].strip()
     kicker = f"THE DIGITAL CREDIT REPORT  ·  MONDAY  ·  8-K WEEK {period.upper()}"
     dates = " · ".join(f"{c.name} {_short(c.balance_date)}" for c in report.companies if c.balance_date)
-    subtitle = f"What last week's filings did to each common share  ·  Balances: {dates}"
-    notes = tuple(f"{t} data stale" for t in extras.get("stale", []) if t != "markets")  # markets: Friday test copy only
+    subtitle = f"What the period's filings did to each common share  ·  Balances: {dates}"
+    notes = tuple(edition_notes) + tuple(f"{t} data stale" for t in extras.get("stale", []) if t != "markets")  # markets: Friday test copy only
     labels, stamp = _price_stamp((prices or {}).get("quotes") or {})
     return MondayPreview(report, view, result, kicker, subtitle, notes, f"8-K week {period}", labels, stamp)
 
@@ -835,7 +850,7 @@ def notes(preview: MondayPreview) -> list[str]:
         "Capital raised = ATM issuance − repurchases, common and preferred. Cash is an existing balance, never counted as a raise. "
         "The waterfall is the week's cash, each flow once: money in (common and preferred sold, cash drawn) climbs from $0, "
         "money out (buybacks, BTC, DIVs, cash kept) steps back to $0, so the two sides match. "
-        "Strive's common figure is an estimate: net share change × prior-week VWAP.",
+        "Strive's common figure is an estimate: net share change × activity-period VWAP.",
         f"BTC = the week's bitcoin purchase cost, fees included ({costs}). DIVs = the rest of the week's funding: preferred "
         f"dividends and interest, plus fees and other uses. {stated}".strip(),
         "Amplification uses each issuer's own formula, shown as a percent above 1× ((× − 1) × 100: 1.51× is 51%), its weekly "
@@ -873,10 +888,10 @@ def audit_rows(preview: MondayPreview) -> list[dict]:
             {"metric": f"{company.ticker} total BTC held", "value": company.total_bitcoin.value if company.total_bitcoin else "—", "source": "SEC 8-K"},
             {"metric": f"{company.ticker} net common capital", "value": company.common.value, "source": "SEC 8-K ATM table" if company.ticker == "MSTR" else "share change × VWAP (est.)"},
             {"metric": f"{company.ticker} preferred capital", "value": company.preferred.value, "source": "SEC 8-K"},
-            {"metric": f"{company.ticker} cash balance / change", "value": f"{_money(extra.liquid_balance, False)} / {_money(extra.liquid_change)} ({extra.liquid_detail})", "source": "SEC 8-K"},
+            {"metric": f"{company.ticker} cash balance / change", "value": f"{_money(extra.liquid_balance, False)} / {_money(extra.liquid_change)} ({extra.liquid_detail})", "source": extra.balance_source},
             {"metric": f"{company.ticker} funding (raised + cash drawn)", "value": _money(extra.net_funding, False), "source": "derived"},
             {"metric": f"{company.ticker} BTC (bitcoin cost)", "value": _money(extra.btc_cost, False), "source": extra.btc_cost_source or "—"},
-            {"metric": f"{company.ticker} DIVs (funding − BTC)", "value": _money(extra.dividends, False),
+            {"metric": f"{company.ticker} {extra.residual_label} (funding − BTC)", "value": _money(extra.dividends, False),
              "source": "derived" + (f"; 8-K dividends + interest {_money(extra.stated_dividends, False)}" if extra.stated_dividends is not None else "")},
             {"metric": f"{company.ticker} money in / money out", "value": _flows_text(extra),
              "source": "8-K gross issuance and repurchases, cash change, BTC cost, DIVs"},

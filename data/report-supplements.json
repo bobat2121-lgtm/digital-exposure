@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "2026-10-13.1",
+  "revision": "2026-10-14.1",
   "basis": "Dated supplemental inputs; NAV estimates use ending preferred shares and ordinary accrued dividends. No supplement automatically rolls into a newer balance date.",
   "balances": {
     "MSTR": {
@@ -198,6 +198,18 @@
           "https://query1.finance.yahoo.com/v8/finance/chart/SATA?interval=1d&range=6mo&includePrePost=false&events=splits"
         ],
         "limitations": "SATA claims use $100 per share: both certificate branches are at the floor. All five weekly dividends are marked paid by the issuer. Common capital retains the net-share-change times same-week VWAP estimate, before fees; includes warrant exercises and is not reported financing proceeds. See reconciliation-2026-10-13.json."
+      },
+      "2026-10-13": {
+        "debt_principal": 0,
+        "preferred_claims_usd": 1403017600,
+        "preferred_claims_eur": 0,
+        "sources": [
+          "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065816/asst-20261014.htm",
+          "https://www.sec.gov/Archives/edgar/data/1920406/000162828026065595/asst-20261013.htm",
+          "https://www.strive.com/treasury/api/dashboard/base-data",
+          "https://www.strive.com/treasury/api/dashboard/calculated?fromDate=2026-10-09&toDate=2026-10-14"
+        ],
+        "limitations": "Issuer dashboard Class B count is 100,000 below Oct 9; use its dated A+B total rather than assuming only warrant issuance. Cash is the issuer dashboard balance, without adding expected proceeds. No SATS offering proceeds or shares assumed. All scheduled SATA dividends through Oct 13 verified paid; certificate floor $100. See reconciliation-2026-10-14.json."
       }
     }
   },
@@ -267,6 +279,7 @@
     "reconciliation-2026-09-14.json",
     "reconciliation-2026-09-21.json",
     "reconciliation-2026-09-28.json",
-    "reconciliation-2026-10-13.json"
+    "reconciliation-2026-10-13.json",
+    "reconciliation-2026-10-14.json"
   ]
 }

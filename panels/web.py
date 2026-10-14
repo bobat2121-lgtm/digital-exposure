@@ -383,9 +383,12 @@ def monday(preview, *, notices=()) -> None:
     stamp = preview.price_stamp or view.report_time.replace("Updated ", "", 1)
     header("monday", "Digital Credit Report · Monday", ("The ", "Accretion", " Ledger"),
            f"<b>{escape(preview.period)}</b> · BTC <b>{escape(view.btc_price)}</b> · {escape(stamp)} · "
-           "what last week's filings did to each common share")
+           "what the period's filings did to each common share")
     for notice in notices:
         st.caption(notice)
+    for note in preview.notes:
+        if not note.endswith(" data stale"):
+            st.caption(note)
     companies = list(view.companies)
     columns = st.columns(len(companies), gap="medium")
     for column, company in zip(columns, companies):
@@ -502,7 +505,9 @@ def _scorecard(preview) -> str:
     rows.append(row("Capital raised (common + preferred)", [_m(e.raised, signed=True) for e in extras]))
     rows.append(row("Cash drawn (+) / kept (−)", [_m(-e.liquid_change if e.liquid_change is not None else None, signed=True) for e in extras]))
     rows.append(row("BTC: bitcoin cost", [_m(e.btc_cost) for e in extras]))
-    rows.append(row("DIVs: dividends, interest, fees", [_m(e.dividends) for e in extras]))
+    residual = any(e.residual_label != "DIVs" for e in extras)
+    rows.append(row("Funding residual (see notes)" if residual else "DIVs: dividends, interest, fees",
+                    [_m(e.dividends) for e in extras]))
     rows.append(row("Cash on hand", [value_with(_m(e.liquid_balance, 2), e.liquid_detail) for e in extras]))
     rows.append(("section", "Per share"))
     rows.append(row("BTC / share (sats)", [value_with(mon._clean(c.bitcoin.value).replace(" sats", ""), c.bitcoin.short_change) for c in views]))
@@ -533,7 +538,7 @@ def _scorecard(preview) -> str:
 MONDAY_FORMULAS = (
     ("Funding", (
         ("Capital raised", "ATM net proceeds − repurchase cost, common and preferred, from each weekly 8-K. Strive's "
-                           "common figure is an estimate: net share change × prior-week VWAP."),
+                           "common figure is an estimate: net share change × activity-period VWAP."),
         ("Cash drawn / kept", "Liquid assets last week − this week. Strategy: USD Reserve + USD Cash. Strive: cash + the STRC it holds."),
         ("Waterfall", "Common + preferred + cash drawn (or − cash kept) = BTC + DIVs."),
         ("BTC", "The week's bitcoin purchase cost, fees included: Strategy's 8-K \"Aggregate Purchase Price\"; "

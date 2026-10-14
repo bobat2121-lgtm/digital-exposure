@@ -160,7 +160,41 @@ class MondayPreviewTests(unittest.TestCase):
     def setUp(self):
         self.prices = load_current_prices()
         self.report = reviewed_report(self.prices)
-        self.preview = monday_preview.build_preview(self.report, self.prices, FEED, offline_extras())
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        self.preview = monday_preview.build_preview(self.report, self.prices, FEED, offline_extras(),
+            now=datetime(2026, 9, 21, 9, tzinfo=ZoneInfo("America/New_York")))
+
+    def test_combined_source_is_one_week_and_remains_available_for_earlier_views(self):
+        from copy import deepcopy
+        rows = deepcopy(live_report._merged_filings(FEED, FEED))
+        asst = sorted((r for r in rows if r["ticker"] == "ASST"), key=lambda r: r["extracted"]["balanceDate"])
+        source, combined = asst[-2:]
+        combined["manualReview"] = {"combinedPeriods": [{"accession": source["accession"]},
+                                                        {"accession": combined["accession"]}]}
+        supplements = live_report.load_supplements()
+        latest = dict(monday_preview._weekly_snapshots(rows, supplements, self.prices, "ASST", combined["extracted"]["balanceDate"]))
+        earlier = dict(monday_preview._weekly_snapshots(rows, supplements, self.prices, "ASST", source["extracted"]["balanceDate"]))
+        self.assertNotIn(source["extracted"]["balanceDate"], latest)
+        self.assertIn(combined["extracted"]["balanceDate"], latest)
+        self.assertIn(source["extracted"]["balanceDate"], earlier)
+
+    def test_manual_combined_edition_keeps_settlement_gap_distinct_from_dividends(self):
+        from copy import deepcopy
+        feed = deepcopy(FEED)
+        company = next(c for c in self.report.companies if c.ticker == "ASST")
+        row = next(r for r in feed["filings"] if r["ticker"] == "ASST"
+                   and r["extracted"]["balanceDate"] == company.balance_date)
+        row["manualReview"] = {"panelNote": "Combined periods; expected proceeds may not be settled.",
+                               "unsettledProceeds": True, "balanceSource": "Dated issuer dashboard"}
+        preview = monday_preview.build_preview(self.report, self.prices, feed, offline_extras())
+        self.assertIn(row["manualReview"]["panelNote"], preview.notes)
+        extra = preview.extras["ASST"]
+        self.assertEqual(extra.dividends, self.preview.extras["ASST"].dividends)
+        self.assertEqual(extra.balance_source, "Dated issuer dashboard")
+        self.assertIn("RESIDUAL", [label for label, _, _ in monday_preview.funding_flows(extra)[1]])
+        self.assertNotIn("DIVs", [label for label, _, _ in monday_preview.funding_flows(extra)[1]])
+        self.assertEqual(preview.extras["MSTR"].residual_label, "DIVs")
 
     def test_amplification_uses_each_issuers_own_formula(self):
         strive = next(c for c in self.report.companies if c.ticker == "ASST")
