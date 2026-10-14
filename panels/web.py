@@ -388,7 +388,7 @@ def monday(preview, *, notices=()) -> None:
         st.caption(notice)
     for note in preview.notes:
         if not note.endswith(" data stale"):
-            st.caption(note)
+            st.caption(note.replace("$", r"\$"))
     companies = list(view.companies)
     columns = st.columns(len(companies), gap="medium")
     for column, company in zip(columns, companies):
