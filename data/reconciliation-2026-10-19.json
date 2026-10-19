@@ -1,0 +1,1555 @@
+{
+  "edition": "2026-10-19",
+  "retrievedAt": "2026-10-19T12:41:31.092731+00:00",
+  "update_type": "manual weekly filing reconciliation",
+  "source_manifest": [
+    {
+      "url": "https://capital-report.alatimore06370.workers.dev/api/filings",
+      "fetched_at": "2026-10-19T12:39:57.099735+00:00",
+      "sha256": "d4d9ee56ca6ed5ff41dd55eae113fad575d4635010fbce94d82e1b9bde75df57"
+    },
+    {
+      "url": "https://capital-report.alatimore06370.workers.dev/api/status",
+      "fetched_at": "2026-10-19T12:39:57.017503+00:00",
+      "sha256": "6ed977f10b8c595a2391674257fd37c5139aeae976e1bd093342074e4ea6112c"
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526424688/mstr-20261019.htm",
+      "fetched_at": "2026-10-19T12:40:09.971650+00:00",
+      "sha256": "2ed0bca2c74040ee7c68eeab9b775c372616b46372d46377f9cdf3e247da98fa",
+      "bytes": 207327
+    },
+    {
+      "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026066222/asst-20261019.htm",
+      "fetched_at": "2026-10-19T12:40:09.943444+00:00",
+      "sha256": "3e78e081153157a20cbc0c13c2f07b8c759e03382a6f94b6855a55eeb6e39548",
+      "bytes": 60373
+    },
+    {
+      "url": "https://www.strategy.com/shares",
+      "fetched_at": "2026-10-19T12:39:56.594397+00:00",
+      "sha256": "2db6f8c559176a72f3c6bdc22a52a1ff8baec4c40cf0cde0ba0c39548fd48a2f"
+    },
+    {
+      "url": "https://api.strategy.com/btc/credit",
+      "fetched_at": "2026-10-19T12:40:10.012737+00:00",
+      "sha256": "d1a741bc9c1aaa8d1ef19179a81f1177a1ee9f40f3bcb5141ba7faf575d26ec0",
+      "bytes": 5518
+    },
+    {
+      "url": "https://api.strategy.com/btc/strcKpiData",
+      "fetched_at": "2026-10-19T12:40:10.012009+00:00",
+      "sha256": "139e7c61b6dc24a07b50bfcb4d4ed23cf64a977c78d8cc80093d36c58ef7fab7",
+      "bytes": 4267
+    },
+    {
+      "url": "https://www.strive.com/treasury/api/dashboard/base-data",
+      "fetched_at": "2026-10-19T12:40:01.848439+00:00",
+      "sha256": "c2aaa9ae3270acfce2859a5ef7e73f49ae71e35371be49d612fe354cb2967aa6"
+    },
+    {
+      "url": "https://query1.finance.yahoo.com/v8/finance/chart/STRF?interval=1d&range=6mo&includePrePost=false&events=splits",
+      "fetched_at": "2026-10-19T12:40:10.543703+00:00",
+      "sha256": "113cf1c6a412f1a04b3c041ead4cc2c0381c2508e0b81c9b2dbc3057822a8efc",
+      "bytes": 13987
+    },
+    {
+      "url": "https://query1.finance.yahoo.com/v8/finance/chart/STRC?interval=1d&range=6mo&includePrePost=false&events=splits",
+      "fetched_at": "2026-10-19T12:40:10.551411+00:00",
+      "sha256": "3d4505a1b4db6aa9c1b7a06ac60599b83b621098b0a043a35cb51a7f58fe0b2b",
+      "bytes": 14079
+    },
+    {
+      "url": "https://query1.finance.yahoo.com/v8/finance/chart/STRK?interval=1d&range=6mo&includePrePost=false&events=splits",
+      "fetched_at": "2026-10-19T12:40:10.539252+00:00",
+      "sha256": "3ea124d9ac913bd21dfc3fc78ad3b00138f732ce841eb4acbf29373e80a93152",
+      "bytes": 13700
+    },
+    {
+      "url": "https://query1.finance.yahoo.com/v8/finance/chart/STRD?interval=1d&range=6mo&includePrePost=false&events=splits",
+      "fetched_at": "2026-10-19T12:40:10.487459+00:00",
+      "sha256": "a0c8c236c92b42dad8925f2c38382e4dafcefada1145f357a8854230620aac00",
+      "bytes": 13634
+    },
+    {
+      "url": "https://query1.finance.yahoo.com/v8/finance/chart/SATA?interval=1d&range=6mo&includePrePost=false&events=splits",
+      "fetched_at": "2026-10-19T12:40:10.552739+00:00",
+      "sha256": "d3f8ca12286c860bdbbf61f416baa1e76cc315cc4d057d53c83599fa3d206817",
+      "bytes": 13939
+    }
+  ],
+  "filings": {
+    "MSTR": {
+      "ticker": "MSTR",
+      "issuer": "Strategy",
+      "cik": "0001050446",
+      "accession": "0001193125-26-424688",
+      "form": "8-K",
+      "filedDate": "2026-10-19",
+      "reportDate": "2026-10-19",
+      "acceptedAt": "2026-10-19T12:00:13.000Z",
+      "firstSeenAt": "2026-10-19T12:01:00.651Z",
+      "documentFetchedAt": "2026-10-19T12:01:00.694Z",
+      "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526424688/mstr-20261019.htm",
+      "documents": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526424688/mstr-20261019.htm",
+          "fetchedAt": "2026-10-19T12:01:00.694Z",
+          "sha256": "2ed0bca2c74040ee7c68eeab9b775c372616b46372d46377f9cdf3e247da98fa"
+        }
+      ],
+      "status": "ready_for_review",
+      "baseline": false,
+      "extracted": {
+        "parserVersion": "sec-weekly-v5",
+        "periodStart": "2026-10-12",
+        "periodEnd": "2026-10-18",
+        "priorBalanceDate": null,
+        "balanceDate": "2026-10-18",
+        "facts": {
+          "weekly_btc_purchases": 267,
+          "btc_holdings": 848517,
+          "weekly_btc_cost_usd": 22100000,
+          "btc_cost_basis_usd": 64020000000,
+          "btc_average_cost_usd": 75446,
+          "usd_reserve_usd": 4830000000,
+          "usd_cash_usd": 447300000,
+          "usd_reserve_dividends_interest_usd": 45500000,
+          "common_issued_shares": 140872,
+          "common_issuance_proceeds_usd": 22000000,
+          "common_repurchased_shares": 0,
+          "common_repurchases_cash_usd": 0
+        },
+        "priorFacts": {},
+        "securities": {
+          "STRF": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "STRC": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 1938780,
+            "repurchaseCashUsd": 193100000
+          },
+          "STRK": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "STRD": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "MSTR": {
+            "issuedShares": 140872,
+            "netIssuanceProceedsUsd": 22000000,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          }
+        },
+        "missing": [],
+        "issues": [],
+        "extractionValidated": true
+      },
+      "attempts": 1,
+      "nextDocumentAttemptAt": 0,
+      "error": null,
+      "manualReview": {
+        "reviewedAt": "2026-10-19T12:41:31.092731+00:00",
+        "basis": "Verified the October 19 8-K ATM, BTC, repurchase and USD-balance tables and narrative against the collector extraction.",
+        "sourceDocuments": [
+          {
+            "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526424688/mstr-20261019.htm",
+            "fetched_at": "2026-10-19T12:40:09.971650+00:00",
+            "sha256": "2ed0bca2c74040ee7c68eeab9b775c372616b46372d46377f9cdf3e247da98fa",
+            "bytes": 207327
+          }
+        ],
+        "reported_weekly_average_btc_price_usd": 82900,
+        "limitations": "Disclosed cash and cost amounts retain issuer rounding. No undisclosed bitcoin sales are set to zero.",
+        "estimatedFunding": true,
+        "panelNote": "Strategy reported $45.5m of dividends; its $50.0m funding residual also includes $4.5m from rounding the USD Reserve to billions."
+      }
+    },
+    "ASST": {
+      "ticker": "ASST",
+      "issuer": "Strive",
+      "cik": "0001920406",
+      "accession": "0001628280-26-066222",
+      "form": "8-K",
+      "filedDate": "2026-10-19",
+      "reportDate": "2026-10-19",
+      "acceptedAt": "2026-10-19T11:59:25.000Z",
+      "firstSeenAt": "2026-10-19T12:00:00.894Z",
+      "documentFetchedAt": "2026-10-19T12:00:01.007Z",
+      "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026066222/asst-20261019.htm",
+      "documents": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026066222/asst-20261019.htm",
+          "fetchedAt": "2026-10-19T12:00:01.007Z",
+          "sha256": "3e78e081153157a20cbc0c13c2f07b8c759e03382a6f94b6855a55eeb6e39548"
+        }
+      ],
+      "status": "ready_for_review",
+      "baseline": false,
+      "extracted": {
+        "parserVersion": "manual-table-review-2026-10-19",
+        "periodStart": "2026-10-12",
+        "periodEnd": "2026-10-16",
+        "priorBalanceDate": "2026-10-09",
+        "balanceDate": "2026-10-16",
+        "facts": {
+          "weekly_btc_purchases": 4045,
+          "cash_and_equivalents_usd": 317500000,
+          "held_strc_fair_value_usd": 49349000,
+          "held_strc_shares": 505000,
+          "btc_holdings": 36818,
+          "common_shares_class_a": 114847610,
+          "common_shares_class_b": 9216516,
+          "effective_common_shares": 124064126,
+          "net_common_shares_change": 13676922,
+          "options": 793642,
+          "unvested_employee_awards": 1932252,
+          "assumed_diluted_shares": 126790020,
+          "traditional_warrant_shares": 0,
+          "sata_shares": 14030176,
+          "net_sata_shares_change": 0
+        },
+        "priorFacts": {
+          "cash_and_equivalents_usd": 310300000,
+          "held_strc_fair_value_usd": 50328000,
+          "held_strc_shares": 505000,
+          "btc_holdings": 32773,
+          "common_shares_class_a": 101169907,
+          "common_shares_class_b": 9217297,
+          "effective_common_shares": 110387204,
+          "options": 796642,
+          "unvested_employee_awards": 1932252,
+          "assumed_diluted_shares": 113116098,
+          "traditional_warrant_shares": 15255900,
+          "sata_shares": 14030176
+        },
+        "securities": {},
+        "missing": [],
+        "issues": [],
+        "extractionValidated": true
+      },
+      "attempts": 1,
+      "nextDocumentAttemptAt": 0,
+      "error": null,
+      "manualReview": {
+        "reviewedAt": "2026-10-19T12:41:31.092731+00:00",
+        "basis": "Manually verified both dated columns and footnotes against the October 19 SEC 8-K; collector balance-table extraction was incomplete. No collector or parser changes.",
+        "sourceDocuments": [
+          {
+            "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026066222/asst-20261019.htm",
+            "fetched_at": "2026-10-19T12:40:09.943444+00:00",
+            "sha256": "3e78e081153157a20cbc0c13c2f07b8c759e03382a6f94b6855a55eeb6e39548",
+            "bytes": 60373
+          }
+        ],
+        "estimatedFunding": true,
+        "panelNote": "Strive: 4,045 BTC bought Oct 12\u201316 includes the 2,822 BTC announced midweek; compared with Oct 9. Common capital is a VWAP estimate, so RESIDUAL includes estimation differences. SATS shares and proceeds are excluded: settlement is scheduled for Oct 20.",
+        "balanceSource": "SEC 8-K, Oct 16 balances",
+        "reported_weekly_average_btc_price_usd": 82803,
+        "reported_warrant_gross_proceeds_usd": 369200000,
+        "purchase_breakdown": [
+          {
+            "start": "2026-10-12",
+            "end": "2026-10-13",
+            "btc": 2822,
+            "previously_announced": true
+          },
+          {
+            "start": "2026-10-14",
+            "end": "2026-10-16",
+            "btc": 1223,
+            "average_price_approx_usd": 81734
+          }
+        ],
+        "unsettled_sats_offering": {
+          "shares": 7000000,
+          "stated_amount_per_share_usd": 100,
+          "offering_price_usd": 90,
+          "gross_proceeds_usd": 630000000,
+          "scheduled_settlement": "2026-10-20",
+          "included_in_balances": false
+        },
+        "limitations": "Filed BTC quantities are rounded. The existing net-common-share-change times same-week VWAP method is retained and is not reported financing proceeds. The prior comparison is the filed Oct 9 balance, not the interim Oct 13 dashboard estimate."
+      }
+    }
+  },
+  "strategy_shares": {
+    "source": "https://www.strategy.com/shares",
+    "balance_date": "2026-10-18",
+    "class_a_thousands": 402713,
+    "class_b_thousands": 19640,
+    "basic_shares": 422353000,
+    "published_basic_thousands": 422353,
+    "basis": "Dated Strategy issuer table: Class A 402,713,000 + Class B 19,640,000 = 422,353,000; rounded to thousands.",
+    "difference_from_prior_plus_atm": 14128
+  },
+  "strategy_debt": {
+    "balance_date": "2026-10-18",
+    "total_usd": 6753703000,
+    "convertible_notes_usd": 6713659000,
+    "other_debt_usd": 40044000,
+    "basis": "The reconciled June 30 principal carried forward (see strategy_assumptions); the split lets the automatic reconciliation compare strategy.com's convertible-note list (api.strategy.com/btc/credit, $6,713.75M on Sep 27, 2026) and catch a new tranche or repurchase.",
+    "source_balance_date": "2026-06-30",
+    "current_issuer_convertible_notes_usd": 6713750000
+  },
+  "strategy_claims": {
+    "STRF": {
+      "shares": 12839689,
+      "currency": "USD",
+      "base_preference_per_share": 103.356,
+      "base_claims": 1327058896.284,
+      "annual_dividend_per_share": 10.0,
+      "accrued_30_360_days": 18,
+      "estimated_accrued_dividends": 6419844.5,
+      "estimated_native_claims": 1333478740.784
+    },
+    "STRC": {
+      "shares": 85982656,
+      "currency": "USD",
+      "base_preference_per_share": 100.0,
+      "base_claims": 8598265600.0,
+      "annual_dividend_per_share": 12.0,
+      "accrued_30_360_days": 3,
+      "estimated_accrued_dividends": 8598265.6,
+      "estimated_native_claims": 8606863865.6
+    },
+    "STRK": {
+      "shares": 14020744,
+      "currency": "USD",
+      "base_preference_per_share": 100.0,
+      "base_claims": 1402074400.0,
+      "annual_dividend_per_share": 8.0,
+      "accrued_30_360_days": 18,
+      "estimated_accrued_dividends": 5608297.6,
+      "estimated_native_claims": 1407682697.6
+    },
+    "STRD": {
+      "shares": 14024221,
+      "currency": "USD",
+      "base_preference_per_share": 100.0,
+      "base_claims": 1402422100.0,
+      "annual_dividend_per_share": 10.0,
+      "accrued_30_360_days": 18,
+      "estimated_accrued_dividends": 7012110.5,
+      "estimated_native_claims": 1409434210.5
+    },
+    "STRE": {
+      "shares": 7750000,
+      "currency": "EUR",
+      "base_preference_per_share": 100.0,
+      "base_claims": 775000000.0,
+      "annual_dividend_per_share": 10,
+      "accrued_30_360_days": 18,
+      "estimated_accrued_dividends": 3875000.0,
+      "estimated_native_claims": 778875000.0
+    }
+  },
+  "strategy_claim_totals": {
+    "USD": 12757459514.484001,
+    "EUR": 778875000.0
+  },
+  "strategy_dividend_schedule": [
+    {
+      "period": "Aug 2025",
+      "recordDate": "2025-08-15",
+      "payDate": "2025-08-31",
+      "cashAmount": 0.8,
+      "rate": 9,
+      "note": "Accrued from July 29, 2025 through August 31, 2025."
+    },
+    {
+      "period": "Sep 2025",
+      "recordDate": "2025-09-15",
+      "payDate": "2025-09-30",
+      "cashAmount": 0.83333333,
+      "rate": 10
+    },
+    {
+      "period": "Oct 2025",
+      "recordDate": "2025-10-15",
+      "payDate": "2025-10-31",
+      "cashAmount": 0.85416667,
+      "rate": 10.25
+    },
+    {
+      "period": "Nov 2025",
+      "recordDate": "2025-11-15",
+      "payDate": "2025-11-30",
+      "cashAmount": 0.875,
+      "rate": 10.5
+    },
+    {
+      "period": "Dec 2025",
+      "recordDate": "2025-12-15",
+      "payDate": "2025-12-31",
+      "cashAmount": 0.89583333,
+      "rate": 10.75
+    },
+    {
+      "period": "Jan 2026",
+      "recordDate": "2026-01-15",
+      "payDate": "2026-01-31",
+      "cashAmount": 0.916666667,
+      "rate": 11
+    },
+    {
+      "period": "Feb 2026",
+      "recordDate": "2026-02-15",
+      "payDate": "2026-02-28",
+      "cashAmount": 0.94,
+      "rate": 11.25
+    },
+    {
+      "period": "Mar 2026",
+      "recordDate": "2026-03-15",
+      "payDate": "2026-03-31",
+      "cashAmount": 0.96,
+      "rate": 11.5
+    },
+    {
+      "period": "Apr 2026",
+      "recordDate": "2026-04-15",
+      "payDate": "2026-04-30",
+      "cashAmount": 0.96,
+      "rate": 11.5
+    },
+    {
+      "period": "May 2026",
+      "recordDate": "2026-05-15",
+      "payDate": "2026-05-31",
+      "cashAmount": 0.96,
+      "rate": 11.5
+    },
+    {
+      "period": "Jun 2026",
+      "recordDate": "2026-06-15",
+      "payDate": "2026-06-30",
+      "cashAmount": 0.96,
+      "rate": 11.5
+    },
+    {
+      "period": "Jun 2026 #2",
+      "recordDate": "2026-06-30",
+      "payDate": "2026-07-15",
+      "cashAmount": 0.48,
+      "rate": 11.5,
+      "note": "June 2026 #2 is the first dividend period under STRC\u2019s new semi-monthly cadence."
+    },
+    {
+      "period": "Jul 2026 #1",
+      "recordDate": "2026-07-15",
+      "payDate": "2026-07-31",
+      "cashAmount": 0.5,
+      "rate": 12
+    },
+    {
+      "period": "Jul 2026 #2",
+      "recordDate": "2026-07-31",
+      "payDate": "2026-08-15",
+      "cashAmount": 0.5,
+      "rate": 12
+    },
+    {
+      "period": "Aug 2026 #1",
+      "recordDate": "2026-08-15",
+      "payDate": "2026-08-31",
+      "cashAmount": 0.5,
+      "rate": 12
+    },
+    {
+      "period": "Aug 2026 #2",
+      "recordDate": "2026-08-31",
+      "payDate": "2026-09-15",
+      "cashAmount": 0.5,
+      "rate": 12
+    },
+    {
+      "period": "Sep 2026 #1",
+      "recordDate": "2026-09-15",
+      "payDate": "2026-09-30",
+      "cashAmount": 0.5,
+      "rate": 12
+    },
+    {
+      "period": "Sep 2026 #2",
+      "recordDate": "2026-09-30",
+      "payDate": "2026-10-15",
+      "cashAmount": 0.5,
+      "rate": 12
+    },
+    {
+      "period": "Oct 2026 #1",
+      "recordDate": "2026-10-15",
+      "payDate": "2026-10-31",
+      "cashAmount": 0.5,
+      "rate": 12
+    },
+    {
+      "period": "Oct 2026 #2",
+      "recordDate": "2026-10-31",
+      "payDate": "2026-11-15",
+      "cashAmount": 0.5,
+      "isUpcoming": true,
+      "rate": 12,
+      "note": "Subject to the proposed STRC daily-dividend transition; if approved and effective, daily record dates are expected to begin Nov. 1, 2026."
+    }
+  ],
+  "preferred_closing_windows": {
+    "STRF": [
+      103.4000015258789,
+      103.4000015258789,
+      103.41999816894531,
+      103.05000305175781,
+      103.04000091552734,
+      103.20999908447266,
+      103.44499969482422,
+      103.44999694824219,
+      103.33999633789062,
+      103.80999755859375
+    ],
+    "STRC": [
+      99.41000366210938,
+      99.4800033569336,
+      99.47000122070312,
+      99.43000030517578,
+      99.44999694824219,
+      99.65499877929688,
+      99.87999725341797,
+      99.9000015258789,
+      99.73999786376953,
+      99.52999877929688
+    ],
+    "STRK": [
+      76.25,
+      76.8499984741211,
+      75.7699966430664,
+      75.29000091552734,
+      75.33000183105469,
+      76.19999694824219,
+      75.51000213623047,
+      75.5999984741211,
+      73.62000274658203,
+      73.8499984741211
+    ],
+    "STRD": [
+      73.37999725341797,
+      73.6500015258789,
+      72.4800033569336,
+      72.33000183105469,
+      72.19999694824219,
+      72.86000061035156,
+      73.0999984741211,
+      73.2699966430664,
+      71.63999938964844,
+      71.83000183105469
+    ]
+  },
+  "strive_sata_claims": {
+    "balance_date": "2026-10-16",
+    "shares": 14030176,
+    "base_per_share": 100.0,
+    "ten_closes": [
+      100.01000213623047,
+      100.01000213623047,
+      100.01000213623047,
+      99.41999816894531,
+      98.81999969482422,
+      99.0999984741211,
+      99.4000015258789,
+      98.79000091552734,
+      97.66999816894531,
+      97.8499984741211
+    ],
+    "claims": 1403017600,
+    "latest_reported_paid_dividend_date": "2026-10-19",
+    "payment_status_limitation": "The limited public history confirms Oct 13, Oct 15 and Oct 19 as paid; Oct 14/16 are not returned. The ordinary after-payment balance convention is an explicit estimate."
+  },
+  "strive_source_tables": [
+    [
+      "",
+      "",
+      ""
+    ],
+    [
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Nevada",
+      "001-41612",
+      "88-1293236"
+    ],
+    [
+      "(State or Other Jurisdictionof Incorporation)",
+      "(Commission File Number)",
+      "(IRS EmployerIdentification No.)"
+    ],
+    [
+      "",
+      "",
+      ""
+    ],
+    [
+      "200 Crescent Ct., Suite 1400, Dallas, Texas 75201"
+    ],
+    [
+      "(Address of principal executive offices and zip code)"
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "\u2610",
+      "Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425)"
+    ],
+    [
+      "",
+      ""
+    ],
+    [
+      "\u2610",
+      "Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12)"
+    ],
+    [
+      "",
+      ""
+    ],
+    [
+      "\u2610",
+      "Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b))"
+    ],
+    [
+      "",
+      ""
+    ],
+    [
+      "\u2610",
+      "Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c))"
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Title of each class",
+      "",
+      "TradingSymbol(s)",
+      "",
+      "Name of each exchange on which registered"
+    ],
+    [
+      "Class A common stock, $0.001 par value per share",
+      "",
+      "ASST",
+      "",
+      "The Nasdaq Stock Market LLC"
+    ],
+    [
+      "Variable Rate Series A Perpetual Preferred Stock, $0.001 par value per share",
+      "",
+      "SATA",
+      "",
+      "The Nasdaq Stock Market LLC"
+    ],
+    [
+      "",
+      "",
+      ""
+    ],
+    [
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "As of October 9, 2026",
+      "",
+      "As of October 16, 2026",
+      "",
+      "Change"
+    ],
+    [
+      "Cash and cash equivalents (in thousands)",
+      "$",
+      "310,300",
+      "",
+      "",
+      "$",
+      "317,500",
+      "",
+      "",
+      "$",
+      "7,200",
+      ""
+    ],
+    [
+      "Fair value of STRC Stock (in thousands)",
+      "$",
+      "50,328",
+      "",
+      "",
+      "$",
+      "49,349",
+      "",
+      "",
+      "$",
+      "(979)",
+      ""
+    ],
+    [
+      "Shares of STRC held",
+      "505,000",
+      "",
+      "",
+      "505,000",
+      "",
+      "",
+      "\u2014",
+      ""
+    ],
+    [
+      "Bitcoin held",
+      "32,773",
+      "",
+      "",
+      "36,818",
+      "",
+      "",
+      "4,045",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Shares outstanding: (1)",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Class A common stock",
+      "101,169,907",
+      "",
+      "114,847,610",
+      "",
+      "13,677,703"
+    ],
+    [
+      "Class B common stock",
+      "9,217,297",
+      "",
+      "9,216,516",
+      "",
+      "(781)"
+    ],
+    [
+      "Effective Common Shares Outstanding (2)",
+      "110,387,204",
+      "",
+      "124,064,126",
+      "",
+      "13,676,922"
+    ],
+    [
+      "Options (3)",
+      "796,642",
+      "",
+      "793,642",
+      "",
+      "(3,000)"
+    ],
+    [
+      "Unvested employee stock awards (3)",
+      "1,932,252",
+      "",
+      "1,932,252",
+      "",
+      "\u2014"
+    ],
+    [
+      "Assumed Fully Diluted Shares (4)",
+      "113,116,098",
+      "",
+      "126,790,020",
+      "",
+      "13,673,922"
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Shares Underlying Traditional Warrants (5)",
+      "15,255,900",
+      "",
+      "\u2014",
+      "",
+      "",
+      "(15,255,900)"
+    ],
+    [
+      "SATA Stock (6)",
+      "14,030,176",
+      "",
+      "14,030,176",
+      "",
+      "\u2014"
+    ],
+    [
+      "(1) Includes shares outstanding and shares sold through 4:00pm EST, which will be issued on the following business day. (2) Effective Common Shares Outstanding is calculated as the sum of Class A common stock and Class B common stock. (3) Represents outstanding, but unvested employee stock awards, which are subject to ongoing time and/or performance conditions. For any awards in which the achievement of performance conditions affect the number of shares to ultimately vest, represents the target number of shares granted. (4) Assumed Fully Diluted Shares Outstanding represents Effective Common Shares Outstanding plus shares underlying all potentially dilutive securities, including options and unvested RSUs. Shares underlying Traditional Warrants are excluded from this figure. (5) Represents shares exercisable underlying Traditional Warrants. As previously announced on October 14, 2026, during the period from October 12, 2026 through October 13, 2026, 273,493,909 Traditional Warrants to purchase 13,674,703 shares of Class A common stock were exercised for gross proceeds of approximately $369.2 million. The remaining warrants, assumed in connection with the Company\u2019s September 2025 merger with Asset Entities Inc., expired unexercised on October 13, 2026. Exercises of traditional warrants subject to the payment of exercise price to Company. As of October 16, 2026, all Traditional Warrants had been exercised or had expired, and no Traditional Warrants remain outstanding. (6) On October 15, 2026, the company priced an underwritten public offering of 7,000,000 shares of its 15.00% Series A Perpetual SATS Preferred Stock ($700 million aggregate stated amount) at a public offering price of $90.00 per share, for expected proceeds of approximately $630 million before underwriting discounts and commissions and estimated offering expenses. The offering is scheduled to settle on October 20, 2026, subject to customary closing conditions. No shares of SATS Stock were outstanding and no proceeds had been received as of the dates presented."
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "Strive, Inc."
+    ],
+    [
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Date:",
+      "October 19, 2026",
+      "By:",
+      "/s/ Matthew Cole"
+    ],
+    [
+      "",
+      "",
+      "",
+      "Matthew Cole"
+    ],
+    [
+      "",
+      "",
+      "",
+      "Chief Executive Officer"
+    ]
+  ],
+  "strategy_source_tables": [
+    [
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Delaware",
+      "",
+      "001-42509",
+      "",
+      "51-0323571"
+    ],
+    [
+      "(State or other jurisdictionof incorporation)",
+      "",
+      "(CommissionFile Number)",
+      "",
+      "(I.R.S. EmployerIdentification No.)"
+    ],
+    [
+      "",
+      "",
+      ""
+    ],
+    [
+      "1850 Towers Crescent PlazaTysons Corner, Virginia",
+      "",
+      "22182"
+    ],
+    [
+      "(Address of principal executive offices)",
+      "",
+      "(Zip Code)"
+    ],
+    [
+      "",
+      ""
+    ],
+    [
+      "\u2610",
+      "Written communications pursuant to Rule 425 under the Securities Act (17 CFR 230.425)"
+    ],
+    [
+      "\u2610",
+      "Soliciting material pursuant to Rule 14a-12 under the Exchange Act (17 CFR 240.14a-12)"
+    ],
+    [
+      "\u2610",
+      "Pre-commencement communications pursuant to Rule 14d-2(b) under the Exchange Act (17 CFR 240.14d-2(b))"
+    ],
+    [
+      "\u2610",
+      "Pre-commencement communications pursuant to Rule 13e-4(c) under the Exchange Act (17 CFR 240.13e-4(c))"
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Title of Each Class",
+      "",
+      "TradingSymbol",
+      "",
+      "Name of Each Exchangeon which Registered"
+    ],
+    [
+      "10.00% Series A Perpetual Strife Preferred Stock, $0.001 par value per share",
+      "",
+      "STRF",
+      "",
+      "The Nasdaq Global Select Market"
+    ],
+    [
+      "Variable Rate Series A Perpetual Stretch Preferred Stock, $0.001 par value per share",
+      "",
+      "STRC",
+      "",
+      "The Nasdaq Global Select Market"
+    ],
+    [
+      "8.00% Series A Perpetual Strike Preferred Stock, $0.001 par value per share",
+      "",
+      "STRK",
+      "",
+      "The Nasdaq Global Select Market"
+    ],
+    [
+      "10.00% Series A Perpetual Stride Preferred Stock, $0.001 par value per share",
+      "",
+      "STRD",
+      "",
+      "The Nasdaq Global Select Market"
+    ],
+    [
+      "Class A Common Stock, $0.001 par value per share",
+      "",
+      "MSTR",
+      "",
+      "The Nasdaq Global Select Market"
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "During Period October 12, 2026 to October 18, 2026",
+      "",
+      "As of October 18, 2026",
+      ""
+    ],
+    [
+      "Security",
+      "",
+      "Shares Sold",
+      "",
+      "Notional Value (in millions) (1)",
+      "",
+      "Net Proceeds (in millions) (2)",
+      "",
+      "Available for Issuance and Sale (in millions)",
+      ""
+    ],
+    [
+      "STRF Stock",
+      "",
+      "",
+      "-",
+      "",
+      "$",
+      "-",
+      "",
+      "$",
+      "-",
+      "",
+      "$",
+      "1,619.3",
+      ""
+    ],
+    [
+      "10.00% Series A Perpetual Strife Preferred Stock",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "STRC Stock",
+      "",
+      "",
+      "-",
+      "",
+      "$",
+      "-",
+      "",
+      "$",
+      "-",
+      "",
+      "$",
+      "17,510.8",
+      ""
+    ],
+    [
+      "Variable Rate Series A Perpetual Stretch Preferred Stock",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "STRK Stock",
+      "",
+      "",
+      "-",
+      "",
+      "$",
+      "-",
+      "",
+      "$",
+      "-",
+      "",
+      "$",
+      "2,100.0",
+      ""
+    ],
+    [
+      "8.00% Series A Perpetual Strike Preferred Stock",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "STRD Stock",
+      "",
+      "",
+      "-",
+      "",
+      "$",
+      "-",
+      "",
+      "$",
+      "-",
+      "",
+      "$",
+      "4,014.8",
+      ""
+    ],
+    [
+      "10.00% Series A Perpetual Stride Preferred Stock",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "MSTR Stock",
+      "",
+      "",
+      "140,872",
+      "",
+      "$",
+      "-",
+      "",
+      "$ 22.0 (3)",
+      "",
+      "$",
+      "18,785.6",
+      ""
+    ],
+    [
+      "Class A Common Stock",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Total",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "$",
+      "22.0",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "During Period October 12, 2026 to October 18, 2026",
+      "",
+      "As of October 18, 2026",
+      ""
+    ],
+    [
+      "BTC Purchased (1)",
+      "",
+      "AggregatePurchase Price (in millions) (2)",
+      "",
+      "Average Purchase Price (2)",
+      "",
+      "Aggregate BTC Holdings",
+      "",
+      "Aggregate Purchase Price (in billions) (2)",
+      "",
+      "Average Purchase Price (2)",
+      ""
+    ],
+    [
+      "",
+      "267",
+      "",
+      "$",
+      "22.1",
+      "",
+      "$",
+      "82,900",
+      "",
+      "",
+      "848,517",
+      "",
+      "$",
+      "64.02",
+      "",
+      "$",
+      "75,446",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "During Period October 12, 2026 to October 18, 2026",
+      ""
+    ],
+    [
+      "Security",
+      "",
+      "Shares Repurchased",
+      "",
+      "Aggregate Purchase Price (in millions)",
+      ""
+    ],
+    [
+      "STRF Stock (1)",
+      "",
+      "",
+      "-",
+      "",
+      "$",
+      "-",
+      ""
+    ],
+    [
+      "10.00% Series A Perpetual Strife Preferred Stock",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "STRC Stock (1)",
+      "",
+      "",
+      "1,938,780",
+      "",
+      "$",
+      "193.1",
+      ""
+    ],
+    [
+      "Variable Rate Series A Perpetual Stretch Preferred Stock",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "STRK Stock (1)",
+      "",
+      "",
+      "-",
+      "",
+      "$",
+      "-",
+      ""
+    ],
+    [
+      "8.00% Series A Perpetual Strike Preferred Stock",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "STRD Stock (1)",
+      "",
+      "",
+      "-",
+      "",
+      "$",
+      "-",
+      ""
+    ],
+    [
+      "10.00% Series A Perpetual Stride Preferred Stock",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "MSTR Stock (2)",
+      "",
+      "",
+      "-",
+      "",
+      "$",
+      "-",
+      ""
+    ],
+    [
+      "Class A Common Stock",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Total",
+      "",
+      "",
+      "1,938,780",
+      "",
+      "$",
+      "193.1",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Date: October 19, 2026",
+      "",
+      "Strategy Inc(Registrant)"
+    ],
+    [
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "By:",
+      "",
+      "/s/ Thomas C. Chow"
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "Name:",
+      "",
+      "Thomas C. Chow"
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "Title:",
+      "",
+      "Executive Vice President & General Counsel"
+    ]
+  ],
+  "strive_btc_costs": [
+    {
+      "date": "2026-10-16",
+      "btc": 1223.48474267,
+      "cost": 100000000,
+      "total_btc_holdings": 36818.41355931,
+      "total_cost_basis": 3266150258.7599998
+    },
+    {
+      "date": "2026-10-13",
+      "btc": 2822.27090114,
+      "cost": 235000000,
+      "total_btc_holdings": 35594.92881664,
+      "total_cost_basis": 3166150258.7599998
+    }
+  ],
+  "strive_warrant_gross_proceeds_usd": 369200000,
+  "comparison_marks": {
+    "source": "data/release-prices/2026-10-13.json",
+    "btc_price": 83261.25,
+    "eurusd": 1.1193,
+    "strc_oct9_filed_fair_value_per_share": 99.65940594059406
+  },
+  "vwap": {
+    "symbol": "ASST",
+    "edition_date": "2026-10-19",
+    "value": 25.562595164503385,
+    "method": "hlc3_5m",
+    "label": "5-minute VWAP estimate",
+    "window": "prior_week",
+    "session_start": "2026-10-12",
+    "session_end": "2026-10-16",
+    "sessiondates": [
+      "2026-10-12",
+      "2026-10-13",
+      "2026-10-14",
+      "2026-10-15",
+      "2026-10-16"
+    ],
+    "bar_count": 390,
+    "total_volume": 55406562.0,
+    "weighted_numerator": 1416335513.862957,
+    "daily": [
+      {
+        "date": "2026-10-12",
+        "value": 27.53998405175463,
+        "bar_count": 78,
+        "total_volume": 5259305.0,
+        "weighted_numerator": 144841175.8233134
+      },
+      {
+        "date": "2026-10-13",
+        "value": 27.664381405383672,
+        "bar_count": 78,
+        "total_volume": 11032493.0,
+        "weighted_numerator": 305207094.20422554
+      },
+      {
+        "date": "2026-10-14",
+        "value": 25.197181330137692,
+        "bar_count": 78,
+        "total_volume": 17578313.0,
+        "weighted_numerator": 442923940.1389167
+      },
+      {
+        "date": "2026-10-15",
+        "value": 24.325671618888148,
+        "bar_count": 78,
+        "total_volume": 11909472.0,
+        "weighted_numerator": 289705905.02634305
+      },
+      {
+        "date": "2026-10-16",
+        "value": 24.27110297738869,
+        "bar_count": 78,
+        "total_volume": 9626979.0,
+        "weighted_numerator": 233657398.6701584
+      }
+    ],
+    "request_urls": [
+      "https://query1.finance.yahoo.com/v8/finance/chart/ASST?period1=1791777600&period2=1792209600&interval=5m&includePrePost=false&includeAdjustedClose=false"
+    ],
+    "fetched_at": "2026-10-19T12:40:46.118602+00:00",
+    "excluded_bar_count": 1,
+    "source_note": "Yahoo Finance unadjusted 5-minute HLC3 weighted by bar volume; an estimate, not reported trade VWAP or company issuance proceeds. Only retrieved regular-session bars are included, with no claim of full SIP coverage. Bars exclude the bar beginning at the close; closing-auction coverage follows the source's timestamps, and volume may differ from end-of-day daily bars.",
+    "fallback_reason": "Missing or nonfinite price/volume in an eligible minute.",
+    "display_note": "5-minute VWAP estimate \u00b7 before fees"
+  },
+  "limitations": [
+    "Strive current week is Oct 12\u201316 versus Oct 9. The Oct 14 interim combined edition is preserved as history and is not added to the 4,045 BTC weekly total.",
+    "Filed BTC quantities are rounded. The existing net-common-share-change times same-week VWAP method is retained and is not reported financing proceeds. The prior comparison is the filed Oct 9 balance, not the interim Oct 13 dashboard estimate.",
+    "Debt carries the reviewed June 30 principal, corroborated by the current convertible note list. Preferred shares roll through the filed repurchases; ordinary 30/360 accrual is 3 days for STRC since Oct 15 and 18 days for the quarterly series since Sep 30. Scheduled payments assumed paid; no unreported issuance assumed. See reconciliation-2026-10-19.json.",
+    "Funding residuals include estimation, rounding and settlement effects and are not identified as exact dividend spending.",
+    "Strategy reported $45.5m of dividends; its $50.0m funding residual also includes $4.5m from rounding the USD Reserve to billions."
+  ]
+}

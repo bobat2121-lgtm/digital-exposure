@@ -1,8 +1,213 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-14T16:26:03.485150+00:00",
+  "generatedAt": "2026-10-19T12:41:31.092731+00:00",
   "publicationMode": "reported_facts_for_review",
   "filings": [
+    {
+      "ticker": "MSTR",
+      "issuer": "Strategy",
+      "cik": "0001050446",
+      "accession": "0001193125-26-424688",
+      "form": "8-K",
+      "filedDate": "2026-10-19",
+      "reportDate": "2026-10-19",
+      "acceptedAt": "2026-10-19T12:00:13.000Z",
+      "firstSeenAt": "2026-10-19T12:01:00.651Z",
+      "documentFetchedAt": "2026-10-19T12:01:00.694Z",
+      "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526424688/mstr-20261019.htm",
+      "documents": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526424688/mstr-20261019.htm",
+          "fetchedAt": "2026-10-19T12:01:00.694Z",
+          "sha256": "2ed0bca2c74040ee7c68eeab9b775c372616b46372d46377f9cdf3e247da98fa"
+        }
+      ],
+      "status": "ready_for_review",
+      "baseline": false,
+      "extracted": {
+        "parserVersion": "sec-weekly-v5",
+        "periodStart": "2026-10-12",
+        "periodEnd": "2026-10-18",
+        "priorBalanceDate": null,
+        "balanceDate": "2026-10-18",
+        "facts": {
+          "weekly_btc_purchases": 267,
+          "btc_holdings": 848517,
+          "weekly_btc_cost_usd": 22100000,
+          "btc_cost_basis_usd": 64020000000,
+          "btc_average_cost_usd": 75446,
+          "usd_reserve_usd": 4830000000,
+          "usd_cash_usd": 447300000,
+          "usd_reserve_dividends_interest_usd": 45500000,
+          "common_issued_shares": 140872,
+          "common_issuance_proceeds_usd": 22000000,
+          "common_repurchased_shares": 0,
+          "common_repurchases_cash_usd": 0
+        },
+        "priorFacts": {},
+        "securities": {
+          "STRF": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "STRC": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 1938780,
+            "repurchaseCashUsd": 193100000
+          },
+          "STRK": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "STRD": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "MSTR": {
+            "issuedShares": 140872,
+            "netIssuanceProceedsUsd": 22000000,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          }
+        },
+        "missing": [],
+        "issues": [],
+        "extractionValidated": true
+      },
+      "attempts": 1,
+      "nextDocumentAttemptAt": 0,
+      "error": null,
+      "manualReview": {
+        "reviewedAt": "2026-10-19T12:41:31.092731+00:00",
+        "basis": "Verified the October 19 8-K ATM, BTC, repurchase and USD-balance tables and narrative against the collector extraction.",
+        "sourceDocuments": [
+          {
+            "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526424688/mstr-20261019.htm",
+            "fetched_at": "2026-10-19T12:40:09.971650+00:00",
+            "sha256": "2ed0bca2c74040ee7c68eeab9b775c372616b46372d46377f9cdf3e247da98fa",
+            "bytes": 207327
+          }
+        ],
+        "reported_weekly_average_btc_price_usd": 82900,
+        "limitations": "Disclosed cash and cost amounts retain issuer rounding. No undisclosed bitcoin sales are set to zero.",
+        "estimatedFunding": true,
+        "panelNote": "Strategy reported $45.5m of dividends; its $50.0m funding residual also includes $4.5m from rounding the USD Reserve to billions."
+      }
+    },
+    {
+      "ticker": "ASST",
+      "issuer": "Strive",
+      "cik": "0001920406",
+      "accession": "0001628280-26-066222",
+      "form": "8-K",
+      "filedDate": "2026-10-19",
+      "reportDate": "2026-10-19",
+      "acceptedAt": "2026-10-19T11:59:25.000Z",
+      "firstSeenAt": "2026-10-19T12:00:00.894Z",
+      "documentFetchedAt": "2026-10-19T12:00:01.007Z",
+      "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026066222/asst-20261019.htm",
+      "documents": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026066222/asst-20261019.htm",
+          "fetchedAt": "2026-10-19T12:00:01.007Z",
+          "sha256": "3e78e081153157a20cbc0c13c2f07b8c759e03382a6f94b6855a55eeb6e39548"
+        }
+      ],
+      "status": "ready_for_review",
+      "baseline": false,
+      "extracted": {
+        "parserVersion": "manual-table-review-2026-10-19",
+        "periodStart": "2026-10-12",
+        "periodEnd": "2026-10-16",
+        "priorBalanceDate": "2026-10-09",
+        "balanceDate": "2026-10-16",
+        "facts": {
+          "weekly_btc_purchases": 4045,
+          "cash_and_equivalents_usd": 317500000,
+          "held_strc_fair_value_usd": 49349000,
+          "held_strc_shares": 505000,
+          "btc_holdings": 36818,
+          "common_shares_class_a": 114847610,
+          "common_shares_class_b": 9216516,
+          "effective_common_shares": 124064126,
+          "net_common_shares_change": 13676922,
+          "options": 793642,
+          "unvested_employee_awards": 1932252,
+          "assumed_diluted_shares": 126790020,
+          "traditional_warrant_shares": 0,
+          "sata_shares": 14030176,
+          "net_sata_shares_change": 0
+        },
+        "priorFacts": {
+          "cash_and_equivalents_usd": 310300000,
+          "held_strc_fair_value_usd": 50328000,
+          "held_strc_shares": 505000,
+          "btc_holdings": 32773,
+          "common_shares_class_a": 101169907,
+          "common_shares_class_b": 9217297,
+          "effective_common_shares": 110387204,
+          "options": 796642,
+          "unvested_employee_awards": 1932252,
+          "assumed_diluted_shares": 113116098,
+          "traditional_warrant_shares": 15255900,
+          "sata_shares": 14030176
+        },
+        "securities": {},
+        "missing": [],
+        "issues": [],
+        "extractionValidated": true
+      },
+      "attempts": 1,
+      "nextDocumentAttemptAt": 0,
+      "error": null,
+      "manualReview": {
+        "reviewedAt": "2026-10-19T12:41:31.092731+00:00",
+        "basis": "Manually verified both dated columns and footnotes against the October 19 SEC 8-K; collector balance-table extraction was incomplete. No collector or parser changes.",
+        "sourceDocuments": [
+          {
+            "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026066222/asst-20261019.htm",
+            "fetched_at": "2026-10-19T12:40:09.943444+00:00",
+            "sha256": "3e78e081153157a20cbc0c13c2f07b8c759e03382a6f94b6855a55eeb6e39548",
+            "bytes": 60373
+          }
+        ],
+        "estimatedFunding": true,
+        "panelNote": "Strive: 4,045 BTC bought Oct 12\u201316 includes the 2,822 BTC announced midweek; compared with Oct 9. Common capital is a VWAP estimate, so RESIDUAL includes estimation differences. SATS shares and proceeds are excluded: settlement is scheduled for Oct 20.",
+        "balanceSource": "SEC 8-K, Oct 16 balances",
+        "reported_weekly_average_btc_price_usd": 82803,
+        "reported_warrant_gross_proceeds_usd": 369200000,
+        "purchase_breakdown": [
+          {
+            "start": "2026-10-12",
+            "end": "2026-10-13",
+            "btc": 2822,
+            "previously_announced": true
+          },
+          {
+            "start": "2026-10-14",
+            "end": "2026-10-16",
+            "btc": 1223,
+            "average_price_approx_usd": 81734
+          }
+        ],
+        "unsettled_sats_offering": {
+          "shares": 7000000,
+          "stated_amount_per_share_usd": 100,
+          "offering_price_usd": 90,
+          "gross_proceeds_usd": 630000000,
+          "scheduled_settlement": "2026-10-20",
+          "included_in_balances": false
+        },
+        "limitations": "Filed BTC quantities are rounded. The existing net-common-share-change times same-week VWAP method is retained and is not reported financing proceeds. The prior comparison is the filed Oct 9 balance, not the interim Oct 13 dashboard estimate."
+      }
+    },
     {
       "ticker": "ASST",
       "issuer": "Strive",
@@ -1262,5 +1467,5 @@
       "error": null
     }
   ],
-  "reconciledAt": "2026-10-14T16:26:03.485150+00:00"
+  "reconciledAt": "2026-10-19T12:41:31.092731+00:00"
 }

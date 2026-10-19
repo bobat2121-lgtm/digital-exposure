@@ -456,7 +456,7 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
             amplification_change_pp=amp - prior_amp if amp is not None and prior_amp is not None else None,
             btc_cost=btc_cost, btc_cost_source=cost_source, stated_dividends=stated,
             dividends=funding - btc_cost if funding is not None and btc_cost is not None else None,
-            residual_label="RESIDUAL" if review.get("unsettledProceeds") else "DIVs",
+            residual_label="RESIDUAL" if review.get("unsettledProceeds") or review.get("estimatedFunding") else "DIVs",
             balance_source=review.get("balanceSource", "SEC 8-K"),
             preferred_pct=current.preferred_claims / bitcoin * 100 if bitcoin and current.preferred_claims is not None else None,
             debt_pct=current.debt_principal / bitcoin * 100 if bitcoin and current.debt_principal is not None else None,

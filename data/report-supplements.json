@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "2026-10-14.1",
+  "revision": "2026-10-19.1",
   "basis": "Dated supplemental inputs; NAV estimates use ending preferred shares and ordinary accrued dividends. No supplement automatically rolls into a newer balance date.",
   "balances": {
     "MSTR": {
@@ -127,6 +127,53 @@
           "https://api.strategy.com/btc/strcKpiData"
         ],
         "limitations": "Debt carries the reviewed June 30 principal, corroborated by the current convertible note list. Preferred counts roll through disclosed repurchases; ordinary 30/360 accrual is 11 days since September 30. Scheduled Strategy payments assumed paid; no unreported issuance assumed. See reconciliation-2026-10-13.json."
+      },
+      "2026-10-18": {
+        "effective_common_shares": 422353000,
+        "debt_principal": 6753703000,
+        "preferred_claims_usd": 12757459514.484001,
+        "preferred_claims_eur": 778875000.0,
+        "components": {
+          "STRF": {
+            "shares": 12839689,
+            "base": 103.356,
+            "accrual_days": 18,
+            "annual": 10.0
+          },
+          "STRC": {
+            "shares": 85982656,
+            "base": 100.0,
+            "accrual_days": 3,
+            "annual": 12.0
+          },
+          "STRK": {
+            "shares": 14020744,
+            "base": 100.0,
+            "accrual_days": 18,
+            "annual": 8.0
+          },
+          "STRD": {
+            "shares": 14024221,
+            "base": 100.0,
+            "accrual_days": 18,
+            "annual": 10.0
+          },
+          "STRE": {
+            "shares": 7750000,
+            "base": 100.0,
+            "accrual_days": 18,
+            "currency": "EUR"
+          }
+        },
+        "limitations": "Debt carries the reviewed June 30 principal, corroborated by the current convertible note list. Preferred shares roll through the filed repurchases; ordinary 30/360 accrual is 3 days for STRC since Oct 15 and 18 days for the quarterly series since Sep 30. Scheduled payments assumed paid; no unreported issuance assumed. See reconciliation-2026-10-19.json.",
+        "sources": [
+          "https://www.sec.gov/Archives/edgar/data/1050446/000119312526424688/mstr-20261019.htm",
+          "https://www.strategy.com/shares",
+          "https://api.strategy.com/btc/credit",
+          "https://api.strategy.com/btc/strcKpiData"
+        ],
+        "btc_holdings": 848517,
+        "share_basis": "Dated Strategy issuer table: Class A 402,713,000 + Class B 19,640,000 = 422,353,000; rounded to thousands."
       }
     },
     "ASST": {
@@ -210,6 +257,18 @@
           "https://www.strive.com/treasury/api/dashboard/calculated?fromDate=2026-10-09&toDate=2026-10-14"
         ],
         "limitations": "Issuer dashboard Class B count is 100,000 below Oct 9; use its dated A+B total rather than assuming only warrant issuance. Cash is the issuer dashboard balance, without adding expected proceeds. No SATS offering proceeds or shares assumed. All scheduled SATA dividends through Oct 13 verified paid; certificate floor $100. See reconciliation-2026-10-14.json."
+      },
+      "2026-10-16": {
+        "debt_principal": 0,
+        "preferred_claims_usd": 1403017600,
+        "preferred_claims_eur": 0,
+        "sources": [
+          "https://www.sec.gov/Archives/edgar/data/1920406/000162828026066222/asst-20261019.htm",
+          "https://www.strive.com/treasury/api/dashboard/base-data",
+          "https://strive.com/api/treasury",
+          "https://query1.finance.yahoo.com/v8/finance/chart/SATA?interval=1d&range=6mo&includePrePost=false&events=splits"
+        ],
+        "limitations": "SATA claims: 14,030,176 shares at the $100 certificate floor, with daily dividends treated paid through the balance date. The issuer reports the latest paid dividend on Oct 19; its limited dividend history omits Oct 14 and Oct 16, so individual payment confirmations for those dates are not available. No SATS shares or proceeds were outstanding at Oct 16. Common capital remains a five-minute VWAP estimate before fees. See reconciliation-2026-10-19.json."
       }
     }
   },
@@ -219,7 +278,8 @@
     "2026-09-13": 77471.9,
     "2026-09-20": 85149.67,
     "2026-09-27": 83539.0234375,
-    "2026-10-04": 86148.71
+    "2026-10-04": 86148.71,
+    "2026-10-11": 83261.25
   },
   "comparison_release_dates": {
     "2026-08-30": "2026-08-31",
@@ -227,7 +287,8 @@
     "2026-09-13": "2026-09-14",
     "2026-09-20": "2026-09-21",
     "2026-09-27": "2026-09-28",
-    "2026-10-04": "2026-10-05"
+    "2026-10-04": "2026-10-05",
+    "2026-10-11": "2026-10-13"
   },
   "balance_marks": {
     "2026-08-30": {
@@ -271,6 +332,12 @@
     },
     "2026-10-04": {
       "EURUSD=X": 1.121
+    },
+    "2026-10-11": {
+      "EURUSD=X": 1.1193
+    },
+    "2026-10-09": {
+      "STRC": 99.65940594059406
     }
   },
   "preferred_audit_files": [
@@ -280,6 +347,7 @@
     "reconciliation-2026-09-21.json",
     "reconciliation-2026-09-28.json",
     "reconciliation-2026-10-13.json",
-    "reconciliation-2026-10-14.json"
+    "reconciliation-2026-10-14.json",
+    "reconciliation-2026-10-19.json"
   ]
 }

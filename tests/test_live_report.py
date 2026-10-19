@@ -88,6 +88,40 @@ class LiveReportTests(unittest.TestCase):
         self.assertEqual(result.report, self.resolve().report)
         self.assertIn("awaits validation", result.notice)
 
+    def test_manual_review_clears_partial_parse_only_for_identical_document(self):
+        from report import live_report
+        checkpoint = deepcopy(self.feed)
+        reviewed = current_rows(checkpoint)[0]
+        reviewed["manualReview"] = {"reviewedAt": "2026-09-08T15:00:00+00:00"}
+        bad = deepcopy(self.feed)
+        row = current_rows(bad)[0]
+        row["status"] = "partial"
+        row["extracted"]["extractionValidated"] = False
+        row["extracted"]["missing"] = ["btc_holdings"]
+        row["extracted"]["facts"].pop("btc_holdings")
+        original = live_report._load
+        with patch.object(live_report, "_load", side_effect=lambda path:
+                          checkpoint if path == CHECKPOINT else original(path)):
+            result = self.resolve(bad)
+            self.assertIsNone(result.notice)
+            self.assertEqual(result.report, self.resolve().report)
+            row["documents"][0]["sha256"] = "0" * 64
+            self.assertIn("awaits validation", self.resolve(bad).notice)
+            row["documents"] = deepcopy(reviewed["documents"])
+            row["form"] = "8-K/A"
+            self.assertIn("awaits validation", self.resolve(bad).notice)
+
+    def test_collector_cannot_replace_manual_review_of_unchanged_document(self):
+        from report.live_report import _merged_filings
+        checkpoint = deepcopy(self.feed)
+        reviewed = current_rows(checkpoint)[0]
+        reviewed["manualReview"] = {"reviewedAt": "2026-09-08T15:00:00+00:00"}
+        parsed = deepcopy(reviewed)
+        parsed.pop("manualReview")
+        parsed["extracted"]["facts"]["btc_holdings"] += 1
+        merged = _merged_filings({"filings": [parsed]}, checkpoint)
+        self.assertEqual(next(row for row in merged if row["accession"] == reviewed["accession"]), reviewed)
+
     def test_malformed_nested_records_cannot_crash_or_replace_checkpoint(self):
         for field, value in (("documents", [1]), ("primaryDocumentUrl", {}),
                              ("extracted.securities", []), ("extracted.priorFacts", [1]),

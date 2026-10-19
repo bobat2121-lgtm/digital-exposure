@@ -189,11 +189,25 @@ def _same_facts(prior, row) -> bool:
     return facts(prior) == facts(row)
 
 
+def _same_reviewed_document(prior, row) -> bool:
+    """Keep a manual review when the collector reparses the identical filed bytes."""
+    if not prior or not prior.get("manualReview", {}).get("reviewedAt") or not _eligible(prior):
+        return False
+    documents = row.get("documents")
+    return (row.get("form") == "8-K"
+            and all(row.get(key) == prior.get(key) for key in ("ticker", "accession", "primaryDocumentUrl"))
+            and isinstance(documents, list) and len(documents) == 1 and isinstance(documents[0], dict)
+            and documents[0].get("url") == prior["documents"][0]["url"]
+            and documents[0].get("sha256") == prior["documents"][0]["sha256"])
+
+
 def _merged_filings(feed, checkpoint):
     rows = {row["accession"]: row for row in checkpoint.get("filings", []) if _eligible(row)}
     for row in feed.get("filings", []):
         if _eligible(row):
             prior = rows.get(row["accession"])
+            if _same_reviewed_document(prior, row):
+                continue
             if prior and prior.get("documents") and row.get("documents"):
                 # SEC serves a re-fetched document with different bytes (the Worker's parser upgrade
                 # re-fetched recent 8-Ks on Oct 5, 2026), so only a change in what it reports stops the page.
@@ -423,8 +437,11 @@ def resolve_live_report(prices: dict, feed: dict, *, through_date: str | None = 
     if max(groups, default=start) > start:
         notice = "One newer filing received · awaiting its matching weekly report. " + report.subtitle
     newest_release = max(row["filedDate"] for row in chosen.values())
+    reviewed = {row["accession"]: row for row in checkpoint.get("filings", []) if _eligible(row)}
     pending = [row for row in feed["filings"] if isinstance(row, dict) and row.get("ticker") in CIKS
                and isinstance(row.get("filedDate"), str) and row["filedDate"] >= newest_release
+               and not _same_reviewed_document(reviewed.get(row.get("accession"))
+                                              if isinstance(row.get("accession"), str) else None, row)
                and (row.get("form") == "8-K/A" or row.get("status") in ("pending", "partial", "document_error")
                     or (row.get("status") == "ready_for_review" and not _eligible(row)))]
     if pending:
