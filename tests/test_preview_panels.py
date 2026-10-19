@@ -196,6 +196,23 @@ class MondayPreviewTests(unittest.TestCase):
         self.assertNotIn("DIVs", [label for label, _, _ in monday_preview.funding_flows(extra)[1]])
         self.assertEqual(preview.extras["MSTR"].residual_label, "DIVs")
 
+    def test_reported_purchase_price_wins_over_rounded_cost(self):
+        from copy import deepcopy
+        from panels import web
+        feed = deepcopy(FEED)
+        company = next(c for c in self.report.companies if c.ticker == "MSTR")
+        row = next(r for r in feed["filings"] if r["ticker"] == "MSTR"
+                   and r["extracted"]["balanceDate"] == company.balance_date)
+        row["manualReview"] = {"reported_weekly_average_btc_price_usd": 79684}
+        preview = monday_preview.build_preview(self.report, self.prices, feed, offline_extras())
+        extra = preview.extras["MSTR"]
+        self.assertEqual(extra.reported_btc_purchase_price, 79684)
+        self.assertNotEqual(extra.btc_cost / extra.btc_bought, 79684)
+        view = next(c for c in preview.view.companies if c.ticker == "MSTR")
+        with patch.object(web.st, "html") as html, patch.object(web, "heading"), patch.object(web, "_waterfall"):
+            web._monday_company(view, extra, company, self.report.current_btc_price)
+        self.assertIn("$79,684", " ".join(str(call.args[0]) for call in html.call_args_list))
+
     def test_amplification_uses_each_issuers_own_formula(self):
         strive = next(c for c in self.report.companies if c.ticker == "ASST")
         current = strive.current

@@ -429,7 +429,9 @@ def _monday_company(c, e, source, btc_price, price_label="") -> None:
             f'<div class="p">{escape(c.stock_price)}</div></div>'
             f'<div class="dcr-meta">Balance {escape(mon._short(source.balance_date))}{link} · '
             f'<b style="color:{C.ink}">{escape(mon._clean(c.price_to_nav))}</b> NAV{when}</div>')
-    paid = e.btc_cost / e.btc_bought if e.btc_cost and e.btc_bought else None
+    paid = e.reported_btc_purchase_price
+    if paid is None:
+        paid = e.btc_cost / e.btc_bought if e.btc_cost and e.btc_bought else None
     st.html(tiles((
         ("Bitcoin bought", mon._btc(e.btc_bought, True), "", True),
         ("Held", mon._btc(e.btc_held), "", False),
@@ -544,7 +546,7 @@ MONDAY_FORMULAS = (
         ("BTC", "The week's bitcoin purchase cost, fees included: Strategy's 8-K \"Aggregate Purchase Price\"; "
                 "Strive's dashboard purchase cost."),
         ("DIVs", "Funding − BTC: preferred dividends, interest, fees and other uses."),
-        ("Price paid", "BTC ÷ bitcoin bought."),
+        ("Price paid", "Reported average purchase price when available; otherwise bitcoin cost ÷ bitcoin bought. Rounded aggregate cost may imply a different average."),
     )),
     ("Per share", (
         ("BTC / share (sats)", "BTC held × 100,000,000 ÷ shares (the share basis below)."),

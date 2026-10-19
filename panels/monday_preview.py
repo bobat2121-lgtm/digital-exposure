@@ -73,6 +73,7 @@ class CompanyExtras:
     net_funding: float | None = None
     btc_cost: float | None = None               # the week's bitcoin purchases (− sale proceeds)
     btc_cost_source: str = ""
+    reported_btc_purchase_price: float | None = None
     dividends: float | None = None              # the rest of the week's funding: dividends, interest, fees
     residual_label: str = "DIVs"                 # manual combined editions can include unsettled proceeds
     balance_source: str = "SEC 8-K"
@@ -455,6 +456,7 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
             preferred_bought_back=bought_back,
             amplification_change_pp=amp - prior_amp if amp is not None and prior_amp is not None else None,
             btc_cost=btc_cost, btc_cost_source=cost_source, stated_dividends=stated,
+            reported_btc_purchase_price=_n(review.get("reported_weekly_average_btc_price_usd")),
             dividends=funding - btc_cost if funding is not None and btc_cost is not None else None,
             residual_label="RESIDUAL" if review.get("unsettledProceeds") or review.get("estimatedFunding") else "DIVs",
             balance_source=review.get("balanceSource", "SEC 8-K"),
