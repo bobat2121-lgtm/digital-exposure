@@ -76,6 +76,14 @@ def _short(value):
     return f"{parsed:%b} {parsed.day}" if parsed else "date unavailable"
 
 
+def activity_week_start(extraction):
+    """Group a weekend-start reporting period with its following trading week."""
+    start = date.fromisoformat(extraction["periodStart"])
+    if start.weekday() >= 5:
+        start += timedelta(days=7 - start.weekday())
+    return (start - timedelta(days=start.weekday())).isoformat()
+
+
 def _load(path):
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
@@ -362,6 +370,19 @@ def _company(ticker, filing, all_filings, supplements, prices):
                 raise ValueError("SATA net shares do not reconcile")
         activity = (PreferredActivity("SATA", None, None, issuance_price_assumption=100,
                                      capital_method="share_change_par", net_share_change=change),)
+        # Separately disclosed preferred offerings are cash transactions, not
+        # SATA share changes or common equity. Preserve their reported basis.
+        for series, transaction in extraction.get("securities", {}).items():
+            if series == "SATA":
+                continue
+            proceeds = _number(transaction.get("netIssuanceProceedsUsd"))
+            repurchases = _number(transaction.get("repurchaseCashUsd"))
+            if proceeds is None or repurchases is None:
+                raise ValueError(f"{series} preferred funding is incomplete")
+            activity += (PreferredActivity(series, _number(transaction.get("issuedShares")),
+                _number(transaction.get("repurchasedShares")), issuance_price_assumption=None,
+                capital_method="reported", reported_issuance_proceeds=proceeds,
+                reported_repurchases_cash=repurchases),)
         estimate = _vwap(filing)
         if estimate and (estimate["session_start"] < extraction["periodStart"]
                          or estimate["session_end"] > extraction["periodEnd"]):
@@ -381,7 +402,9 @@ def _company(ticker, filing, all_filings, supplements, prices):
         common_capital_method=method, prior_week_equity_vwap=estimate["value"] if estimate else None,
         equity_vwap_note=estimate.get("display_note", "1-minute VWAP estimate · before fees") if estimate else None,
         share_basis_note="A + B · rounded to 1,000" if ticker == "MSTR" else "Class A + Class B · effective shares",
-        preferred_activity_notes=("Net share change × $100 · before fees",) if ticker == "ASST" else (),
+        preferred_activity_notes=(("Net share change × $100 · before fees",) +
+            tuple(f"{item.series}: disclosed offering proceeds, net of underwriting commissions and before other expenses"
+                  for item in activity if item.series != "SATA")) if ticker == "ASST" else (),
         valuation_estimated=True, preferred_claims_estimated=True,
         valuation_note=("≈ Basic common shares · after debt & preferred claims" if ticker == "MSTR"
                         else "≈ Fully diluted shares, as Strive's dashboard · after debt & preferred claims"),
@@ -401,10 +424,9 @@ def resolve_live_report(prices: dict, feed: dict, *, through_date: str | None = 
         rows = [row for row in rows if date.fromisoformat(row["extracted"]["balanceDate"]) <= cutoff]
     groups = {}
     for row in sorted(rows, key=lambda item: item.get("acceptedAt", "")):
-        period_start = date.fromisoformat(row["extracted"]["periodStart"])
         # The week after a Monday holiday can begin Tue for Strategy and Mon
-        # for Strive; both still belong to the same activity week.
-        week = (period_start - timedelta(days=period_start.weekday())).isoformat()
+        # for Strive. A Strive period can also begin on the preceding Saturday.
+        week = activity_week_start(row["extracted"])
         groups.setdefault(week, {})[row["ticker"]] = row
     paired = sorted((period for period, filings in groups.items() if set(filings) == set(CIKS)), reverse=True)
     if not paired or paired[0] <= "2026-08-24":

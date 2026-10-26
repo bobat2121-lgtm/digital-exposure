@@ -273,11 +273,11 @@ def _adv(rows, days=30, today=None, *, usd_volume=False):
 
 def _ledger(feed_rows):
     """Weekly issuance/buyback cash by activity week from validated filings."""
+    from report.live_report import activity_week_start
     weeks = {}
     for row in feed_rows:
         extraction = row["extracted"]
-        start = date.fromisoformat(extraction["periodStart"])
-        week = (start - timedelta(days=start.weekday())).isoformat()
+        week = activity_week_start(extraction)
         entry = weeks.setdefault(week, {"week": week})
         facts = extraction["facts"]
         if row["ticker"] == "MSTR":

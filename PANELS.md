@@ -209,7 +209,7 @@ then what it did per share.
   percentage points (pp):
   - Strategy: BTC reserve ÷ net BTC reserve (BTC + USD − debt − preferred),
     strategy.com's `amplification` KPI since Jul 23, 2026 (about 1.25×, shown as 25%).
-  - Strive: (debt + SATA notional) ÷ BTC value, the "Amplification Ratio" on Strive's
+  - Strive: (debt + preferred notional) ÷ BTC value, the "Amplification Ratio" on Strive's
     treasury dashboard (about 50.5%, shown as 51%). The audit checks it against
     Strive's dashboard figure.
 
@@ -229,6 +229,14 @@ then what it did per share.
   0.02%.
 
   Strive's PIPE warrant tag (25.8M @ $27, due Oct 13) disappears after the deadline.
+
+  Settled SATS offerings enter preferred funding at disclosed proceeds after
+  underwriting commissions and before other offering expenses. SATA and SATS
+  claims, including estimated unpaid dividends, reduce NAV; their combined
+  notional drives Strive's amplification, and both coupons enter coverage.
+  A reporting period starting on Saturday or Sunday belongs to the following
+  trading week, so the October 17–23 Strive period pairs with Strategy's
+  October 19–25 period.
 - **Coverage against each issuer's own target** (each cell's text is centered, with a
   short note: "of dividends", "BTC gain / yr"):
   - Strategy's USD cover as a multiple of its 12-month floor.

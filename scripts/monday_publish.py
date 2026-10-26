@@ -83,8 +83,7 @@ def _short(day: str) -> str:
 
 
 def _week(row) -> str:
-    start = date.fromisoformat(row["extracted"]["periodStart"])
-    return (start - timedelta(days=start.weekday())).isoformat()
+    return live_report.activity_week_start(row["extracted"])
 
 
 def _awaiting(feed: dict, since: str) -> list:

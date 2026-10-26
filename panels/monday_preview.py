@@ -213,10 +213,14 @@ def _coverage(ticker, company, btc_price, extras, facts):
         strive = extras.get("strive") or {}
         rate = _n(strive.get("sata_rate_pct"))
         sata = _n(facts.get("sata_shares"))
-        annual = sata * 100 * rate / 100 if sata and rate else None
+        annual = _n(facts.get("annual_preferred_dividends_usd"))
+        if annual is None:
+            annual = sata * 100 * rate / 100 if sata and rate else None
         latest = (strive.get("cash") or [{}])[0]
         months = _n(latest.get("dividend_reserve_months"))
-        source = "strive.com dashboard, SATA stated rate " + (_pct(rate) if rate else "n/a")
+        source = ("SATA + SATS annual dividends from dated share counts and stated rates"
+                  if facts.get("sats_shares") else
+                  "strive.com dashboard, SATA stated rate " + (_pct(rate) if rate else "n/a"))
     years = (bitcoin + liquid) / annual if annual and bitcoin is not None and liquid is not None else None
     breakeven = annual / bitcoin * 100 if annual and bitcoin else None
     return months, years, breakeven, source
@@ -233,6 +237,8 @@ def _btc_cost(ticker, company, facts, extras, btc_price):
     """The week's bitcoin cost, with its source: filed figures first, an estimate last."""
     bought, sold = _n(facts.get("weekly_btc_purchases")), _n(facts.get("weekly_btc_sales"))
     start, end = company.prior_balance_date or "", company.balance_date or ""
+    if ticker == "ASST" and _n(facts.get("weekly_btc_cost_usd")) is not None:
+        return facts["weekly_btc_cost_usd"], "strive.com dashboard purchase cost"
     if ticker == "MSTR":
         cost = _n(facts.get("weekly_btc_cost_usd"))
         if cost is not None:
@@ -400,9 +406,13 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
         prior_bitcoin = btc_value(company.prior, report.prior_btc_price)
         current, prior = company.current, company.prior
         # Strive's amplification ratio: (notional preferred + debt) ÷ BTC value.
-        amp = ((current.debt_principal + current.preferred_claims) / bitcoin * 100
+        notional = _n(facts.get("preferred_notional_usd"))
+        prior_notional = _n(prior_facts.get("preferred_notional_usd"))
+        notional = current.preferred_claims if notional is None else notional
+        prior_notional = prior.preferred_claims if prior_notional is None else prior_notional
+        amp = ((current.debt_principal + notional) / bitcoin * 100
                if bitcoin and current.debt_principal is not None and current.preferred_claims is not None else None)
-        prior_amp = ((prior.debt_principal + prior.preferred_claims) / prior_bitcoin * 100
+        prior_amp = ((prior.debt_principal + prior_notional) / prior_bitcoin * 100
                      if prior_bitcoin and prior.debt_principal is not None and prior.preferred_claims is not None else None)
         liquid, prior_liquid = liquid_assets(current), liquid_assets(prior)
         liquid_change = liquid - prior_liquid if liquid is not None and prior_liquid is not None else None
@@ -427,11 +437,11 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
             amp_x, amp_source = (kpi, "strategy.com KPI") if kpi else (metrics.net_btc_amplification, "derived")
             amp_change_x = metrics.amplification_change
         else:
-            # Strive's own "Amplification Ratio" (its dashboard): (debt + SATA notional) ÷ BTC value.
+            # Strive's own "Amplification Ratio" (its dashboard): (debt + preferred notional) ÷ BTC value.
             # Shown as exposure in ×: 1 + the ratio (a 50.5% ratio reads 1.51×).
             amp_x = 1 + amp / 100 if amp is not None else None
             amp_change_x = (amp - prior_amp) / 100 if amp is not None and prior_amp is not None else None
-            amp_source = "Strive's Amplification Ratio: (debt + SATA notional) ÷ BTC value"
+            amp_source = "Strive's Amplification Ratio: (debt + preferred notional) ÷ BTC value"
         months, years, breakeven, source = _coverage(ticker, company, report.current_btc_price, extras, facts)
         key = "strategy_reserve_floor_months" if ticker == "MSTR" else "strive_reserve_goal_months"
         target = _n((config.get(key) or {}).get("value"))
@@ -443,6 +453,8 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
         else:
             change = _n(facts.get("net_sata_shares_change"))
             note = f"SATA {change / 1e3:+,.0f}k sh" if change is not None else "SATA"
+            if facts.get("sats_shares"):
+                note += f" · SATS {facts['sats_shares'] / 1e6:g}m sh"
         cost_basis, average_cost, basis_source = _cost_basis(ticker, company, facts, extras, (btc_cost, cost_source))
         common_in, common_out = _split(metrics.net_common_capital, None if metrics.common_capital_estimated
                                        else (metrics.common_issuance_cash, metrics.common_buybacks_cash))
@@ -849,7 +861,7 @@ def notes(preview: MondayPreview) -> list[str]:
     stated = " ".join(_stated_dividends_note(e) for e in preview.extras.values()
                       if e.ticker == "MSTR" and e.stated_dividends is not None)
     return [line for line in (
-        "Capital raised = ATM issuance − repurchases, common and preferred. Cash is an existing balance, never counted as a raise. "
+        "Capital raised = ATM and other disclosed issuance − repurchases, common and preferred. Cash is an existing balance, never counted as a raise. "
         "The waterfall is the week's cash, each flow once: money in (common and preferred sold, cash drawn) climbs from $0, "
         "money out (buybacks, BTC, Dividends, cash kept) steps back to $0, so the two sides match. "
         "Strive's common figure is an estimate: net share change × activity-period VWAP.",
@@ -857,14 +869,14 @@ def notes(preview: MondayPreview) -> list[str]:
         f"dividends and interest, plus fees and other uses. {stated}".strip(),
         "Amplification uses each issuer's own formula, shown as a percent above 1× ((× − 1) × 100: 1.51× is 51%), its weekly "
         "change in percentage points. Strategy: BTC reserve ÷ net BTC reserve (BTC + USD − debt − preferred), its strategy.com "
-        "KPI since July 23, 2026. Strive: (debt + SATA notional) ÷ BTC value, the \"Amplification Ratio\" on its treasury "
+        "KPI since July 23, 2026. Strive: (debt + preferred notional) ÷ BTC value, the \"Amplification Ratio\" on its treasury "
         "dashboard; Strive has no debt. The two measure different things and are not comparable. Weekly changes come from "
         "the filed balances.",
         "NAV, price/NAV, coverage and growth are estimates from dated balances and reconstructed preferred "
         "claims at the displayed prices; growth holds prices constant. Per-share figures divide by Strategy's basic "
         "Class A + B shares and by Strive's fully diluted shares (Class A + B + options + RSUs/RSAs, warrants excluded: "
-        "the 8-K's \"Assumed Fully Diluted Shares\", Strive's dashboard default), so ASST's NAV/share and price/NAV "
-        "match its dashboard's Net Treasury Asset Value per share and Multiple to Net Treasury Asset Value.",
+        "the 8-K's \"Assumed Fully Diluted Shares\", Strive's dashboard default). ASST's NAV/share and price/NAV use "
+        "that dashboard basis, with differences from unpaid preferred accruals and market-price timing.",
         "USD cover = months of dividend (and, for Strategy, interest) obligations held in USD, read against Strategy's 12-month "
         "floor and Strive's 18-month goal. Coverage = (BTC + cash) ÷ annual obligations; break-even = obligations ÷ BTC value. "
         f"{sources}.",
@@ -904,7 +916,7 @@ def audit_rows(preview: MondayPreview) -> list[dict]:
             {"metric": f"{company.ticker} price / NAV ({'basic' if company.ticker == 'MSTR' else 'fully diluted'} shares)",
              "value": _clean(company.price_to_nav), "source": "derived"},
             {"metric": f"{company.ticker} sats per share", "value": company.bitcoin.value, "source": "derived"},
-            {"metric": f"{company.ticker} amplification ({'BTC reserve ÷ net BTC reserve' if company.ticker == 'MSTR' else '(debt + SATA notional) ÷ BTC value'})",
+            {"metric": f"{company.ticker} amplification ({'BTC reserve ÷ net BTC reserve' if company.ticker == 'MSTR' else '(debt + preferred notional) ÷ BTC value'})",
              "value": " / ".join(_amplification(extra)), "source": extra.amplification_source},
             {"metric": f"{company.ticker} USD cover (months)", "value": f"{extra.reserve_months:.1f} ({_cover_note(extra)})" if extra.reserve_months else "—", "source": extra.coverage_source},
             {"metric": f"{company.ticker} {extra.window.get('weeks', '?')}-week BTC/share", "value": _pct(extra.window.get("btc"), 2, True), "source": f"since {extra.window.get('start', '—')}"},

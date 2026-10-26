@@ -538,7 +538,7 @@ def _scorecard(preview) -> str:
 
 MONDAY_FORMULAS = (
     ("Funding", (
-        ("Capital raised", "ATM net proceeds − repurchase cost, common and preferred, from each weekly 8-K. Strive's "
+        ("Capital raised", "ATM and other disclosed offering proceeds − repurchase cost, common and preferred. Strive's "
                            "common figure is an estimate: net share change × activity-period VWAP."),
         ("Cash drawn / kept", "Liquid assets last week − this week. Strategy: USD Reserve + USD Cash. Strive: cash + the STRC it holds."),
         ("Waterfall", "Common + preferred + cash drawn (or − cash kept) = BTC + Dividends."),
@@ -558,7 +558,7 @@ MONDAY_FORMULAS = (
         ("Amplification", "Shown as a percent above 1×: (ratio − 1) × 100, so 1.51× reads 51%; weekly change in points."),
         ("Amplification, Strategy", "BTC reserve ÷ net BTC reserve = BTC value ÷ (BTC value + USD − debt − preferred), "
                                     "strategy.com's KPI since July 23, 2026 (1.25× shows as 25%)."),
-        ("Amplification, Strive", "(debt + SATA notional) ÷ BTC value, Strive's dashboard \"Amplification Ratio\" "
+        ("Amplification, Strive", "(debt + preferred notional) ÷ BTC value, Strive's dashboard \"Amplification Ratio\" "
                                   "(its 50.5% shows as 51%). The two are not comparable."),
         ("Weekly changes", "This week's balances vs last week's, each at its own week's BTC price (growth rows hold prices constant)."),
     )),
@@ -895,8 +895,11 @@ def _turnover(turnover) -> None:
         part = frame[frame["ticker"] == ticker]
         with column:
             latest = part["pct"].iloc[-1] if len(part) else None
-            st.html(f'<div class="dcr-meta"><span class="dot" style="background:{C.series[ticker]}"></span>'
-                    f'<b style="color:{C.text}">{ticker}</b> · {latest:.1f}% last week</div>' if latest is not None else "")
+            if latest is not None:
+                st.html(f'<div class="dcr-meta"><span class="dot" style="background:{C.series[ticker]}"></span>'
+                        f'<b style="color:{C.text}">{ticker}</b> · {latest:.1f}% last week</div>')
+            else:
+                st.caption(f"{ticker} turnover unavailable")
             bars = alt.Chart(part).mark_bar(color=C.series[ticker], size=10).encode(
                 x=alt.X("week:T", title=None, axis=alt.Axis(format="%b %-d", tickCount=3)),
                 y=alt.Y("pct:Q", title="% / week"),

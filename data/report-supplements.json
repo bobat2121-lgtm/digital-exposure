@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "2026-10-19.1",
+  "revision": "2026-10-26.1",
   "basis": "Dated supplemental inputs; NAV estimates use ending preferred shares and ordinary accrued dividends. No supplement automatically rolls into a newer balance date.",
   "balances": {
     "MSTR": {
@@ -174,6 +174,52 @@
         ],
         "btc_holdings": 848517,
         "share_basis": "Dated Strategy issuer table: Class A 402,713,000 + Class B 19,640,000 = 422,353,000; rounded to thousands."
+      },
+      "2026-10-25": {
+        "effective_common_shares": 422353000,
+        "debt_principal": 6753703000,
+        "preferred_claims_usd": 12576582390.154778,
+        "preferred_claims_eur": 780381944.4444444,
+        "components": {
+          "STRF": {
+            "shares": 12839689,
+            "base": 103.293,
+            "accrual_days": 25,
+            "annual": 10.0
+          },
+          "STRC": {
+            "shares": 83914197,
+            "base": 100.0,
+            "accrual_days": 10,
+            "annual": 12.0
+          },
+          "STRK": {
+            "shares": 14020744,
+            "base": 100.0,
+            "accrual_days": 25,
+            "annual": 8.0
+          },
+          "STRD": {
+            "shares": 14024221,
+            "base": 100.0,
+            "accrual_days": 25,
+            "annual": 10.0
+          },
+          "STRE": {
+            "shares": 7750000,
+            "base": 100.0,
+            "accrual_days": 25,
+            "currency": "EUR"
+          }
+        },
+        "limitations": "Common shares roll forward the Oct 18 issuer count with zero common issuance or repurchases in the Oct 26 8-K; the issuer shares table has not yet advanced to Oct 25, so employee issuance after Oct 18 is not included. Debt principal is the reconciled June 30 carryforward, corroborated by the unchanged current convertible-note list. Claims: max($100, ten-close mean) plus 30/360 accrual \u2014 STRC 10 days at $12, quarterly series 25 days; scheduled payments assumed paid.",
+        "sources": [
+          "https://api.strategy.com/btc/strcKpiData",
+          "https://query1.finance.yahoo.com/v8/finance/chart/",
+          "https://www.sec.gov/Archives/edgar/data/1050446/000119312526431146/mstr-20261026.htm",
+          "https://www.strategy.com/shares",
+          "https://api.strategy.com/btc/credit"
+        ]
       }
     },
     "ASST": {
@@ -269,6 +315,35 @@
           "https://query1.finance.yahoo.com/v8/finance/chart/SATA?interval=1d&range=6mo&includePrePost=false&events=splits"
         ],
         "limitations": "SATA claims: 14,030,176 shares at the $100 certificate floor, with daily dividends treated paid through the balance date. The issuer reports the latest paid dividend on Oct 19; its limited dividend history omits Oct 14 and Oct 16, so individual payment confirmations for those dates are not available. No SATS shares or proceeds were outstanding at Oct 16. Common capital remains a five-minute VWAP estimate before fees. See reconciliation-2026-10-19.json."
+      },
+      "2026-10-23": {
+        "debt_principal": 0,
+        "preferred_claims_usd": 2104267600.0,
+        "preferred_claims_eur": 0,
+        "sources": [
+          "https://www.sec.gov/Archives/edgar/data/1920406/000162828026067141/asst-20261026.htm",
+          "https://www.strive.com/treasury/api/dashboard/base-data",
+          "https://www.sec.gov/Archives/edgar/data/1920406/000095010326015849/dp255260_8k.htm",
+          "https://www.sec.gov/Archives/edgar/data/1920406/000162828026066608/asst-20261021.htm"
+        ],
+        "limitations": "SATA: 14,030,176 shares at $100 floor, daily dividends treated paid through Oct 23 (the issuer labels Oct 23 paid). SATS: 7m shares at $100 floor; prices since issue remain below par. Estimated unpaid dividends are 3 October business days (Oct 21-23) times $15/12/21 per share; first payment is Nov 9. Both classes count in NAV; amplification uses their $2.1030176bn combined notional without accrued dividends.",
+        "preferred_components": {
+          "SATA": {
+            "shares": 14030176,
+            "base": 100.0,
+            "annual_rate_pct": 13,
+            "claims_usd": 1403017600.0
+          },
+          "SATS": {
+            "shares": 7000000,
+            "base": 100,
+            "annual_rate_pct": 15,
+            "accrual_business_days": 3,
+            "month_business_days": 21,
+            "accrued_dividends_usd": 1250000.0,
+            "claims_usd": 701250000.0
+          }
+        }
       }
     }
   },
@@ -279,7 +354,8 @@
     "2026-09-20": 85149.67,
     "2026-09-27": 83539.0234375,
     "2026-10-04": 86148.71,
-    "2026-10-11": 83261.25
+    "2026-10-11": 83261.25,
+    "2026-10-18": 82540.21
   },
   "comparison_release_dates": {
     "2026-08-30": "2026-08-31",
@@ -288,7 +364,8 @@
     "2026-09-20": "2026-09-21",
     "2026-09-27": "2026-09-28",
     "2026-10-04": "2026-10-05",
-    "2026-10-11": "2026-10-13"
+    "2026-10-11": "2026-10-13",
+    "2026-10-18": "2026-10-19"
   },
   "balance_marks": {
     "2026-08-30": {
@@ -338,6 +415,15 @@
     },
     "2026-10-09": {
       "STRC": 99.65940594059406
+    },
+    "2026-10-18": {
+      "EURUSD=X": 1.1218
+    },
+    "2026-10-16": {
+      "STRC": 97.72079207920792
+    },
+    "2026-10-23": {
+      "STRC": 99.36039603960396
     }
   },
   "preferred_audit_files": [

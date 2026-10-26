@@ -204,8 +204,8 @@ def audit_monday(report, monday, extras, rows, now):
                                      - number(cash_row.get("debt")) - notional) / diluted
                     compare("monday", "ASST.nav_dashboard", "ASST NAV per share vs Strive's dashboard formula", nav_ps,
                             dashboard_nav, .002, relative=True,
-                            source="(BTC × price + cash + securities − debt − SATA notional) ÷ fully diluted, strive.com inputs",
-                            detail="residual: STRC marked live vs the 8-K's fair value; SATA claim $100.01 vs $100")
+                            source="(BTC × price + cash + securities − debt − preferred notional) ÷ fully diluted, strive.com inputs",
+                            detail="STRC is marked live; preferred claims include certificate preferences and unpaid dividend accruals")
             trades = [row for row in strive.get("transactions") or [] if row.get("transaction_date") == balance]
             if trades:
                 held = number(trades[0].get("total_btc_holdings"))
