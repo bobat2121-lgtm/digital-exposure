@@ -129,17 +129,17 @@ def audit_monday(report, monday, extras, rows, now):
                   ("estimated: add the week's 8-K 'Aggregate Purchase Price' to data/strategy-weekly-8k.json or redeploy "
                    "the filing worker" if t == "MSTR" else "estimated: Strive's dashboard has no purchase for the week")
                   if estimated else e.btc_cost_source, e.btc_cost_source)
-            compare("monday", f"{t}.btc_divs", f"{t} BTC + DIVs = funding", e.btc_cost + e.dividends, e.net_funding, 1,
+            compare("monday", f"{t}.btc_divs", f"{t} BTC + Dividends = funding", e.btc_cost + e.dividends, e.net_funding, 1,
                     source="waterfall arithmetic")
         flows = monday_preview.funding_flows(e)
         if flows is not None:
             money_in, money_out = (sum(amount for _, amount, _ in side) for side in flows)
             compare("monday", f"{t}.in_out", f"{t} waterfall: money in = money out", money_in, money_out, 1,
-                    source="gross issuance, buybacks, cash change, BTC and DIVs")
+                    source="gross issuance, buybacks, cash change, BTC and Dividends")
         if t == "MSTR" and e.stated_dividends is not None and e.dividends is not None:
-            compare("monday", "MSTR.divs_8k", "MSTR DIVs vs 8-K dividends + interest", e.dividends, e.stated_dividends, 20e6,
+            compare("monday", "MSTR.divs_8k", "MSTR Dividends vs 8-K dividends + interest", e.dividends, e.stated_dividends, 20e6,
                     warn_only=True, source="8-K: USD Reserve used for dividends and interest",
-                    detail="DIVs is net of interest earned on cash and the 8-K's $0.01B rounding (up to ~$20m)")
+                    detail="Dividends is net of interest earned on cash and the 8-K's $0.01B rounding (up to ~$20m)")
         if t == "MSTR":
             annual = number(strategy_btc.get("totalAnnualDividends"))
             compare("monday", "MSTR.btc_kpi", "MSTR BTC held vs strategy.com", cur.btc_holdings, number(strategy_btc.get("btcHoldings")),

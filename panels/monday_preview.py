@@ -75,7 +75,7 @@ class CompanyExtras:
     btc_cost_source: str = ""
     reported_btc_purchase_price: float | None = None
     dividends: float | None = None              # the rest of the week's funding: dividends, interest, fees
-    residual_label: str = "DIVs"                 # manual combined editions can include unsettled proceeds
+    residual_label: str = "Dividends"           # display name; calculation notes retain funding limitations
     balance_source: str = "SEC 8-K"
     stated_dividends: float | None = None       # Strategy's 8-K figure for dividends and interest, if given
     reserve_months: float | None = None
@@ -353,7 +353,7 @@ def funding_flows(e: CompanyExtras) -> tuple[list, list] | None:
     if e.btc_cost is None:
         funding = e.net_funding if e.net_funding is not None else 0.0
         if funding > 0:
-            money_out.append(("BTC + DIVs", funding, "btc"))
+            money_out.append(("BTC + Dividends", funding, "btc"))
     else:
         if e.btc_cost > 0:
             money_out.append(("BTC", e.btc_cost, "btc"))
@@ -458,7 +458,7 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
             btc_cost=btc_cost, btc_cost_source=cost_source, stated_dividends=stated,
             reported_btc_purchase_price=_n(review.get("reported_weekly_average_btc_price_usd")),
             dividends=funding - btc_cost if funding is not None and btc_cost is not None else None,
-            residual_label="RESIDUAL" if review.get("unsettledProceeds") or review.get("estimatedFunding") else "DIVs",
+            residual_label="Dividends",
             balance_source=review.get("balanceSource", "SEC 8-K"),
             preferred_pct=current.preferred_claims / bitcoin * 100 if bitcoin and current.preferred_claims is not None else None,
             debt_pct=current.debt_principal / bitcoin * 100 if bitcoin and current.debt_principal is not None else None,
@@ -589,10 +589,10 @@ def _top_waterfall(canvas, e, L, R, y, p, stripe):
 
     One row per flow, so every label and amount stays at phone size. The bars climb
     from $0 with money in (common and preferred sold, cash drawn) and step back to $0
-    with money out (buybacks, BTC, DIVs, cash kept): the last bar ends on zero, which
+    with money out (buybacks, BTC, Dividends, cash kept): the last bar ends on zero, which
     is the check that the two sides match. Money in is green with its +; money out
     keeps its − in the normal ink, since buying bitcoin is not a loss. BTC is the
-    week's bitcoin cost; DIVs is the rest (dividends, interest and fees).
+    week's bitcoin cost; Dividends is the rest (dividends, interest and fees).
     """
     flows = funding_flows(e)
     if flows is None:
@@ -632,7 +632,7 @@ def _top_waterfall(canvas, e, L, R, y, p, stripe):
                 canvas.draw.line((L, rule, R, rule), fill=p.line, width=2)
         for n, (label, text, a, b, color, tone) in enumerate(rows):
             middle = middles[n]
-            fill = color if isinstance(color, tuple) else mix(color, p.card, .85)  # DIVs arrives pre-tinted
+            fill = color if isinstance(color, tuple) else mix(color, p.card, .85)  # Dividends arrives pre-tinted
             canvas.draw.rounded_rectangle((px(a), middle - bar / 2, max(px(b), px(a) + 4), middle + bar / 2),
                                           radius=min(4, p.radius), fill=fill)
             # Both texts are centered on the bar by their capitals.
@@ -830,14 +830,14 @@ def render_png(preview: MondayPreview, theme: themes.Theme = themes.DEFAULT, var
 
 
 def _stated_dividends_note(e) -> str:
-    """Strategy's 8-K dividends and interest beside DIVs. DIVs is what the cash change leaves, so it is net of
-    interest earned on cash as well as the 8-K's rounding (Oct 5, 2026: $142.5m stated, $117.3m DIVs, after
+    """Strategy's 8-K dividends and interest beside Dividends. Dividends is what the cash change leaves, so it is net of
+    interest earned on cash as well as the 8-K's rounding (Oct 5, 2026: $142.5m stated, $117.3m Dividends, after
     $22.2m of STRC buybacks were funded with interest earned)."""
     text = f"Strategy's 8-K put the week's dividends and interest at {_money(e.stated_dividends, False)}"
     gap = None if e.dividends is None else e.stated_dividends - e.dividends
     if gap is not None and abs(gap) >= 50_000:
-        text += f", {_money(abs(gap), False)} {'more' if gap > 0 else 'less'} than DIVs"
-    return (text + ". DIVs is what the week's cash change leaves after buybacks and bitcoin, so it is net of other "
+        text += f", {_money(abs(gap), False)} {'more' if gap > 0 else 'less'} than Dividends"
+    return (text + ". Dividends is what the week's cash change leaves after buybacks and bitcoin, so it is net of other "
             "income, such as interest earned on cash, and of the 8-K's rounding of balances to $0.01B.")
 
 
@@ -851,9 +851,9 @@ def notes(preview: MondayPreview) -> list[str]:
     return [line for line in (
         "Capital raised = ATM issuance − repurchases, common and preferred. Cash is an existing balance, never counted as a raise. "
         "The waterfall is the week's cash, each flow once: money in (common and preferred sold, cash drawn) climbs from $0, "
-        "money out (buybacks, BTC, DIVs, cash kept) steps back to $0, so the two sides match. "
+        "money out (buybacks, BTC, Dividends, cash kept) steps back to $0, so the two sides match. "
         "Strive's common figure is an estimate: net share change × activity-period VWAP.",
-        f"BTC = the week's bitcoin purchase cost, fees included ({costs}). DIVs = the rest of the week's funding: preferred "
+        f"BTC = the week's bitcoin purchase cost, fees included ({costs}). Dividends = the rest of the week's funding: preferred "
         f"dividends and interest, plus fees and other uses. {stated}".strip(),
         "Amplification uses each issuer's own formula, shown as a percent above 1× ((× − 1) × 100: 1.51× is 51%), its weekly "
         "change in percentage points. Strategy: BTC reserve ÷ net BTC reserve (BTC + USD − debt − preferred), its strategy.com "
@@ -896,7 +896,7 @@ def audit_rows(preview: MondayPreview) -> list[dict]:
             {"metric": f"{company.ticker} {extra.residual_label} (funding − BTC)", "value": _money(extra.dividends, False),
              "source": "derived" + (f"; 8-K dividends + interest {_money(extra.stated_dividends, False)}" if extra.stated_dividends is not None else "")},
             {"metric": f"{company.ticker} money in / money out", "value": _flows_text(extra),
-             "source": "8-K gross issuance and repurchases, cash change, BTC cost, DIVs"},
+             "source": "8-K gross issuance and repurchases, cash change, BTC cost, Dividends"},
             {"metric": f"{company.ticker} NAV / share (est.)", "value": _clean(company.nav_per_share), "source": "derived"},
             {"metric": f"{company.ticker} BTC cost basis / average", "value":
              f"{_money(extra.cost_basis, False)} / ${extra.average_cost:,.0f}" if extra.average_cost else "—",

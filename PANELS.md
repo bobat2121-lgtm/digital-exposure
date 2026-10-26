@@ -180,7 +180,7 @@ then what it did per share.
     (COMMON), preferred sold (PREF) and cash drawn (FROM CASH), green with a +.
     **Money out** steps back to $0: buybacks (e.g. STRC BUYBACK; a common buyback
     reads MSTR BUYBACK), **BTC** (the week's bitcoin purchase cost, fees included),
-    **DIVs** (the rest: preferred dividends, interest and fees) and cash kept
+    **Dividends** (the rest: preferred dividends, interest and fees) and cash kept
     (TO CASH), with a − in the normal ink (buying bitcoin is not a loss). The last
     bar ends on zero, which shows the two sides match; the audit checks it. A rule
     separates the two groups (dashed grey on Bloomberg, a hairline on Broadsheet),
@@ -191,9 +191,9 @@ then what it did per share.
       cost for the same dates. If neither exists, BTC bought × the week's average
       close is used and the audit flags it.
     - When Strategy's 8-K states its dividends and interest (Sep 14–20: $57.4m),
-      the footnote shows it and the gap to DIVs. DIVs is what the week's cash
+      the footnote shows it and the gap to Dividends. Dividends is what the week's cash
       change leaves, so it is net of interest earned on cash as well as the 8-K's
-      $0.01B rounding (Sep 28–Oct 4: $142.5m stated, $117.3m DIVs, after $22.2m of
+      $0.01B rounding (Sep 28–Oct 4: $142.5m stated, $117.3m Dividends, after $22.2m of
       STRC buybacks were funded with interest earned).
   - **B · Ledger:** common ATM + preferred ATM = raised, as a short statement, with
     cash below.

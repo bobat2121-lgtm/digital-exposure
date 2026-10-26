@@ -361,7 +361,7 @@ class DiscordTests(unittest.TestCase):
         "MSTR": {"name": "Strategy", "balance_label": "Sep 27", "bitcoin_bought": "1,666 BTC",
                  "money": "in COMMON +$231.0m · out STRC BUYBACK −$174.0m, BTC −$140.1m"},
         "ASST": {"name": "Strive", "balance_label": "Sep 25", "bitcoin_bought": "455 BTC",
-                 "money": "in COMMON +$30.1m, PREF +$10.1m · out BTC −$38.0m, DIVs −$2.2m"}},
+                 "money": "in COMMON +$30.1m, PREF +$10.1m · out BTC −$38.0m, Dividends −$2.2m"}},
         "heads_up": []}
     COMMIT = "https://github.com/bobat2121-lgtm/digital-exposure/commit/abc1234"
 

@@ -179,7 +179,7 @@ class MondayPreviewTests(unittest.TestCase):
         self.assertIn(combined["extracted"]["balanceDate"], latest)
         self.assertIn(source["extracted"]["balanceDate"], earlier)
 
-    def test_manual_combined_edition_keeps_settlement_gap_distinct_from_dividends(self):
+    def test_manual_combined_edition_uses_requested_dividends_label_and_keeps_notes(self):
         from copy import deepcopy
         feed = deepcopy(FEED)
         company = next(c for c in self.report.companies if c.ticker == "ASST")
@@ -192,9 +192,9 @@ class MondayPreviewTests(unittest.TestCase):
         extra = preview.extras["ASST"]
         self.assertEqual(extra.dividends, self.preview.extras["ASST"].dividends)
         self.assertEqual(extra.balance_source, "Dated issuer dashboard")
-        self.assertIn("RESIDUAL", [label for label, _, _ in monday_preview.funding_flows(extra)[1]])
-        self.assertNotIn("DIVs", [label for label, _, _ in monday_preview.funding_flows(extra)[1]])
-        self.assertEqual(preview.extras["MSTR"].residual_label, "DIVs")
+        self.assertIn("Dividends", [label for label, _, _ in monday_preview.funding_flows(extra)[1]])
+        self.assertNotIn("RESIDUAL", [label for label, _, _ in monday_preview.funding_flows(extra)[1]])
+        self.assertEqual(preview.extras["MSTR"].residual_label, "Dividends")
 
     def test_reported_purchase_price_wins_over_rounded_cost(self):
         from copy import deepcopy
@@ -250,11 +250,11 @@ class MondayPreviewTests(unittest.TestCase):
             self.assertFalse(extra.btc_cost_source.startswith("estimate"), extra.ticker)
 
     def test_footnote_gives_the_gap_to_the_8k_dividends_and_why(self):
-        # Oct 5, 2026: $142.5m stated, $117.3m DIVs; $22.2m of buybacks were paid from interest earned.
+        # Oct 5, 2026: $142.5m stated, $117.3m Dividends; $22.2m of buybacks were paid from interest earned.
         from dataclasses import replace
         note = monday_preview._stated_dividends_note(
             replace(self.preview.extras["MSTR"], stated_dividends=142_500_000, dividends=117_300_000))
-        self.assertIn("$142.5m, $25.2m more than DIVs", note)
+        self.assertIn("$142.5m, $25.2m more than Dividends", note)
         self.assertIn("interest earned on cash", note)
         self.assertNotIn("the difference is rounding", " ".join(monday_preview.notes(self.preview)))
 
@@ -332,11 +332,11 @@ class MondayPreviewTests(unittest.TestCase):
         flows = {t: monday_preview.funding_flows(e) for t, e in self.preview.extras.items()}
         money_in, money_out = flows["MSTR"]
         self.assertEqual([(label, round(amount)) for label, amount, _ in money_in], [("FROM CASH", 310_000_000)])
-        self.assertEqual([label for label, _, _ in money_out], ["STRC BUYBACK", "BTC", "DIVs"])
+        self.assertEqual([label for label, _, _ in money_out], ["STRC BUYBACK", "BTC", "Dividends"])
         self.assertEqual(round(money_out[0][1]), 174_000_000)  # the buyback is money out, not a negative raise
         money_in, money_out = flows["ASST"]
         self.assertEqual([label for label, _, _ in money_in], ["COMMON", "PREF"])
-        self.assertEqual([label for label, _, _ in money_out], ["BTC", "DIVs", "TO CASH"])
+        self.assertEqual([label for label, _, _ in money_out], ["BTC", "Dividends", "TO CASH"])
         for money_in, money_out in flows.values():
             self.assertAlmostEqual(sum(a for _, a, _ in money_in), sum(a for _, a, _ in money_out), places=2)
         self.assertIn("out STRC BUYBACK −$174.0m", monday_preview._flows_text(self.preview.extras["MSTR"]))
@@ -357,7 +357,7 @@ class MondayPreviewTests(unittest.TestCase):
                        preferred_bought_back=("STRC", "STRF"), liquid_change=-30e6, btc_cost=120e6, dividends=30e6)
         money_in, money_out = monday_preview.funding_flows(busy)
         self.assertEqual([label for label, _, _ in money_in], ["COMMON", "PREF", "FROM CASH"])
-        self.assertEqual([label for label, _, _ in money_out], ["MSTR BUYBACK", "PREF BUYBACK", "BTC", "DIVs"])
+        self.assertEqual([label for label, _, _ in money_out], ["MSTR BUYBACK", "PREF BUYBACK", "BTC", "Dividends"])
         preview = replace(self.preview, extras={**self.preview.extras, "MSTR": busy})
         from panels import themes
         for theme in themes.THEMES.values():

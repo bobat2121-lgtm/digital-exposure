@@ -179,7 +179,7 @@
           }
         ],
         "estimatedFunding": true,
-        "panelNote": "Strive: 4,045 BTC bought Oct 12\u201316 includes the 2,822 BTC announced midweek; compared with Oct 9. Common capital is a VWAP estimate, so RESIDUAL includes estimation differences. SATS shares and proceeds are excluded: settlement is scheduled for Oct 20.",
+        "panelNote": "Strive: 4,045 BTC bought Oct 12\u201316 includes the 2,822 BTC announced midweek; compared with Oct 9. Common capital is a VWAP estimate, so Dividends includes estimation differences. SATS shares and proceeds are excluded: settlement is scheduled for Oct 20.",
         "balanceSource": "SEC 8-K, Oct 16 balances",
         "reported_weekly_average_btc_price_usd": 82803,
         "reported_warrant_gross_proceeds_usd": 369200000,
@@ -319,7 +319,7 @@
             "hash_basis": "JSON serialized API response"
           }
         ],
-        "panelNote": "Strive combines 3,311 BTC bought Oct 5\u20139 and 2,822 BTC bought Oct 12\u201313: 6,133 BTC total, compared with Oct 2. Oct 13 cash and shares use Strive\u2019s dashboard; SATA and STRC share counts retain the latest disclosed amounts. Common capital is an Oct 5\u201313 VWAP estimate. RESIDUAL includes estimation and settlement differences, not just dividends: the 8-K describes $369.2m of warrant proceeds as expected, while the dashboard still lists $310.3m cash.",
+        "panelNote": "Strive combines 3,311 BTC bought Oct 5\u20139 and 2,822 BTC bought Oct 12\u201313: 6,133 BTC total, compared with Oct 2. Oct 13 cash and shares use Strive\u2019s dashboard; SATA and STRC share counts retain the latest disclosed amounts. Common capital is an Oct 5\u201313 VWAP estimate. Dividends includes estimation and settlement differences, not just dividends: the 8-K describes $369.2m of warrant proceeds as expected, while the dashboard still lists $310.3m cash.",
         "unsettledProceeds": true,
         "field_sources": {
           "purchases": "Sum of both 8-K disclosed integer amounts",

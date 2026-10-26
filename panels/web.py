@@ -507,8 +507,7 @@ def _scorecard(preview) -> str:
     rows.append(row("Capital raised (common + preferred)", [_m(e.raised, signed=True) for e in extras]))
     rows.append(row("Cash drawn (+) / kept (−)", [_m(-e.liquid_change if e.liquid_change is not None else None, signed=True) for e in extras]))
     rows.append(row("BTC: bitcoin cost", [_m(e.btc_cost) for e in extras]))
-    residual = any(e.residual_label != "DIVs" for e in extras)
-    rows.append(row("Funding residual (see notes)" if residual else "DIVs: dividends, interest, fees",
+    rows.append(row("Dividends",
                     [_m(e.dividends) for e in extras]))
     rows.append(row("Cash on hand", [value_with(_m(e.liquid_balance, 2), e.liquid_detail) for e in extras]))
     rows.append(("section", "Per share"))
@@ -542,10 +541,10 @@ MONDAY_FORMULAS = (
         ("Capital raised", "ATM net proceeds − repurchase cost, common and preferred, from each weekly 8-K. Strive's "
                            "common figure is an estimate: net share change × activity-period VWAP."),
         ("Cash drawn / kept", "Liquid assets last week − this week. Strategy: USD Reserve + USD Cash. Strive: cash + the STRC it holds."),
-        ("Waterfall", "Common + preferred + cash drawn (or − cash kept) = BTC + DIVs."),
+        ("Waterfall", "Common + preferred + cash drawn (or − cash kept) = BTC + Dividends."),
         ("BTC", "The week's bitcoin purchase cost, fees included: Strategy's 8-K \"Aggregate Purchase Price\"; "
                 "Strive's dashboard purchase cost."),
-        ("DIVs", "Funding − BTC: preferred dividends, interest, fees and other uses."),
+        ("Dividends", "Funding − BTC: preferred dividends, interest, fees and other uses."),
         ("Price paid", "Reported average purchase price when available; otherwise bitcoin cost ÷ bitcoin bought. Rounded aggregate cost may imply a different average."),
     )),
     ("Per share", (

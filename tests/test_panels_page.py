@@ -165,7 +165,7 @@ class FormulaListTests(TestCase):
             self.assertGreaterEqual(len(items), 8)
             self.assertTrue(all(term and text for term, text in items))
         terms = {term for _, entries in web.MONDAY_FORMULAS for term, _ in entries}
-        self.assertTrue({"Amplification, Strategy", "Amplification, Strive", "BTC", "DIVs"} <= terms)
+        self.assertTrue({"Amplification, Strategy", "Amplification, Strive", "BTC", "Dividends"} <= terms)
 
 
 class BtcChartTests(TestCase):
