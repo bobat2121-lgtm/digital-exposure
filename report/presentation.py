@@ -186,7 +186,8 @@ def company_view(c: Company, m: CompanyMetrics, *, historical: bool = False,
         preferred_label = "STRC + preferred capital"
         preferred_overline = "Net preferred capital · reported cash"
     elif any(a.capital_method == "share_change_par" for a in c.preferred_activity):
-        preferred_label = "SATA capital" if c.ticker == "ASST" else "Preferred capital (est.)"
+        preferred_label = (" + ".join(a.series for a in c.preferred_activity) + " capital"
+                           if c.ticker == "ASST" else "Preferred capital (est.)")
         preferred_overline = "Net preferred capital · estimated"
     elif c.preferred_activity_notes:
         preferred_overline = "Net preferred capital · cash flows not disclosed"
@@ -277,3 +278,4 @@ def build_report_view(report: Report, *, prices: dict | None = None) -> ReportVi
         comparison_note=f"Market-ratio changes vs {report.prior_comparison_date}" if report.prior_comparison_date else "",
         **metadata,
     )
+

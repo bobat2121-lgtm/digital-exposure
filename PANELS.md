@@ -237,6 +237,16 @@ then what it did per share.
   A reporting period starting on Saturday or Sunday belongs to the following
   trading week, so the October 17–23 Strive period pairs with Strategy's
   October 19–25 period.
+
+  Strive's waterfall shows **SATA** and **SATS** as separate issuance rows,
+  including a confirmed zero. These replace the aggregate PREF row; the combined
+  total still feeds capital raised. SATA keeps the net-share-change × $100
+  estimate. SATS uses disclosed offering proceeds when available; subsequent ATM
+  share changes use that week's archived trading-price estimate, before fees.
+  Issuance estimates never substitute for the $100 liquidation preference in NAV.
+  A nonzero SATS share change without a dated price holds the new edition.
+  The collector currently omits SATS counts: after SATS is outstanding, new
+  Strive claims require a dated reconciliation so automation cannot drop them.
 - **Coverage against each issuer's own target** (each cell's text is centered, with a
   short note: "of dividends", "BTC gain / yr"):
   - Strategy's USD cover as a multiple of its 12-month floor.
@@ -414,3 +424,4 @@ are in `PANEL_AUDIT.md`.
 - the dated warrant terms;
 - Strategy's 12-month reserve floor;
 - Strive's 18-month reserve goal.
+

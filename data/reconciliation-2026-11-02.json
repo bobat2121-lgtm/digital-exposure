@@ -1,0 +1,474 @@
+{
+  "edition": "2026-11-02",
+  "retrievedAt": "2026-11-02T13:27:41.003804+00:00",
+  "update_type": "manual weekly filing reconciliation with SATA/SATS split",
+  "filings": {
+    "MSTR": {
+      "ticker": "MSTR",
+      "issuer": "Strategy",
+      "cik": "0001050446",
+      "accession": "0001193125-26-442707",
+      "form": "8-K",
+      "filedDate": "2026-11-02",
+      "reportDate": "2026-11-02",
+      "acceptedAt": "2026-11-02T13:00:14.000Z",
+      "firstSeenAt": "2026-11-02T13:01:31.366Z",
+      "documentFetchedAt": "2026-11-02T13:01:31.703Z",
+      "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526442707/mstr-20261102.htm",
+      "documents": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526442707/mstr-20261102.htm",
+          "fetchedAt": "2026-11-02T13:01:31.703Z",
+          "sha256": "6e733bfde6562ed7a1741aac650efd174837dbc59efc9e5973172ab0a3e4930a"
+        }
+      ],
+      "status": "ready_for_review",
+      "baseline": false,
+      "extracted": {
+        "parserVersion": "sec-weekly-v5",
+        "periodStart": "2026-10-26",
+        "periodEnd": "2026-11-01",
+        "balanceDate": "2026-11-01",
+        "priorBalanceDate": null,
+        "facts": {
+          "weekly_btc_purchases": 811,
+          "btc_holdings": 849327,
+          "weekly_btc_cost_usd": 65500000,
+          "btc_cost_basis_usd": 64080000000,
+          "btc_average_cost_usd": 75451,
+          "usd_reserve_usd": 4790000000,
+          "usd_cash_usd": 132700000,
+          "usd_reserve_dividends_interest_usd": 43400000,
+          "common_issued_shares": 1178552,
+          "common_issuance_proceeds_usd": 164000000,
+          "common_repurchased_shares": 0,
+          "common_repurchases_cash_usd": 0
+        },
+        "priorFacts": {},
+        "securities": {
+          "STRF": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "STRC": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 2092035,
+            "repurchaseCashUsd": 208200000
+          },
+          "STRK": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "STRD": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "MSTR": {
+            "issuedShares": 1178552,
+            "netIssuanceProceedsUsd": 164000000,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          }
+        },
+        "missing": [],
+        "issues": [],
+        "extractionValidated": true
+      },
+      "attempts": 1,
+      "nextDocumentAttemptAt": 0,
+      "error": null,
+      "manualReview": {
+        "reviewedAt": "2026-11-02T13:27:41.003804+00:00",
+        "balanceSource": "SEC 8-K, verified against the issuer dashboard",
+        "reported_weekly_average_btc_price_usd": 80846
+      }
+    },
+    "ASST": {
+      "ticker": "ASST",
+      "issuer": "Strive",
+      "cik": "0001920406",
+      "accession": "0001628280-26-068660",
+      "form": "8-K",
+      "filedDate": "2026-11-02",
+      "reportDate": "2026-11-02",
+      "acceptedAt": "2026-11-02T12:49:27.000Z",
+      "firstSeenAt": "2026-11-02T12:50:32.032Z",
+      "documentFetchedAt": "2026-11-02T12:50:32.081Z",
+      "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026068660/asst-20261102.htm",
+      "documents": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026068660/asst-20261102.htm",
+          "fetchedAt": "2026-11-02T12:50:32.081Z",
+          "sha256": "c3d677ed8dc94268843415a12939d0cb6866030278e38a78c1aaed882efb5718"
+        }
+      ],
+      "status": "ready_for_review",
+      "baseline": false,
+      "extracted": {
+        "parserVersion": "sec-weekly-v5",
+        "periodStart": "2026-10-24",
+        "periodEnd": "2026-10-30",
+        "balanceDate": "2026-10-30",
+        "priorBalanceDate": "2026-10-23",
+        "facts": {
+          "weekly_btc_purchases": 124,
+          "cash_and_equivalents_usd": 490400000,
+          "held_strc_fair_value_usd": 50061000,
+          "held_strc_shares": 505000,
+          "btc_holdings": 43124,
+          "common_shares_class_a": 118117620,
+          "common_shares_class_b": 9213489,
+          "effective_common_shares": 127331109,
+          "net_common_shares_change": 2763,
+          "options": 781329,
+          "unvested_employee_awards": 1932252,
+          "assumed_diluted_shares": 130044690,
+          "sata_shares": 14030176,
+          "net_sata_shares_change": 0,
+          "sats_shares": 7003418,
+          "net_sats_shares_change": 3418,
+          "preferred_notional_usd": 2103359400,
+          "annual_preferred_dividends_usd": 287443558,
+          "weekly_btc_cost_usd": 10000000
+        },
+        "priorFacts": {
+          "cash_and_equivalents_usd": 504400000,
+          "held_strc_fair_value_usd": 50177000,
+          "held_strc_shares": 505000,
+          "btc_holdings": 43000,
+          "common_shares_class_a": 118113644,
+          "common_shares_class_b": 9214702,
+          "effective_common_shares": 127328346,
+          "options": 784092,
+          "unvested_employee_awards": 1932252,
+          "assumed_diluted_shares": 130044690,
+          "sata_shares": 14030176,
+          "sats_shares": 7000000,
+          "preferred_notional_usd": 2103017600,
+          "annual_preferred_dividends_usd": 287392288,
+          "weekly_btc_cost_usd": 511430832
+        },
+        "securities": {},
+        "missing": [],
+        "issues": [],
+        "extractionValidated": true
+      },
+      "attempts": 1,
+      "nextDocumentAttemptAt": 0,
+      "error": null,
+      "manualReview": {
+        "reviewedAt": "2026-11-02T13:27:41.003804+00:00",
+        "balanceSource": "SEC 8-K, verified against the issuer dashboard",
+        "reported_weekly_average_btc_price_usd": 80526,
+        "basis": "SATS row in the primary 8-K: 7,000,000 prior shares, 7,003,418 current shares. Collector omitted SATS; verified share change is 3,418. SATS capital is a dated five-minute HLC3 VWAP estimate before fees, not disclosed cash proceeds."
+      }
+    }
+  },
+  "strategy_shares": {
+    "balance_date": "2026-11-01",
+    "basic_shares": 423533000,
+    "class_a": 403893000,
+    "class_b": 19640000,
+    "source": "https://www.strategy.com/shares"
+  },
+  "strategy_debt": {
+    "balance_date": "2026-11-01",
+    "total_usd": 6753703000,
+    "convertible_notes_usd": 6713659000,
+    "other_debt_usd": 40044000,
+    "basis": "The reconciled June 30 principal carried forward (see strategy_assumptions); the split lets the automatic reconciliation compare strategy.com's convertible-note list (api.strategy.com/btc/credit, $6,713.75M on Sep 27, 2026) and catch a new tranche or repurchase.",
+    "source_balance_date": "2026-06-30",
+    "current_issuer_convertible_notes_usd": 6713750000
+  },
+  "strategy_claims": {
+    "STRF": {
+      "shares": 12839689,
+      "currency": "USD",
+      "base_preference_per_share": 102.33799819946289,
+      "annual_dividend_per_share": 10.0,
+      "accrued_30_360_days": 31,
+      "estimated_accrued_dividends": 11056398.861111112,
+      "estimated_native_claims": 1325044468.6247747
+    },
+    "STRC": {
+      "shares": 81822162,
+      "currency": "USD",
+      "base_preference_per_share": 100,
+      "annual_dividend_per_share": 12.0,
+      "accrued_30_360_days": 0,
+      "estimated_accrued_dividends": 2454664.86,
+      "estimated_native_claims": 8184670864.86,
+      "basis": "October semi-monthly dividend paid; November 1 daily dividend of $0.03/share is declared payable November 2."
+    },
+    "STRK": {
+      "shares": 14020744,
+      "currency": "USD",
+      "base_preference_per_share": 100,
+      "annual_dividend_per_share": 8.0,
+      "accrued_30_360_days": 31,
+      "estimated_accrued_dividends": 9658734.755555555,
+      "estimated_native_claims": 1411733134.7555554
+    },
+    "STRD": {
+      "shares": 14024221,
+      "currency": "USD",
+      "base_preference_per_share": 100,
+      "annual_dividend_per_share": 10.0,
+      "accrued_30_360_days": 31,
+      "estimated_accrued_dividends": 12076412.527777778,
+      "estimated_native_claims": 1414498512.527778
+    },
+    "STRE": {
+      "shares": 7750000,
+      "currency": "EUR",
+      "base_preference_per_share": 100,
+      "annual_dividend_per_share": 10,
+      "accrued_30_360_days": 31,
+      "estimated_accrued_dividends": 6673611.111111112,
+      "estimated_native_claims": 781673611.1111112
+    }
+  },
+  "strive_preferred_components": {
+    "SATA": {
+      "shares": 14030176,
+      "base": 100,
+      "annual_rate_pct": 13,
+      "claims_usd": 1403017600
+    },
+    "SATS": {
+      "shares": 7003418,
+      "base": 100,
+      "annual_rate_pct": 15,
+      "accrual_business_days": 8,
+      "month_business_days": 21,
+      "accrued_dividends_usd": 3334960.9523809524,
+      "claims_usd": 703676760.9523809
+    }
+  },
+  "closing_dates": [
+    "2026-10-16",
+    "2026-10-19",
+    "2026-10-20",
+    "2026-10-21",
+    "2026-10-22",
+    "2026-10-23",
+    "2026-10-26",
+    "2026-10-27",
+    "2026-10-28",
+    "2026-10-29",
+    "2026-10-30"
+  ],
+  "unadjusted_closes": {
+    "SATA": [
+      96.88500213623048,
+      97.80999755859376,
+      98.75,
+      98.16000366210938,
+      97.95999908447266,
+      98.0199966430664,
+      98.36000061035156,
+      98.5,
+      97.91000366210938,
+      97.9800033569336,
+      94.86000061035156
+    ],
+    "STRF": [
+      103.5999984741211,
+      103.08999633789062,
+      102.8000030517578,
+      103.41999816894533,
+      102.7699966430664,
+      101.1999969482422,
+      100.9499969482422,
+      101.0999984741211,
+      101.77999877929688,
+      102.66999816894533,
+      101.41999816894533
+    ],
+    "STRC": [
+      97.72000122070312,
+      98.62000274658205,
+      98.70999908447266,
+      99.1999969482422,
+      98.6500015258789,
+      99.36000061035156,
+      99.16999816894533,
+      99.48999786376952,
+      99.91999816894533,
+      99.98999786376952,
+      99.12999725341795
+    ],
+    "STRK": [
+      71.23999786376953,
+      71.3499984741211,
+      71.25,
+      73,
+      70.47000122070312,
+      69.30000305175781,
+      69.86000061035156,
+      70.1500015258789,
+      70.7750015258789,
+      70.22000122070312,
+      67.8499984741211
+    ],
+    "STRD": [
+      70.86000061035156,
+      71,
+      70.4000015258789,
+      70.5,
+      69.6500015258789,
+      69.70999908447266,
+      69.55000305175781,
+      69.87000274658203,
+      71,
+      70.5199966430664,
+      69.75
+    ]
+  },
+  "comparison_marks_basis": "Prior published release-prices/2026-10-26.json (BTC $80,265.94; EURUSD 1.1194). STRC from current/prior filed fair values and held share counts.",
+  "sources": [
+    "https://www.sec.gov/Archives/edgar/data/1050446/000119312526442707/mstr-20261102.htm",
+    "https://www.strategy.com/shares",
+    "https://api.strategy.com/btc/credit",
+    "https://api.strategy.com/btc/strcKpiData",
+    "https://www.sec.gov/Archives/edgar/data/1920406/000162828026068660/asst-20261102.htm",
+    "https://strive.com/treasury/api/dashboard/base-data",
+    "https://strive.com/api/treasury",
+    "https://www.sec.gov/Archives/edgar/data/1920406/000095010326015769/dp255174_ex0401.htm"
+  ],
+  "issuance_estimates": {
+    "ASST": {
+      "symbol": "ASST",
+      "edition_date": "2026-11-02",
+      "value": 25.09685189570443,
+      "method": "hlc3_5m",
+      "label": "5-minute VWAP estimate",
+      "display_note": "5-minute VWAP estimate \u00b7 before fees",
+      "window": "prior_week",
+      "session_start": "2026-10-26",
+      "session_end": "2026-10-30",
+      "sessiondates": [
+        "2026-10-26",
+        "2026-10-27",
+        "2026-10-28",
+        "2026-10-29",
+        "2026-10-30"
+      ],
+      "bar_count": 390,
+      "total_volume": 33270881,
+      "weighted_numerator": 834994372.8966064,
+      "daily": [
+        {
+          "date": "2026-10-26",
+          "total_volume": 6723623,
+          "weighted_numerator": 182023660.908591,
+          "bar_count": 78,
+          "value": 27.07225864814119
+        },
+        {
+          "date": "2026-10-27",
+          "total_volume": 4143737,
+          "weighted_numerator": 109616883.5823275,
+          "bar_count": 78,
+          "value": 26.453629557649894
+        },
+        {
+          "date": "2026-10-28",
+          "total_volume": 4502549,
+          "weighted_numerator": 122250834.97906622,
+          "bar_count": 78,
+          "value": 27.151472416861253
+        },
+        {
+          "date": "2026-10-29",
+          "total_volume": 5656134,
+          "weighted_numerator": 146865247.14955837,
+          "bar_count": 78,
+          "value": 25.965659079073863
+        },
+        {
+          "date": "2026-10-30",
+          "total_volume": 12244838,
+          "weighted_numerator": 274237746.27706337,
+          "bar_count": 78,
+          "value": 22.396192279315038
+        }
+      ],
+      "fetched_at": "2026-11-02T13:27:41.003804+00:00",
+      "request_urls": [
+        "https://query1.finance.yahoo.com/v8/finance/chart/ASST?interval=5m&range=1mo&includePrePost=false&events=splits"
+      ],
+      "source_note": "Unadjusted regular-session five-minute HLC3 weighted by volume; 390 of 390 scheduled bars. This archive stores validated daily aggregates, not raw bars. It is an estimate, not actual issuance proceeds."
+    },
+    "SATS": {
+      "symbol": "SATS",
+      "edition_date": "2026-11-02",
+      "value": 94.4091570579615,
+      "method": "hlc3_5m",
+      "label": "5-minute VWAP estimate",
+      "display_note": "5-minute VWAP estimate \u00b7 before fees",
+      "window": "prior_week",
+      "session_start": "2026-10-26",
+      "session_end": "2026-10-30",
+      "sessiondates": [
+        "2026-10-26",
+        "2026-10-27",
+        "2026-10-28",
+        "2026-10-29",
+        "2026-10-30"
+      ],
+      "bar_count": 355,
+      "total_volume": 1464907,
+      "weighted_numerator": 138300635.0383072,
+      "daily": [
+        {
+          "date": "2026-10-26",
+          "total_volume": 280424,
+          "weighted_numerator": 26413507.250005085,
+          "bar_count": 69,
+          "value": 94.19132189115442
+        },
+        {
+          "date": "2026-10-27",
+          "total_volume": 184095,
+          "weighted_numerator": 17424208.35216268,
+          "bar_count": 70,
+          "value": 94.64791739136143
+        },
+        {
+          "date": "2026-10-28",
+          "total_volume": 310399,
+          "weighted_numerator": 29413548.11678568,
+          "bar_count": 73,
+          "value": 94.76044741376641
+        },
+        {
+          "date": "2026-10-29",
+          "total_volume": 311856,
+          "weighted_numerator": 29735018.914840706,
+          "bar_count": 73,
+          "value": 95.34855482928245
+        },
+        {
+          "date": "2026-10-30",
+          "total_volume": 378133,
+          "weighted_numerator": 35314352.40451304,
+          "bar_count": 70,
+          "value": 93.39135278992588
+        }
+      ],
+      "fetched_at": "2026-11-02T13:27:41.003804+00:00",
+      "request_urls": [
+        "https://query1.finance.yahoo.com/v8/finance/chart/SATS?interval=5m&range=1mo&includePrePost=false&events=splits"
+      ],
+      "source_note": "Unadjusted regular-session five-minute HLC3 weighted by volume. Daily aggregates were verified from returned bars; this archive stores the aggregates. No bars were filled. SATS has sparse trading (355 valid bars, versus 390 scheduled slots), so the estimate represents retrieved trading bars, not complete SIP coverage or actual issuance proceeds."
+    }
+  }
+}

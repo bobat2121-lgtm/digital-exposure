@@ -541,7 +541,7 @@ MONDAY_FORMULAS = (
         ("Capital raised", "ATM and other disclosed offering proceeds − repurchase cost, common and preferred. Strive's "
                            "common figure is an estimate: net share change × activity-period VWAP."),
         ("Cash drawn / kept", "Liquid assets last week − this week. Strategy: USD Reserve + USD Cash. Strive: cash + the STRC it holds."),
-        ("Waterfall", "Common + preferred + cash drawn (or − cash kept) = BTC + Dividends."),
+        ("Waterfall", "Common + preferred + cash drawn (or − cash kept) = BTC + Dividends. Strive shows SATA and SATS separately; their rows replace the preferred total. SATA uses net new shares × $100; SATS ATM issuance uses net new shares × the dated weekly VWAP estimate, before fees. Disclosed offering proceeds take precedence."),
         ("BTC", "The week's bitcoin purchase cost, fees included: Strategy's 8-K \"Aggregate Purchase Price\"; "
                 "Strive's dashboard purchase cost."),
         ("Dividends", "Funding − BTC: preferred dividends, interest, fees and other uses."),
@@ -931,3 +931,4 @@ FRIDAY_FORMULAS = (
         ("Realized price", "Checkonchain's realised price: the average price at which each BTC last moved."),
     )),
 )
+

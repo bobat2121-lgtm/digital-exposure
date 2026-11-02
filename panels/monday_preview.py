@@ -64,6 +64,7 @@ class CompanyExtras:
     common_out: float | None = None
     preferred_in: float | None = None
     preferred_out: float | None = None
+    preferred_by_series: tuple = ()            # (series, money in, money out), including confirmed zeroes
     preferred_bought_back: tuple = ()           # the preferred series repurchased this week
     btc_bought: float | None = None
     btc_held: float | None = None
@@ -347,13 +348,23 @@ def funding_flows(e: CompanyExtras) -> tuple[list, list] | None:
     money_in, money_out = [], []
     if e.common_in > 0:
         money_in.append(("COMMON", e.common_in, "raise"))
-    if e.preferred_in > 0:
+    split_preferred = e.ticker == "ASST" and bool(e.preferred_by_series)
+    if split_preferred:
+        # Series rows replace the aggregate; never add both and double count.
+        if (abs(sum(row[1] for row in e.preferred_by_series) - e.preferred_in) >= 1
+                or abs(sum(row[2] for row in e.preferred_by_series) - e.preferred_out) >= 1):
+            return None
+        money_in.extend((series, amount, "raise") for series, amount, _ in e.preferred_by_series)
+    elif e.preferred_in > 0:
         money_in.append(("PREF", e.preferred_in, "raise"))
     if drawn > 0:
         money_in.append(("FROM CASH", drawn, "cash"))
     if e.common_out > 0:
         money_out.append((f"{e.ticker} BUYBACK", e.common_out, "buyback"))  # "COMMON BUYBACK" is too wide in Broadsheet
-    if e.preferred_out > 0:
+    if split_preferred:
+        money_out.extend((f"{series} BUYBACK", amount, "buyback")
+                         for series, _, amount in e.preferred_by_series if amount > 0)
+    elif e.preferred_out > 0:
         series = e.preferred_bought_back
         money_out.append((f"{series[0]} BUYBACK" if len(series) == 1 else "PREF BUYBACK", e.preferred_out, "buyback"))
     if e.btc_cost is None:
@@ -459,12 +470,23 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
         common_in, common_out = _split(metrics.net_common_capital, None if metrics.common_capital_estimated
                                        else (metrics.common_issuance_cash, metrics.common_buybacks_cash))
         preferred_in, preferred_out, bought_back = _preferred_split(company.preferred_activity, metrics.net_preferred_capital)
+        by_series = []
+        if ticker == "ASST":
+            for activity in company.preferred_activity:
+                amount = preferred_activity_capital(activity)
+                if amount is None:
+                    by_series = []
+                    break
+                add, remove = ((activity.reported_issuance_proceeds, activity.reported_repurchases_cash)
+                               if activity.capital_method == "reported" else _split(amount))
+                by_series.append((activity.series, add, remove))
         result[ticker] = CompanyExtras(
             ticker=ticker, amplification_pct=amp,
             amplification_x=amp_x, amplification_change_x=amp_change_x, amplification_source=amp_source,
             common_capital=metrics.net_common_capital, preferred_capital=metrics.net_preferred_capital,
             preferred_note=note, btc_bought=_n(facts.get("weekly_btc_purchases")), btc_held=current.btc_holdings,
             common_in=common_in, common_out=common_out, preferred_in=preferred_in, preferred_out=preferred_out,
+            preferred_by_series=tuple(by_series),
             preferred_bought_back=bought_back,
             amplification_change_pp=amp - prior_amp if amp is not None and prior_amp is not None else None,
             btc_cost=btc_cost, btc_cost_source=cost_source, stated_dividends=stated,
@@ -923,3 +945,4 @@ def audit_rows(preview: MondayPreview) -> list[dict]:
             {"metric": f"{company.ticker} QTD BTC/share", "value": next((_clean(p.btc_growth) for p in company.periods if p.period == "QTD"), "—"), "source": "derived"},
         ]
     return rows
+

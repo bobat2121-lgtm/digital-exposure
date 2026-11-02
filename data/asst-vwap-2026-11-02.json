@@ -1,0 +1,63 @@
+{
+  "symbol": "ASST",
+  "edition_date": "2026-11-02",
+  "value": 25.09685189570443,
+  "method": "hlc3_5m",
+  "label": "5-minute VWAP estimate",
+  "display_note": "5-minute VWAP estimate \u00b7 before fees",
+  "window": "prior_week",
+  "session_start": "2026-10-26",
+  "session_end": "2026-10-30",
+  "sessiondates": [
+    "2026-10-26",
+    "2026-10-27",
+    "2026-10-28",
+    "2026-10-29",
+    "2026-10-30"
+  ],
+  "bar_count": 390,
+  "total_volume": 33270881,
+  "weighted_numerator": 834994372.8966064,
+  "daily": [
+    {
+      "date": "2026-10-26",
+      "total_volume": 6723623,
+      "weighted_numerator": 182023660.908591,
+      "bar_count": 78,
+      "value": 27.07225864814119
+    },
+    {
+      "date": "2026-10-27",
+      "total_volume": 4143737,
+      "weighted_numerator": 109616883.5823275,
+      "bar_count": 78,
+      "value": 26.453629557649894
+    },
+    {
+      "date": "2026-10-28",
+      "total_volume": 4502549,
+      "weighted_numerator": 122250834.97906622,
+      "bar_count": 78,
+      "value": 27.151472416861253
+    },
+    {
+      "date": "2026-10-29",
+      "total_volume": 5656134,
+      "weighted_numerator": 146865247.14955837,
+      "bar_count": 78,
+      "value": 25.965659079073863
+    },
+    {
+      "date": "2026-10-30",
+      "total_volume": 12244838,
+      "weighted_numerator": 274237746.27706337,
+      "bar_count": 78,
+      "value": 22.396192279315038
+    }
+  ],
+  "fetched_at": "2026-11-02T13:27:41.003804+00:00",
+  "request_urls": [
+    "https://query1.finance.yahoo.com/v8/finance/chart/ASST?interval=5m&range=1mo&includePrePost=false&events=splits"
+  ],
+  "source_note": "Unadjusted regular-session five-minute HLC3 weighted by volume; 390 of 390 scheduled bars. This archive stores validated daily aggregates, not raw bars. It is an estimate, not actual issuance proceeds."
+}

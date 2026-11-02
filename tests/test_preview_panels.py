@@ -335,7 +335,7 @@ class MondayPreviewTests(unittest.TestCase):
         self.assertEqual([label for label, _, _ in money_out], ["STRC BUYBACK", "BTC", "Dividends"])
         self.assertEqual(round(money_out[0][1]), 174_000_000)  # the buyback is money out, not a negative raise
         money_in, money_out = flows["ASST"]
-        self.assertEqual([label for label, _, _ in money_in], ["COMMON", "PREF"])
+        self.assertEqual([label for label, _, _ in money_in], ["COMMON", "SATA"])
         self.assertEqual([label for label, _, _ in money_out], ["BTC", "Dividends", "TO CASH"])
         for money_in, money_out in flows.values():
             self.assertAlmostEqual(sum(a for _, a, _ in money_in), sum(a for _, a, _ in money_out), places=2)
@@ -595,3 +595,4 @@ class FridayPreviewTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

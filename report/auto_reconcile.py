@@ -303,6 +303,15 @@ def augment(rows: list, supplements: dict, *, now: datetime | None = None,
         if day <= latest_reviewed or day in reviewed_asst:
             continue
         facts = asst[day]["extracted"]["facts"]
+        # A SATA-only collector record is no longer a complete capital
+        # structure after SATS launched. Retain the last complete edition
+        # until this date's SATS claims have been reconciled.
+        has_sats = any(
+            (entry.get("preferred_components", {}).get("SATS", {}).get("shares") or 0) > 0
+            for prior_day, entry in reviewed_asst.items() if prior_day < day)
+        if has_sats or (facts.get("sats_shares") or 0) > 0:
+            notes.append(f"Strive {day} unavailable (dated SATA and SATS claims require reconciliation)")
+            continue
         sata = facts.get("sata_shares")
         if not sata:
             continue
@@ -378,3 +387,4 @@ def vwap_estimate(filed: date):
     """Strive prior-week HLC3 estimate when no archived estimate exists."""
     from .equity_vwap import pull_estimate
     return _cached(("vwap", filed.isoformat()), lambda: pull_estimate("ASST", filed))
+

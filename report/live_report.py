@@ -383,6 +383,20 @@ def _company(ticker, filing, all_filings, supplements, prices):
                 _number(transaction.get("repurchasedShares")), issuance_price_assumption=None,
                 capital_method="reported", reported_issuance_proceeds=proceeds,
                 reported_repurchases_cash=repurchases),)
+        # Post-IPO SATS ATM updates report outstanding shares, not cash proceeds.
+        # Estimate their financing at the dated weekly VWAP, never at $100 par
+        # or at today's price. A missing nonzero estimate holds publication.
+        if "SATS" not in extraction.get("securities", {}) and "sats_shares" in facts:
+            sats = _number(facts.get("sats_shares"))
+            prior_sats = _number(prior_facts.get("sats_shares"))
+            sats_change = sats - prior_sats if None not in (sats, prior_sats) else None
+            estimate_sats = load_estimate("SATS", date.fromisoformat(filing["filedDate"]))
+            sats_price = estimate_sats["value"] if estimate_sats else (100 if sats_change == 0 else None)
+            if estimate_sats and (estimate_sats["session_start"] < extraction["periodStart"]
+                                  or estimate_sats["session_end"] > extraction["periodEnd"]):
+                raise ValueError("SATS VWAP does not match the filing's activity period")
+            activity += (PreferredActivity("SATS", None, None, issuance_price_assumption=sats_price,
+                                          capital_method="share_change_par", net_share_change=sats_change),)
         estimate = _vwap(filing)
         if estimate and (estimate["session_start"] < extraction["periodStart"]
                          or estimate["session_end"] > extraction["periodEnd"]):
@@ -402,9 +416,12 @@ def _company(ticker, filing, all_filings, supplements, prices):
         common_capital_method=method, prior_week_equity_vwap=estimate["value"] if estimate else None,
         equity_vwap_note=estimate.get("display_note", "1-minute VWAP estimate · before fees") if estimate else None,
         share_basis_note="A + B · rounded to 1,000" if ticker == "MSTR" else "Class A + Class B · effective shares",
-        preferred_activity_notes=(("Net share change × $100 · before fees",) +
-            tuple(f"{item.series}: disclosed offering proceeds, net of underwriting commissions and before other expenses"
-                  for item in activity if item.series != "SATA")) if ticker == "ASST" else (),
+        preferred_activity_notes=tuple(
+            (f"{item.series}: net share change × ${item.issuance_price_assumption:,.4f} · estimated before fees"
+             if item.issuance_price_assumption is not None else f"{item.series}: dated issuance price unavailable")
+            if item.capital_method == "share_change_par" else
+            f"{item.series}: disclosed offering proceeds, net of underwriting commissions and before other expenses"
+            for item in activity) if ticker == "ASST" else (),
         valuation_estimated=True, preferred_claims_estimated=True,
         valuation_note=("≈ Basic common shares · after debt & preferred claims" if ticker == "MSTR"
                         else "≈ Fully diluted shares, as Strive's dashboard · after debt & preferred claims"),
@@ -528,3 +545,4 @@ def resolve_complete_report(prices: dict, feed: dict) -> LiveReportResult:
                 "New filing inputs are being reconciled · showing the last complete report. "
                 + candidate.report.subtitle))
     raise ValueError("No complete dated Monday report is available")
+
