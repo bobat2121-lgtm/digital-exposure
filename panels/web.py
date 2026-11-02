@@ -441,6 +441,8 @@ def _monday_company(c, e, source, btc_price, price_label="") -> None:
     heading("Funding → where it went", "8-K week")
     _waterfall(e, color)
     lines = [*c.common.details[:2], *c.preferred.details[:3]]
+    inactive = {series for series, issued, repurchased in e.preferred_by_series if issued == repurchased == 0}
+    lines = [line for line in lines if not any(line.startswith(f"{series}:") for series in inactive)]
     st.html(heading_html("Filing detail") + '<ul class="dcr-list">'
             + "".join(f"<li>{escape(line)}</li>" for line in lines if line) + "</ul>")
 
