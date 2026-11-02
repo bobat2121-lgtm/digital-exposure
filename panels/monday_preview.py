@@ -354,7 +354,7 @@ def funding_flows(e: CompanyExtras) -> tuple[list, list] | None:
         if (abs(sum(row[1] for row in e.preferred_by_series) - e.preferred_in) >= 1
                 or abs(sum(row[2] for row in e.preferred_by_series) - e.preferred_out) >= 1):
             return None
-        money_in.extend((series, amount, "raise") for series, amount, _ in e.preferred_by_series)
+        money_in.extend((series, amount, "raise") for series, amount, _ in e.preferred_by_series if amount > 0)
     elif e.preferred_in > 0:
         money_in.append(("PREF", e.preferred_in, "raise"))
     if drawn > 0:

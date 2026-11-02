@@ -239,7 +239,7 @@ then what it did per share.
   October 19–25 period.
 
   Strive's waterfall shows **SATA** and **SATS** as separate issuance rows,
-  including a confirmed zero. These replace the aggregate PREF row; the combined
+  only when issuance is nonzero. These replace the aggregate PREF row; the combined
   total still feeds capital raised. SATA keeps the net-share-change × $100
   estimate. SATS uses disclosed offering proceeds when available; subsequent ATM
   share changes use that week's archived trading-price estimate, before fees.

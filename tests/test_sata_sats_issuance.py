@@ -35,7 +35,7 @@ class SataSatsIssuanceTests(unittest.TestCase):
         self.assertEqual(self.preview.extras['ASST'].btc_cost, 10000000)
         self.assertEqual(self.preview.extras['ASST'].reported_btc_purchase_price, 80526)
         inflows, outflows = monday_preview.funding_flows(self.preview.extras['ASST'])
-        self.assertEqual(dict((label, value) for label, value, _ in inflows)['SATA'], 0)
+        self.assertNotIn('SATA', [label for label, _, _ in inflows])
         self.assertAlmostEqual(dict((label, value) for label, value, _ in inflows)['SATS'], 322690.4988241124)
         self.assertNotIn('PREF', [label for label, _, _ in inflows])
         self.assertAlmostEqual(sum(x[1] for x in inflows), sum(x[1] for x in outflows))
