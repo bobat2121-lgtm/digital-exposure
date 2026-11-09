@@ -3182,5 +3182,6 @@
   "fetched_at": "2026-11-09T13:12:30.108939+00:00",
   "excluded_bar_count": 1,
   "source_note": "Yahoo Finance unadjusted 5-minute HLC3 weighted by bar volume; an estimate, not reported trade VWAP or company issuance proceeds. Only retrieved regular-session bars are included, with no claim of full SIP coverage. Bars exclude the bar beginning at the close; closing-auction coverage follows the source's timestamps, and volume may differ from end-of-day daily bars.",
-  "fallback_reason": "Missing or nonfinite price/volume in an eligible minute."
+  "fallback_reason": "Missing or nonfinite price/volume in an eligible minute.",
+  "display_note": "5-minute VWAP estimate \u00b7 before fees"
 }
