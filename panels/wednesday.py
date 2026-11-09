@@ -30,8 +30,8 @@ CALENDAR_ROWS = 7
 HEROES = ("STRC", "SATA")
 REST = ("STRF", "STRK", "STRD", "STRE")
 ISSUER = {"STRC": "Strategy", "STRF": "Strategy", "STRK": "Strategy", "STRD": "Strategy", "STRE": "Strategy", "SATA": "Strive"}
-HERO_NOTE = {"STRC": "variable rate · paid semi-monthly", "SATA": "variable rate · paid every business day"}
-KIND = {"STRC": "variable · semi-monthly", "SATA": "variable · daily", "STRF": "10% fixed · senior",
+HERO_NOTE = {"STRC": "variable rate · daily dividends", "SATA": "variable rate · paid every business day"}
+KIND = {"STRC": "variable · daily", "SATA": "variable · daily", "STRF": "10% fixed · senior",
         "STRK": "8% · convertible", "STRD": "10% · non-cumulative", "STRE": "10% · euro"}
 # The 3-month bill is the headline: it is Strategy's stated risk-free rate, the
 # bill Jeff Walton benchmarks digital credit against, and it matches STRC/SATA's
