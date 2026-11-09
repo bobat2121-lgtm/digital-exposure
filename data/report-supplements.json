@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "2026-11-02.1",
+  "revision": "2026-11-09.1",
   "basis": "Dated supplemental inputs; NAV estimates use ending preferred shares and ordinary accrued dividends. No supplement automatically rolls into a newer balance date.",
   "balances": {
     "MSTR": {
@@ -270,6 +270,61 @@
           "https://api.strategy.com/btc/strcKpiData"
         ],
         "limitations": "Basic shares are the November 1 issuer table (thousand-share precision). Debt carries the June 30 reviewed principal; the current convertible-note list remains $6,713.75m. Preferred shares reflect the November 2 repurchase filing. STRC includes the declared November 1 daily dividend of $0.03/share. Other series use 31 days of 30/360 accrual and ten closes strictly before October 30; scheduled payments assumed paid."
+      },
+      "2026-11-08": {
+        "effective_common_shares": 425591000,
+        "debt_principal": 6753703000,
+        "preferred_claims_usd": 12153133481.310223,
+        "preferred_claims_eur": 783180555.5555556,
+        "components": {
+          "STRF": {
+            "shares": 12839689,
+            "base": 101.792,
+            "annual": 10.0,
+            "accrual_days": 38,
+            "currency": "USD",
+            "accrued_dividends": 13553005.055555556
+          },
+          "STRC": {
+            "shares": 79934698,
+            "base": 100,
+            "annual": 12.0,
+            "accrual_days": null,
+            "currency": "USD",
+            "accrued_dividends": 7993469.800000001
+          },
+          "STRK": {
+            "shares": 14020744,
+            "base": 100,
+            "annual": 8.0,
+            "accrual_days": 38,
+            "currency": "USD",
+            "accrued_dividends": 11839739.377777778
+          },
+          "STRD": {
+            "shares": 14024221,
+            "base": 100,
+            "annual": 10.0,
+            "accrual_days": 38,
+            "currency": "USD",
+            "accrued_dividends": 14803344.388888888
+          },
+          "STRE": {
+            "shares": 7750000,
+            "base": 100.0,
+            "annual": 10.0,
+            "accrual_days": 38,
+            "currency": "EUR",
+            "accrued_dividends": 8180555.555555556
+          }
+        },
+        "sources": [
+          "https://www.sec.gov/Archives/edgar/data/1050446/000119312526452693/mstr-20261109.htm",
+          "https://www.strategy.com/shares",
+          "https://api.strategy.com/btc/credit",
+          "https://api.strategy.com/btc/strcKpiData"
+        ],
+        "limitations": "Basic shares are the November 8 issuer table (thousand-share precision). Debt is the reviewed carryforward, corroborated by the unchanged current convertible-note list. Preferred claims use max($100, the ten closes strictly before November 6) plus 30/360 accrual from September 30 for the quarterly series. STRC uses its declared unpaid November 6-8 dividends of $0.10/share; scheduled payments through November 6 are treated paid."
       }
     },
     "ASST": {
@@ -423,6 +478,41 @@
           "https://www.sec.gov/Archives/edgar/data/1920406/000095010326015769/dp255174_ex0401.htm"
         ],
         "limitations": "SATA and SATS use their $100 preference floors; observed closes remain below par. SATA daily dividends are treated paid through October 30 (issuer reports paid dividends through November 2; its payment list omits October 30). SATS first payment is November 9; estimated unpaid October dividends are eight business days after the October 20 issue date at $15/12/21 per share, applied to ending shares. Issuance cash is estimated from 3,418 net new SATS shares times the retrieved five-minute weekly VWAP, before fees; no actual ATM proceeds were disclosed."
+      },
+      "2026-11-06": {
+        "debt_principal": 0,
+        "preferred_claims_usd": 2112338899.9467418,
+        "preferred_claims_eur": 0,
+        "preferred_components": {
+          "SATA": {
+            "shares": 14030176,
+            "base": 100,
+            "annual_rate_pct": 13,
+            "claims_usd": 1403017600
+          },
+          "SATS": {
+            "shares": 7036559,
+            "base": 100,
+            "annual_rate_pct": 15,
+            "accrual_business_days_by_month": {
+              "2026-10": 8,
+              "2026-11": 5
+            },
+            "month_business_days": {
+              "2026-10": 21,
+              "2026-11": 19
+            },
+            "accrued_dividends_usd": 5665399.946741854,
+            "claims_usd": 709321299.9467418
+          }
+        },
+        "sources": [
+          "https://www.sec.gov/Archives/edgar/data/1920406/000162828026071888/asst-20261109.htm",
+          "https://strive.com/treasury/api/dashboard/base-data",
+          "https://strive.com/api/treasury",
+          "https://www.sec.gov/Archives/edgar/data/1920406/000095010326015769/dp255174_ex0401.htm"
+        ],
+        "limitations": "SATA and SATS use $100 preference floors; the relevant closes remain below par. SATA daily dividends are treated paid through November 6. SATS first payment is November 9; unpaid dividends through the November 6 balance date are estimated using eight October business days (21 days in October) and five November business days (19 days in November), at $15/12 per month, applied to ending shares. This excludes the November 9 accrual and is not an exact record-holder liability ledger. SATS financing is 33,141 net new shares times the dated weekly VWAP before fees; actual ATM cash proceeds were not disclosed."
       }
     }
   },
@@ -435,7 +525,8 @@
     "2026-10-04": 86148.71,
     "2026-10-11": 83261.25,
     "2026-10-18": 82540.21,
-    "2026-10-25": 80265.94
+    "2026-10-25": 80265.94,
+    "2026-11-01": 77544
   },
   "comparison_release_dates": {
     "2026-08-30": "2026-08-31",
@@ -446,7 +537,8 @@
     "2026-10-04": "2026-10-05",
     "2026-10-11": "2026-10-13",
     "2026-10-18": "2026-10-19",
-    "2026-10-25": "2026-10-26"
+    "2026-10-25": "2026-10-26",
+    "2026-11-01": "2026-11-02"
   },
   "balance_marks": {
     "2026-08-30": {
@@ -511,6 +603,12 @@
     },
     "2026-10-30": {
       "STRC": 99.13069306930693
+    },
+    "2026-11-01": {
+      "EURUSD=X": 1.1218
+    },
+    "2026-11-06": {
+      "STRC": 99.83960396039603
     }
   },
   "preferred_audit_files": [

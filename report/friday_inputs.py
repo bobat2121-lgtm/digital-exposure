@@ -6,7 +6,7 @@ The accepted filing pair and date-specific supplements come from the shared
 resolver; Friday never fills missing values from its older balance fixtures.
 """
 from copy import deepcopy
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timezone
 import hashlib
 import json
 
@@ -36,8 +36,9 @@ def _selected_publications(feed, report):
     rows = live_report._merged_filings(feed, live_report._load(live_report.CHECKPOINT))
     groups = {}
     for row in sorted(rows, key=lambda item: item.get("acceptedAt", "")):
-        start = date.fromisoformat(row["extracted"]["periodStart"])
-        week = (start - timedelta(days=start.weekday())).isoformat()
+        # Strive's Saturday-Friday period belongs with Strategy's following
+        # Monday-Sunday period, exactly as in the shared Monday resolver.
+        week = live_report.activity_week_start(row["extracted"])
         groups.setdefault(week, {})[row["ticker"]] = row
     paired = sorted((week for week, members in groups.items() if set(members) == set(live_report.CIKS)), reverse=True)
     if not paired or paired[0] <= "2026-08-24":

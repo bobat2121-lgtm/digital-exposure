@@ -1,39 +1,39 @@
 {
   "schema_version": 1,
-  "fetched_at": "2026-11-02T13:28:03.665550+00:00",
+  "fetched_at": "2026-11-09T13:11:29.478245+00:00",
   "quotes": {
     "MSTR": {
       "symbol": "MSTR",
-      "price": 131.57,
-      "as_of": "2026-11-02T13:26:40+00:00",
+      "price": 125.359,
+      "as_of": "2026-11-09T13:11:01+00:00",
       "session": "pre-market",
       "source_url": "https://query1.finance.yahoo.com/v8/finance/chart/MSTR?interval=1m&range=1d&includePrePost=true"
     },
     "ASST": {
       "symbol": "ASST",
-      "price": 22.5,
-      "as_of": "2026-11-02T13:26:33+00:00",
+      "price": 20.71,
+      "as_of": "2026-11-09T13:11:15+00:00",
       "session": "pre-market",
       "source_url": "https://query1.finance.yahoo.com/v8/finance/chart/ASST?interval=1m&range=1d&includePrePost=true"
     },
     "STRC": {
       "symbol": "STRC",
-      "price": 99.13,
-      "as_of": "2026-10-30T20:00:00+00:00",
+      "price": 99.84,
+      "as_of": "2026-11-06T21:00:00+00:00",
       "session": "close",
       "source_url": "https://query1.finance.yahoo.com/v8/finance/chart/STRC?interval=1d&range=5d"
     },
     "EURUSD=X": {
       "symbol": "EURUSD=X",
-      "price": 1.1218,
-      "as_of": "2026-11-02T13:26:28+00:00",
+      "price": 1.1196,
+      "as_of": "2026-11-09T13:10:31+00:00",
       "session": "close",
       "source_url": "https://query1.finance.yahoo.com/v8/finance/chart/EURUSD%3DX?interval=1d&range=5d"
     },
     "BTC-USD": {
       "symbol": "BTC-USD",
-      "price": 77544,
-      "as_of": "2026-11-02T13:26:22.550000+00:00",
+      "price": 74713.25,
+      "as_of": "2026-11-09T13:11:13.558000+00:00",
       "session": "live",
       "source_url": "https://api.strategy.com/btc/bitcoinKpis"
     }

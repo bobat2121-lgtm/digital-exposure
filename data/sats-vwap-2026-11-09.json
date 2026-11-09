@@ -1,0 +1,63 @@
+{
+  "symbol": "SATS",
+  "edition_date": "2026-11-09",
+  "value": 93.91035393815838,
+  "method": "hlc3_5m",
+  "label": "5-minute VWAP estimate",
+  "display_note": "5-minute VWAP estimate \u00b7 before fees",
+  "window": "prior_week",
+  "session_start": "2026-11-02",
+  "session_end": "2026-11-06",
+  "sessiondates": [
+    "2026-11-02",
+    "2026-11-03",
+    "2026-11-04",
+    "2026-11-05",
+    "2026-11-06"
+  ],
+  "bar_count": 353,
+  "total_volume": 1475830.0,
+  "weighted_numerator": 138595717.65255228,
+  "daily": [
+    {
+      "date": "2026-11-02",
+      "bar_count": 71,
+      "total_volume": 295704.0,
+      "weighted_numerator": 27586652.102724712,
+      "value": 93.29144043612773
+    },
+    {
+      "date": "2026-11-03",
+      "bar_count": 69,
+      "total_volume": 331119.0,
+      "weighted_numerator": 30817550.90519206,
+      "value": 93.0709228561093
+    },
+    {
+      "date": "2026-11-04",
+      "bar_count": 73,
+      "total_volume": 392659.0,
+      "weighted_numerator": 37219279.87421417,
+      "value": 94.78779265014725
+    },
+    {
+      "date": "2026-11-05",
+      "bar_count": 76,
+      "total_volume": 350364.0,
+      "weighted_numerator": 32993856.450668335,
+      "value": 94.17022425439924
+    },
+    {
+      "date": "2026-11-06",
+      "bar_count": 64,
+      "total_volume": 105984.0,
+      "weighted_numerator": 9978378.319753012,
+      "value": 94.14985582496426
+    }
+  ],
+  "fetched_at": "2026-11-09T13:13:24.337978+00:00",
+  "request_urls": [
+    "https://query1.finance.yahoo.com/v8/finance/chart/SATS?period1=1793595600&period2=1794027600&interval=5m&includePrePost=false&includeAdjustedClose=false"
+  ],
+  "source_note": "Unadjusted regular-session five-minute HLC3 weighted by volume. All five trading sessions represented. 37 missing/invalid intervals excluded and no bars filled. Sparse trading estimate from retrieved bars, not complete SIP coverage or actual issuance proceeds; comparable to the prior edition method."
+}

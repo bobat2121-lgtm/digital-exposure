@@ -87,6 +87,18 @@ class FridayInputsTests(unittest.TestCase):
         result = self.resolve({"schemaVersion": 1, "filings": []})
         self.assertEqual(result, actual)
 
+    def test_saturday_strive_period_keeps_both_monday_publications(self):
+        feed = deepcopy(self.feed)
+        row = next(row for row in feed['filings']
+                   if row['ticker'] == 'ASST' and row['filedDate'] == '2026-09-08')
+        row['extracted']['periodStart'] = '2026-08-29'
+        result = self.resolve(feed)
+        self.assertEqual(result['balance_dates'], {'MSTR': '2026-09-07', 'ASST': '2026-09-04'})
+        self.assertIsNone(result['notice'])
+        for ticker in ('MSTR', 'ASST'):
+            self.assertIsNotNone(result['companies'][ticker]['shares'])
+            self.assertIsNotNone(result['companies'][ticker]['preferred_usd'])
+
     def test_newer_single_filing_waits_for_same_pair_without_mixing_issuers(self):
         feed = deepcopy(self.feed)
         feed["filings"].append(next(row for row in future_rows(feed) if row["ticker"] == "MSTR"))

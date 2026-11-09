@@ -1,0 +1,525 @@
+{
+  "edition": "2026-11-09",
+  "retrievedAt": "2026-11-09T13:12:53.983308+00:00",
+  "update_type": "manual weekly filing reconciliation retaining separate SATA and SATS funding",
+  "filings": {
+    "MSTR": {
+      "ticker": "MSTR",
+      "issuer": "Strategy",
+      "cik": "0001050446",
+      "accession": "0001193125-26-452693",
+      "form": "8-K",
+      "filedDate": "2026-11-09",
+      "reportDate": "2026-11-09",
+      "acceptedAt": "2026-11-09T13:00:15.000Z",
+      "firstSeenAt": "2026-11-09T13:01:31.067Z",
+      "documentFetchedAt": "2026-11-09T13:01:31.412Z",
+      "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526452693/mstr-20261109.htm",
+      "documents": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526452693/mstr-20261109.htm",
+          "fetchedAt": "2026-11-09T13:01:31.412Z",
+          "sha256": "94b87b66317e6bf05a753193475c122e7d1ac09738f443eb53fa04f4452d72a7"
+        }
+      ],
+      "status": "ready_for_review",
+      "baseline": false,
+      "extracted": {
+        "parserVersion": "sec-weekly-v5",
+        "periodStart": "2026-11-02",
+        "periodEnd": "2026-11-08",
+        "priorBalanceDate": null,
+        "balanceDate": "2026-11-08",
+        "facts": {
+          "weekly_btc_purchases": 1036,
+          "btc_holdings": 850364,
+          "weekly_btc_cost_usd": 81900000,
+          "btc_cost_basis_usd": 64160000000,
+          "btc_average_cost_usd": 75456,
+          "usd_reserve_usd": 4770000000,
+          "usd_cash_usd": 146200000,
+          "usd_reserve_dividends_interest_usd": 21100000,
+          "common_issued_shares": 2051348,
+          "common_issuance_proceeds_usd": 283800000,
+          "common_repurchased_shares": 0,
+          "common_repurchases_cash_usd": 0
+        },
+        "priorFacts": {},
+        "securities": {
+          "STRF": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "STRC": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 1887464,
+            "repurchaseCashUsd": 188300000
+          },
+          "STRK": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "STRD": {
+            "issuedShares": 0,
+            "netIssuanceProceedsUsd": 0,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          },
+          "MSTR": {
+            "issuedShares": 2051348,
+            "netIssuanceProceedsUsd": 283800000,
+            "repurchasedShares": 0,
+            "repurchaseCashUsd": 0
+          }
+        },
+        "missing": [],
+        "issues": [],
+        "extractionValidated": true
+      },
+      "attempts": 1,
+      "nextDocumentAttemptAt": 0,
+      "error": null,
+      "manualReview": {
+        "reviewedAt": "2026-11-09T13:12:53.983308+00:00",
+        "balanceSource": "SEC 8-K, checked against issuer dashboard",
+        "reported_weekly_average_btc_price_usd": 79012
+      }
+    },
+    "ASST": {
+      "ticker": "ASST",
+      "issuer": "Strive",
+      "cik": "0001920406",
+      "accession": "0001628280-26-071888",
+      "form": "8-K",
+      "filedDate": "2026-11-09",
+      "reportDate": "2026-11-09",
+      "acceptedAt": "2026-11-09T12:59:19.000Z",
+      "firstSeenAt": "2026-11-09T13:00:01.702Z",
+      "documentFetchedAt": "2026-11-09T13:00:01.816Z",
+      "primaryDocumentUrl": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026071888/asst-20261109.htm",
+      "documents": [
+        {
+          "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026071888/asst-20261109.htm",
+          "fetchedAt": "2026-11-09T13:00:01.816Z",
+          "sha256": "8813c5c20d4ad404b51788385ac2ca25ec96875aa9d7ce648d91327468bd2bb7"
+        }
+      ],
+      "status": "ready_for_review",
+      "baseline": false,
+      "extracted": {
+        "parserVersion": "sec-weekly-v5",
+        "periodStart": "2026-10-31",
+        "periodEnd": "2026-11-06",
+        "priorBalanceDate": "2026-10-30",
+        "balanceDate": "2026-11-06",
+        "facts": {
+          "weekly_btc_purchases": 29,
+          "cash_and_equivalents_usd": 487600000,
+          "held_strc_fair_value_usd": 50419000,
+          "held_strc_shares": 505000,
+          "btc_holdings": 43153,
+          "common_shares_class_a": 118133002,
+          "common_shares_class_b": 9198107,
+          "effective_common_shares": 127331109,
+          "net_common_shares_change": 0,
+          "options": 781329,
+          "unvested_employee_awards": 1932252,
+          "assumed_diluted_shares": 130044690,
+          "sata_shares": 14030176,
+          "net_sata_shares_change": 0,
+          "sats_shares": 7036559,
+          "net_sats_shares_change": 33141,
+          "preferred_notional_usd": 2106673500,
+          "annual_preferred_dividends_usd": 287940673,
+          "weekly_btc_cost_usd": 2200000
+        },
+        "priorFacts": {
+          "cash_and_equivalents_usd": 490400000,
+          "held_strc_fair_value_usd": 50061000,
+          "held_strc_shares": 505000,
+          "btc_holdings": 43124,
+          "common_shares_class_a": 118117620,
+          "common_shares_class_b": 9213489,
+          "effective_common_shares": 127331109,
+          "options": 781329,
+          "unvested_employee_awards": 1932252,
+          "assumed_diluted_shares": 130044690,
+          "sata_shares": 14030176,
+          "sats_shares": 7003418,
+          "preferred_notional_usd": 2103359400,
+          "annual_preferred_dividends_usd": 287443558,
+          "weekly_btc_cost_usd": 10000000
+        },
+        "securities": {},
+        "missing": [],
+        "issues": [],
+        "extractionValidated": true
+      },
+      "attempts": 1,
+      "nextDocumentAttemptAt": 0,
+      "error": null,
+      "manualReview": {
+        "reviewedAt": "2026-11-09T13:12:53.983308+00:00",
+        "balanceSource": "SEC 8-K, checked against issuer dashboard",
+        "reported_weekly_average_btc_price_usd": 75721,
+        "basis": "SATS row in the primary 8-K: 7,003,418 prior shares and 7,036,559 current shares, a 33,141-share increase. The collector omitted SATS. Financing is estimated using the dated regular-session SATS VWAP, before fees; actual ATM proceeds were not disclosed. The issuer dashboard dates the matching $2.2m BTC purchase to the filing date November 9; its source accession and price match the October 31-November 6 activity period."
+      }
+    }
+  },
+  "strategy_shares": {
+    "balance_date": "2026-11-08",
+    "basic_shares": 425591000,
+    "class_a": 405951000,
+    "class_b": 19640000,
+    "source": "https://www.strategy.com/shares"
+  },
+  "strategy_debt": {
+    "balance_date": "2026-11-08",
+    "total_usd": 6753703000,
+    "convertible_notes_usd": 6713659000,
+    "other_debt_usd": 40044000,
+    "basis": "The reconciled June 30 principal carried forward (see strategy_assumptions); the split lets the automatic reconciliation compare strategy.com's convertible-note list (api.strategy.com/btc/credit, $6,713.75M on Sep 27, 2026) and catch a new tranche or repurchase.",
+    "source_balance_date": "2026-06-30",
+    "current_issuer_convertible_notes_usd": 6713750000
+  },
+  "strategy_claims": {
+    "STRF": {
+      "shares": 12839689,
+      "currency": "USD",
+      "base_preference_per_share": 101.792,
+      "annual_dividend_per_share": 10.0,
+      "accrued_30_360_days": 38,
+      "estimated_accrued_dividends": 13553005.055555556,
+      "estimated_native_claims": 1320530627.7435555,
+      "ten_prior_closes": [
+        {
+          "date": "2026-10-23",
+          "close": 101.19999694824219
+        },
+        {
+          "date": "2026-10-26",
+          "close": 100.94999694824219
+        },
+        {
+          "date": "2026-10-27",
+          "close": 101.0999984741211
+        },
+        {
+          "date": "2026-10-28",
+          "close": 101.77999877929688
+        },
+        {
+          "date": "2026-10-29",
+          "close": 102.66999816894531
+        },
+        {
+          "date": "2026-10-30",
+          "close": 101.41999816894531
+        },
+        {
+          "date": "2026-11-02",
+          "close": 101.8499984741211
+        },
+        {
+          "date": "2026-11-03",
+          "close": 102.05000305175781
+        },
+        {
+          "date": "2026-11-04",
+          "close": 102.79000091552734
+        },
+        {
+          "date": "2026-11-05",
+          "close": 102.11000061035156
+        }
+      ]
+    },
+    "STRC": {
+      "shares": 79934698,
+      "currency": "USD",
+      "base_preference_per_share": 100,
+      "annual_dividend_per_share": 12.0,
+      "accrued_30_360_days": null,
+      "estimated_accrued_dividends": 7993469.800000001,
+      "estimated_native_claims": 8001463269.8,
+      "ten_prior_closes": [
+        {
+          "date": "2026-10-23",
+          "close": 99.36000061035156
+        },
+        {
+          "date": "2026-10-26",
+          "close": 99.16999816894531
+        },
+        {
+          "date": "2026-10-27",
+          "close": 99.48999786376953
+        },
+        {
+          "date": "2026-10-28",
+          "close": 99.91999816894531
+        },
+        {
+          "date": "2026-10-29",
+          "close": 99.98999786376953
+        },
+        {
+          "date": "2026-10-30",
+          "close": 99.12999725341797
+        },
+        {
+          "date": "2026-11-02",
+          "close": 99.27999877929688
+        },
+        {
+          "date": "2026-11-03",
+          "close": 99.93000030517578
+        },
+        {
+          "date": "2026-11-04",
+          "close": 99.9800033569336
+        },
+        {
+          "date": "2026-11-05",
+          "close": 99.55999755859375
+        }
+      ],
+      "unpaid_declared_dividends": [
+        {
+          "period": "Nov 6, 2026",
+          "recordDate": "2026-11-06",
+          "payDate": "2026-11-09",
+          "cashAmount": 0.04,
+          "rate": 12
+        },
+        {
+          "period": "Nov 7, 2026",
+          "recordDate": "2026-11-07",
+          "payDate": "2026-11-09",
+          "cashAmount": 0.03,
+          "rate": 12
+        },
+        {
+          "period": "Nov 8, 2026",
+          "recordDate": "2026-11-08",
+          "payDate": "2026-11-09",
+          "cashAmount": 0.03,
+          "rate": 12
+        }
+      ]
+    },
+    "STRK": {
+      "shares": 14020744,
+      "currency": "USD",
+      "base_preference_per_share": 100,
+      "annual_dividend_per_share": 8.0,
+      "accrued_30_360_days": 38,
+      "estimated_accrued_dividends": 11839739.377777778,
+      "estimated_native_claims": 1413914139.3777778,
+      "ten_prior_closes": [
+        {
+          "date": "2026-10-23",
+          "close": 69.30000305175781
+        },
+        {
+          "date": "2026-10-26",
+          "close": 69.86000061035156
+        },
+        {
+          "date": "2026-10-27",
+          "close": 70.1500015258789
+        },
+        {
+          "date": "2026-10-28",
+          "close": 70.7750015258789
+        },
+        {
+          "date": "2026-10-29",
+          "close": 70.22000122070312
+        },
+        {
+          "date": "2026-10-30",
+          "close": 67.8499984741211
+        },
+        {
+          "date": "2026-11-02",
+          "close": 67.12000274658203
+        },
+        {
+          "date": "2026-11-03",
+          "close": 67.69999694824219
+        },
+        {
+          "date": "2026-11-04",
+          "close": 70.80000305175781
+        },
+        {
+          "date": "2026-11-05",
+          "close": 68.47000122070312
+        }
+      ]
+    },
+    "STRD": {
+      "shares": 14024221,
+      "currency": "USD",
+      "base_preference_per_share": 100,
+      "annual_dividend_per_share": 10.0,
+      "accrued_30_360_days": 38,
+      "estimated_accrued_dividends": 14803344.388888888,
+      "estimated_native_claims": 1417225444.3888888,
+      "ten_prior_closes": [
+        {
+          "date": "2026-10-23",
+          "close": 69.70999908447266
+        },
+        {
+          "date": "2026-10-26",
+          "close": 69.55000305175781
+        },
+        {
+          "date": "2026-10-27",
+          "close": 69.87000274658203
+        },
+        {
+          "date": "2026-10-28",
+          "close": 71.0
+        },
+        {
+          "date": "2026-10-29",
+          "close": 70.5199966430664
+        },
+        {
+          "date": "2026-10-30",
+          "close": 69.75
+        },
+        {
+          "date": "2026-11-02",
+          "close": 69.6500015258789
+        },
+        {
+          "date": "2026-11-03",
+          "close": 70.2699966430664
+        },
+        {
+          "date": "2026-11-04",
+          "close": 71.4800033569336
+        },
+        {
+          "date": "2026-11-05",
+          "close": 70.05000305175781
+        }
+      ]
+    },
+    "STRE": {
+      "shares": 7750000,
+      "currency": "EUR",
+      "base_preference_per_share": 100.0,
+      "annual_dividend_per_share": 10.0,
+      "accrued_30_360_days": 38,
+      "estimated_accrued_dividends": 8180555.555555556,
+      "estimated_native_claims": 783180555.5555556,
+      "ten_prior_closes": []
+    }
+  },
+  "strive_preferred_components": {
+    "SATA": {
+      "shares": 14030176,
+      "base": 100,
+      "annual_rate_pct": 13,
+      "claims_usd": 1403017600
+    },
+    "SATS": {
+      "shares": 7036559,
+      "base": 100,
+      "annual_rate_pct": 15,
+      "accrual_business_days_by_month": {
+        "2026-10": 8,
+        "2026-11": 5
+      },
+      "month_business_days": {
+        "2026-10": 21,
+        "2026-11": 19
+      },
+      "accrued_dividends_usd": 5665399.946741854,
+      "claims_usd": 709321299.9467418
+    }
+  },
+  "source_documents": {
+    "strategy-8k.html": {
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526452693/mstr-20261109.htm",
+      "retrievedAt": "2026-11-09T13:11:15.064322+00:00",
+      "bytes": 204220,
+      "sha256": "94b87b66317e6bf05a753193475c122e7d1ac09738f443eb53fa04f4452d72a7"
+    },
+    "strive-8k.html": {
+      "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026071888/asst-20261109.htm",
+      "retrievedAt": "2026-11-09T13:11:15.037157+00:00",
+      "bytes": 59091,
+      "sha256": "8813c5c20d4ad404b51788385ac2ca25ec96875aa9d7ce648d91327468bd2bb7"
+    },
+    "strategy-shares.html": {
+      "url": "https://www.strategy.com/shares",
+      "retrievedAt": "2026-11-09T13:11:15.188415+00:00",
+      "bytes": 118940,
+      "sha256": "341ef422f99a5abb0004fbaef77156eebbf975f8efc9b14f70bf002b0d42a497"
+    },
+    "strategy-credit.json": {
+      "url": "https://api.strategy.com/btc/credit",
+      "retrievedAt": "2026-11-09T13:11:14.505265+00:00",
+      "bytes": 5693,
+      "sha256": "aa232066db5b5ec111cb8f3d16528fe4681afb6efb3780a66c681eb689ba3a44"
+    },
+    "strive-dashboard.json": {
+      "url": "https://strive.com/treasury/api/dashboard/base-data",
+      "retrievedAt": "2026-11-09T13:11:16.824799+00:00",
+      "bytes": 89785,
+      "sha256": "1e9b76e017dcdab4b28531ffb268ef108f7ef1c53cf0ec93b2fe1a89153fb11b"
+    },
+    "strive-treasury.json": {
+      "url": "https://strive.com/api/treasury",
+      "retrievedAt": "2026-11-09T13:11:16.722509+00:00",
+      "bytes": 608,
+      "sha256": "09b2468575291213cba96a1ae96d1f9f0ef7332091dfee84687f6ec5fcead0ae"
+    },
+    "strategy-strc.json": {
+      "url": "https://api.strategy.com/btc/strcKpiData",
+      "retrievedAt": "2026-11-09T13:11:17.234695+00:00",
+      "bytes": 7824,
+      "sha256": "7ce5f4f1c1afb5d56e34dbbbe738e6d9ee2f11f07d7c133d04e5795e0fabbd3a"
+    }
+  },
+  "strive_btc_cost": {
+    "usd": 2200000,
+    "issuer_transaction_date": "2026-11-09",
+    "filing_activity_period": [
+      "2026-10-31",
+      "2026-11-06"
+    ],
+    "basis": "Matched source accession, reported 29 BTC and reported $75,721 average price."
+  },
+  "comparison_mark_basis": "Prior edition release snapshot; Strive STRC mark equals its filed fair value divided by 505,000 shares.",
+  "strive_sats_funding": {
+    "net_new_shares": 33141,
+    "price_estimate": 93.91035393815838,
+    "estimated_cash_before_fees": 3112283.039864507,
+    "method": "hlc3_5m",
+    "source_note": "Unadjusted regular-session five-minute HLC3 weighted by volume. All five trading sessions represented. 37 missing/invalid intervals excluded and no bars filled. Sparse trading estimate from retrieved bars, not complete SIP coverage or actual issuance proceeds; comparable to the prior edition method."
+  },
+  "validation": {
+    "monday_publication": "complete, frozen saved inputs; Strategy balance November 8 and Strive balance November 6",
+    "source_sections": "all seven refreshed successfully",
+    "image_styles": [
+      "Bloomberg",
+      "Broadsheet"
+    ],
+    "image_overflows": 0,
+    "friday_publication": "both companies use the same normalized activity week as Monday; complete NAV and turnover",
+    "focused_tests": "45 passed, 34 subtests passed",
+    "full_suite": "378 existing tests and 484 subtests passed; two dated SATS tests required pinning to their November 2 fixture. Both were corrected; the 45-test focused suite then passed."
+  }
+}

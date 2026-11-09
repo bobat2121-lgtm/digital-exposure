@@ -19,6 +19,7 @@ class SataSatsIssuanceTests(unittest.TestCase):
     def setUpClass(cls):
         cls.prices = load_current_prices()
         cls.feed = json.loads((ROOT / 'data/latest-report-filings.json').read_text())
+        cls.feed['filings'] = [row for row in cls.feed['filings'] if row['filedDate'] <= '2026-11-02']
         cls.result = live_report.resolve_live_report(cls.prices, cls.feed, through_date='2026-11-01')
         cls.preview = monday_preview.build_preview(cls.result.report, cls.prices, cls.feed,
                                                   extras.load_extras(offline=True))
@@ -42,8 +43,11 @@ class SataSatsIssuanceTests(unittest.TestCase):
 
     def test_missing_sats_price_never_becomes_zero_or_par_proceeds(self):
         original = live_report.load_estimate
+        original_load = live_report._load
         with patch.object(live_report, 'load_estimate', side_effect=lambda symbol, day:
-                          None if symbol == 'SATS' and day == date(2026, 11, 2) else original(symbol, day)):
+                          None if symbol == 'SATS' and day == date(2026, 11, 2) else original(symbol, day)), \
+                patch.object(live_report, '_load', side_effect=lambda path:
+                             deepcopy(self.feed) if path == live_report.CHECKPOINT else original_load(path)):
             result = live_report.resolve_complete_report(self.prices, self.feed)
         self.assertEqual(result.report.companies[1].balance_date, '2026-10-23')
         self.assertIn('last complete report', result.notice)
@@ -59,11 +63,11 @@ class SataSatsIssuanceTests(unittest.TestCase):
 
     def test_partial_collector_cannot_drop_outstanding_sats(self):
         row = deepcopy(next(r for r in self.feed['filings'] if r['ticker'] == 'ASST'))
-        row['extracted']['balanceDate'] = '2026-11-06'
+        row['extracted']['balanceDate'] = '2026-11-13'
         row['extracted']['facts'].pop('sats_shares')
         supplements = json.loads((ROOT / 'data/report-supplements.json').read_text())
         updated, notes = auto_reconcile.augment([row], supplements)
-        self.assertNotIn('2026-11-06', updated['balances']['ASST'])
+        self.assertNotIn('2026-11-13', updated['balances']['ASST'])
         self.assertTrue(any('SATA and SATS claims' in note for note in notes))
 
     def test_both_image_styles_fit_the_separate_rows(self):
