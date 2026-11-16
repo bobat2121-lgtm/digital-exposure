@@ -429,7 +429,7 @@ def _monday_company(c, e, source, btc_price, price_label="") -> None:
             f'<div class="p">{escape(c.stock_price)}</div></div>'
             f'<div class="dcr-meta">Balance {escape(mon._short(source.balance_date))}{link} · '
             f'EV mNAV <b style="color:{C.ink}">{escape(mon._multiple(e.ev_mnav))}</b> · '
-            f'mNAV <b style="color:{C.ink}">{escape(mon._multiple(e.simple_mnav))}</b>{when}</div>')
+            f'BTC mNAV <b style="color:{C.ink}">{escape(mon._multiple(e.simple_mnav))}</b>{when}</div>')
     paid = e.reported_btc_purchase_price
     if paid is None:
         paid = e.btc_cost / e.btc_bought if e.btc_cost and e.btc_bought else None
@@ -517,7 +517,7 @@ def _scorecard(preview) -> str:
     rows.append(row("BTC / share (sats)", [value_with(mon._clean(c.bitcoin.value).replace(" sats", ""), c.bitcoin.short_change) for c in views]))
     rows.append(row("NAV / share", [value_with(mon._clean(c.nav_per_share), mon._clean(c.nav_change.value)) for c in views]))
     rows.append(row("EV mNAV (EV ÷ BTC NAV)", [mon._multiple(e.ev_mnav) for e in extras]))
-    rows.append(row("mNAV (market cap ÷ BTC NAV)", [mon._multiple(e.simple_mnav) for e in extras]))
+    rows.append(row("BTC mNAV (market cap ÷ BTC NAV)", [mon._multiple(e.simple_mnav) for e in extras]))
     rows.append(row("Amplification", [value_with(*mon._amplification(e)) for e in extras]))
     rows.append(row("Shares", [value_with(c.shares.value, mon._share_change(c)) for c in views]))
     rows, later = later, rows
@@ -558,7 +558,7 @@ MONDAY_FORMULAS = (
         ("EV mNAV", "Enterprise value ÷ BTC NAV, as Strategy and Strive report mNAV: (market cap + debt + preferred "
                     "notional − cash and liquid assets) ÷ (BTC held × BTC price). Preferred notional is $100 per share "
                     "(STRE €100 at the current EUR/USD); Strive's liquid assets include the STRC it holds."),
-        ("mNAV", "Simple mNAV: market cap ÷ BTC NAV, with no debt, preferred or cash."),
+        ("BTC mNAV", "Simple mNAV: market cap ÷ BTC NAV, with no debt, preferred or cash."),
         ("Share basis", "Strategy: basic Class A + B shares. Strive: fully diluted shares (Class A + B + options + "
                         "RSUs/RSAs, warrants excluded; the 8-K's \"Assumed Fully Diluted Shares\"), the default on "
                         "Strive's dashboard, so NAV / share and price / NAV match its Net Treasury Asset Value per share "

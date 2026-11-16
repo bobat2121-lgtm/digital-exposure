@@ -803,7 +803,7 @@ def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, report_company, i
     canvas.text(R, name_middle - cap_middle(T_VALUE), c.stock_price, T_VALUE, p.ink, True, align="right")
     canvas.text(L, top + 102, f"{c.ticker} · balance {_short(report_company.balance_date)}", T_MIN, p.muted)
     # Two mNAVs stacked at the right, beside the ticker line: EV ÷ BTC NAV, then market cap ÷ BTC NAV.
-    for line_y, label, value in ((top + 84, "EV mNAV", e.ev_mnav), (top + 116, "mNAV", e.simple_mnav)):
+    for line_y, label, value in ((top + 84, "EV mNAV", e.ev_mnav), (top + 116, "BTC mNAV", e.simple_mnav)):
         shown = _multiple(value)
         canvas.text(R, line_y, shown, T_MIN, stripe, True, align="right")
         canvas.text(R - width(shown, T_MIN, True) - 12, line_y, label, T_MIN, p.muted, align="right")
@@ -989,7 +989,7 @@ def audit_rows(preview: MondayPreview) -> list[dict]:
             {"metric": f"{company.ticker} price / NAV ({'basic' if company.ticker == 'MSTR' else 'fully diluted'} shares)",
              "value": _clean(company.price_to_nav), "source": "derived"},
             {"metric": f"{company.ticker} EV mNAV", "value": _multiple(extra.ev_mnav), "source": extra.mnav_source},
-            {"metric": f"{company.ticker} mNAV (market cap ÷ BTC NAV)", "value": _multiple(extra.simple_mnav),
+            {"metric": f"{company.ticker} BTC mNAV (market cap ÷ BTC NAV)", "value": _multiple(extra.simple_mnav),
              "source": extra.mnav_source.split(";")[0] + "; ÷ BTC holdings × BTC price"},
             {"metric": f"{company.ticker} sats per share", "value": company.bitcoin.value, "source": "derived"},
             {"metric": f"{company.ticker} amplification ({'BTC reserve ÷ net BTC reserve' if company.ticker == 'MSTR' else '(debt + preferred notional) ÷ BTC value'})",
