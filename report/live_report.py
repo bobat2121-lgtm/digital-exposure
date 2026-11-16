@@ -371,7 +371,10 @@ def _company(ticker, filing, all_filings, supplements, prices):
         activity = (PreferredActivity("SATA", None, None, issuance_price_assumption=100,
                                      capital_method="share_change_par", net_share_change=change),)
         # Separately disclosed preferred offerings are cash transactions, not
-        # SATA share changes or common equity. Preserve their reported basis.
+        # SATA share changes or common equity. Preserve their reported basis:
+        # the SATS IPO reported proceeds after underwriting commissions; weekly
+        # ATM tables report gross proceeds before sales agent commissions.
+        proceeds_bases = {}
         for series, transaction in extraction.get("securities", {}).items():
             if series == "SATA":
                 continue
@@ -379,6 +382,7 @@ def _company(ticker, filing, all_filings, supplements, prices):
             repurchases = _number(transaction.get("repurchaseCashUsd"))
             if proceeds is None or repurchases is None:
                 raise ValueError(f"{series} preferred funding is incomplete")
+            proceeds_bases[series] = transaction.get("proceedsBasis") or "net of underwriting commissions and before other expenses"
             activity += (PreferredActivity(series, _number(transaction.get("issuedShares")),
                 _number(transaction.get("repurchasedShares")), issuance_price_assumption=None,
                 capital_method="reported", reported_issuance_proceeds=proceeds,
@@ -420,7 +424,7 @@ def _company(ticker, filing, all_filings, supplements, prices):
             (f"{item.series}: net share change × ${item.issuance_price_assumption:,.4f} · estimated before fees"
              if item.issuance_price_assumption is not None else f"{item.series}: dated issuance price unavailable")
             if item.capital_method == "share_change_par" else
-            f"{item.series}: disclosed offering proceeds, net of underwriting commissions and before other expenses"
+            f"{item.series}: disclosed offering proceeds, {proceeds_bases.get(item.series, 'net of underwriting commissions and before other expenses')}"
             for item in activity) if ticker == "ASST" else (),
         valuation_estimated=True, preferred_claims_estimated=True,
         valuation_note=("≈ Basic common shares · after debt & preferred claims" if ticker == "MSTR"

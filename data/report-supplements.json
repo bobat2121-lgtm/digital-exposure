@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "2026-11-09.1",
+  "revision": "2026-11-16.1",
   "basis": "Dated supplemental inputs; NAV estimates use ending preferred shares and ordinary accrued dividends. No supplement automatically rolls into a newer balance date.",
   "balances": {
     "MSTR": {
@@ -325,6 +325,51 @@
           "https://api.strategy.com/btc/strcKpiData"
         ],
         "limitations": "Basic shares are the November 8 issuer table (thousand-share precision). Debt is the reviewed carryforward, corroborated by the unchanged current convertible-note list. Preferred claims use max($100, the ten closes strictly before November 6) plus 30/360 accrual from September 30 for the quarterly series. STRC uses its declared unpaid November 6-8 dividends of $0.10/share; scheduled payments through November 6 are treated paid."
+      },
+      "2026-11-15": {
+        "effective_common_shares": 427678040,
+        "debt_principal": 6753703000,
+        "preferred_claims_usd": 11938619854.067,
+        "preferred_claims_eur": 784687500.0,
+        "auto_reconciled": true,
+        "components": {
+          "STRF": {
+            "shares": 12839689,
+            "base": 102.303,
+            "accrual_days": 45,
+            "annual": 10.0
+          },
+          "STRC": {
+            "shares": 77652188,
+            "base": 100.0,
+            "accrual_days": null,
+            "annual": 12.0,
+            "declared_unpaid_per_share": 0.1
+          },
+          "STRK": {
+            "shares": 14020744,
+            "base": 100.0,
+            "accrual_days": 45,
+            "annual": 8.0
+          },
+          "STRD": {
+            "shares": 14024221,
+            "base": 100.0,
+            "accrual_days": 45,
+            "annual": 10.0
+          },
+          "STRE": {
+            "shares": 7750000,
+            "base": 100.0,
+            "accrual_days": 45,
+            "currency": "EUR"
+          }
+        },
+        "limitations": "Basic shares roll the reviewed count forward with 8-K ATM activity; employee issuance since review is not included. Claims: max($100, ten-close mean) plus 30/360 accrual \u2014 STRC declared unpaid daily dividends of $0.10/share, quarterly series 45 days; scheduled payments assumed paid.",
+        "sources": [
+          "https://api.strategy.com/btc/strcKpiData",
+          "https://query1.finance.yahoo.com/v8/finance/chart/"
+        ]
       }
     },
     "ASST": {
@@ -513,6 +558,33 @@
           "https://www.sec.gov/Archives/edgar/data/1920406/000095010326015769/dp255174_ex0401.htm"
         ],
         "limitations": "SATA and SATS use $100 preference floors; the relevant closes remain below par. SATA daily dividends are treated paid through November 6. SATS first payment is November 9; unpaid dividends through the November 6 balance date are estimated using eight October business days (21 days in October) and five November business days (19 days in November), at $15/12 per month, applied to ending shares. This excludes the November 9 accrual and is not an exact record-holder liability ledger. SATS financing is 33,141 net new shares times the dated weekly VWAP before fees; actual ATM cash proceeds were not disclosed."
+      },
+      "2026-11-13": {
+        "debt_principal": 0,
+        "preferred_claims_usd": 2117121300,
+        "preferred_claims_eur": 0,
+        "preferred_components": {
+          "SATA": {
+            "shares": 14030176,
+            "base": 100,
+            "annual_rate_pct": 13,
+            "claims_usd": 1403017600
+          },
+          "SATS": {
+            "shares": 7141037,
+            "base": 100,
+            "annual_rate_pct": 15,
+            "accrued_dividends_usd": 0,
+            "claims_usd": 714103700
+          }
+        },
+        "sources": [
+          "https://www.sec.gov/Archives/edgar/data/1920406/000162828026074004/asst-20261116.htm",
+          "https://www.sec.gov/Archives/edgar/data/1920406/000162828026066608/asst-20261021.htm",
+          "https://www.sec.gov/Archives/edgar/data/1920406/000162828026073033/asst-20261111.htm",
+          "https://strive.com/treasury/api/dashboard/base-data"
+        ],
+        "limitations": "SATA and SATS use their $100 preference floors; the ten closes before Nov 13 and the Nov 13 close remain below par. SATA daily dividends are treated paid through November 13 (the issuer lists Nov 13 paid). SATS moved to daily dividends on Nov 10 (8-K of Oct 21: $0.0658 per business day, each paid that business day); its $0.8710 initial dividend through Nov 9 was paid Nov 9, so no SATS dividend is unpaid at the Nov 13 close. SATS financing is the 8-K's disclosed $10.021m gross proceeds for 104,478 shares, before sales agent commissions. SATA's rate rises to 13.25% from December 1 (8-K of Nov 12); not yet in effect."
       }
     }
   },
@@ -526,7 +598,8 @@
     "2026-10-11": 83261.25,
     "2026-10-18": 82540.21,
     "2026-10-25": 80265.94,
-    "2026-11-01": 77544
+    "2026-11-01": 77544,
+    "2026-11-08": 74713.25
   },
   "comparison_release_dates": {
     "2026-08-30": "2026-08-31",
@@ -538,7 +611,8 @@
     "2026-10-11": "2026-10-13",
     "2026-10-18": "2026-10-19",
     "2026-10-25": "2026-10-26",
-    "2026-11-01": "2026-11-02"
+    "2026-11-01": "2026-11-02",
+    "2026-11-08": "2026-11-09"
   },
   "balance_marks": {
     "2026-08-30": {
@@ -609,6 +683,15 @@
     },
     "2026-11-06": {
       "STRC": 99.83960396039603
+    },
+    "2026-11-08": {
+      "EURUSD=X": 1.1196
+    },
+    "2026-10-13": {
+      "STRC": 99.66336633663366
+    },
+    "2026-11-13": {
+      "STRC": 99.91089108910892
     }
   },
   "preferred_audit_files": [

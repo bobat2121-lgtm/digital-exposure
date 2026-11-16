@@ -1,6 +1,6 @@
 """SATS issuance must remain distinct from SATA and from liquidation claims."""
 from copy import deepcopy
-from datetime import date
+from datetime import date, timedelta
 import json
 from pathlib import Path
 import unittest
@@ -62,12 +62,14 @@ class SataSatsIssuanceTests(unittest.TestCase):
         self.assertEqual(sum(v for _, v, _ in inflows), sum(v for _, v, _ in outflows))
 
     def test_partial_collector_cannot_drop_outstanding_sats(self):
-        row = deepcopy(next(r for r in self.feed['filings'] if r['ticker'] == 'ASST'))
-        row['extracted']['balanceDate'] = '2026-11-13'
-        row['extracted']['facts'].pop('sats_shares')
         supplements = json.loads((ROOT / 'data/report-supplements.json').read_text())
+        # The week after the newest saved Strive balance, so a new edition never dates this test.
+        following = (date.fromisoformat(max(supplements['balances']['ASST'])) + timedelta(days=7)).isoformat()
+        row = deepcopy(next(r for r in self.feed['filings'] if r['ticker'] == 'ASST'))
+        row['extracted']['balanceDate'] = following
+        row['extracted']['facts'].pop('sats_shares')
         updated, notes = auto_reconcile.augment([row], supplements)
-        self.assertNotIn('2026-11-13', updated['balances']['ASST'])
+        self.assertNotIn(following, updated['balances']['ASST'])
         self.assertTrue(any('SATA and SATS claims' in note for note in notes))
 
     def test_both_image_styles_fit_the_separate_rows(self):

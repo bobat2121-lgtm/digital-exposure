@@ -185,16 +185,37 @@ def _hour_mark(symbol, instant: datetime):
     return match[-1]
 
 
+def _iso(value) -> date | None:
+    try:
+        return date.fromisoformat(value) if isinstance(value, str) else None
+    except ValueError:
+        return None  # strategy.com marks a cancelled payment "—"
+
+
 def _strc_accrual(balance: date):
-    """(annual $ rate, 30/360 days) since the last STRC payment on or before balance."""
+    """(annual $ rate, 30/360 days, declared unpaid $ per share or None) for STRC at balance.
+
+    Monthly and semi-monthly periods accrue 30/360 since the last payment on or before
+    balance. Since November 1, 2026 STRC has daily record dates: holders at balance are
+    owed the dividends declared for record dates on or before it and not yet paid, so
+    those amounts are summed instead (days is then None).
+    """
     history = _strc_dividends().get("dividendHistory") or []
-    pays = sorted((date.fromisoformat(row["payDate"]), row) for row in history if row.get("payDate"))
+    pays = sorted(((_iso(row.get("payDate")), row) for row in history if _iso(row.get("payDate"))),
+                  key=lambda item: (item[0], _iso(item[1].get("recordDate")) or item[0]))
     past = [(day, row) for day, row in pays if day <= balance]
     upcoming = [(day, row) for day, row in pays if day > balance]
     if not past:
         raise ValueError("STRC payment history unavailable")
     rate = upcoming[0][1].get("rate") if upcoming else _strc_dividends().get("currentDividend")
-    return float(rate), days360(past[-1][0], balance)
+    records = sorted(day for day in (_iso(row.get("recordDate")) for _, row in pays) if day and day <= balance)
+    if len(records) >= 2 and records[-1] - records[-2] == timedelta(days=1):
+        unpaid = [row for day, row in upcoming if (_iso(row.get("recordDate")) or balance + timedelta(days=1)) <= balance]
+        amounts = [row.get("cashAmount") for row in unpaid]
+        if not unpaid or not all(isinstance(value, (int, float)) for value in amounts):
+            raise ValueError("STRC declared daily dividends unavailable")
+        return float(rate), None, float(sum(amounts))
+    return float(rate), days360(past[-1][0], balance), None
 
 
 def _quarter_start(balance: date) -> date:
@@ -222,7 +243,7 @@ def _seed(before: str | None = None):
 
 def _strategy_entry(balance: date, common, series, debt, facts):
     notes, usd, eur = [], 0.0, 0.0
-    rate, strc_days = _strc_accrual(balance)
+    rate, strc_days, strc_declared = _strc_accrual(balance)
     quarter_days = days360(_quarter_start(balance), balance)
     components = {}
     for name, shares in series.items():
@@ -233,10 +254,15 @@ def _strategy_entry(balance: date, common, series, debt, facts):
             continue
         base, _ = _base(name, balance)
         annual, days = (rate, strc_days) if name == "STRC" else (RATES[name], quarter_days)
-        usd += shares * (base + annual * days / 360)
+        accrued = strc_declared if name == "STRC" and strc_declared is not None else annual * days / 360
+        usd += shares * (base + accrued)
         components[name] = {"shares": shares, "base": base, "accrual_days": days, "annual": annual}
+        if name == "STRC" and strc_declared is not None:
+            components[name]["declared_unpaid_per_share"] = strc_declared
+    strc_text = (f"STRC declared unpaid daily dividends of ${strc_declared:.2f}/share" if strc_declared is not None
+                 else f"STRC {strc_days} days at ${rate:g}")
     notes.append(f"Basic shares roll the reviewed count forward with 8-K ATM activity; employee issuance since review is not included.")
-    notes.append(f"Claims: max($100, ten-close mean) plus 30/360 accrual — STRC {strc_days} days at ${rate:g}, quarterly series {quarter_days} days; scheduled payments assumed paid.")
+    notes.append(f"Claims: max($100, ten-close mean) plus 30/360 accrual — {strc_text}, quarterly series {quarter_days} days; scheduled payments assumed paid.")
     return {"effective_common_shares": common, "debt_principal": debt, "preferred_claims_usd": usd,
             "preferred_claims_eur": eur, "auto_reconciled": True, "components": components,
             "limitations": " ".join(notes),

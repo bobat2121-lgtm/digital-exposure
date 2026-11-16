@@ -1,0 +1,113 @@
+{
+  "edition": "2026-11-16",
+  "retrievedAt": "2026-11-16T13:09:49.058109+00:00",
+  "update_type": "reviewed Strive SATA/SATS balance; automatic Strategy roll-forward (strategy.com/shares not retrieved)",
+  "filings": {
+    "MSTR": {
+      "accession": "0001193125-26-462151",
+      "balanceDate": "2026-11-15",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526462151/mstr-20261116.htm",
+      "sha256": "13de1399dd4f3335cd2c86af51141d143f3ce276c19a941c18a86122cb8e0804"
+    },
+    "ASST": {
+      "accession": "0001628280-26-074004",
+      "balanceDate": "2026-11-13",
+      "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026074004/asst-20261116.htm",
+      "sha256": "c56da747f05f5ab32d21223d95bdc65ac231bc8e22eed96e0eedcca2ba53d18a"
+    }
+  },
+  "strategy_automatic": {
+    "balance_date": "2026-11-15",
+    "seed": "reconciliation-2026-11-09.json (Nov 8: 425,591,000 basic shares)",
+    "effective_common_shares": 427678040,
+    "strc_repurchased_shares": 2282510,
+    "strc_repurchase_cash_usd": 228100000,
+    "preferred_claims_usd": 11938619854.067,
+    "preferred_claims_eur": 784687500.0,
+    "debt_principal": 6753703000,
+    "note": "strategy.com/shares refused the automated request (HTTP 403), so basic shares are the reviewed Nov 8 count plus the 8-K's 2,087,040 ATM shares; employee issuance is not included. STRC accrues its declared unpaid daily dividends (record Nov 13-15, paid Nov 16: $0.10/share), the method of the Nov 9 review."
+  },
+  "strive_preferred_components": {
+    "SATA": {
+      "shares": 14030176,
+      "base": 100,
+      "annual_rate_pct": 13,
+      "claims_usd": 1403017600
+    },
+    "SATS": {
+      "shares": 7141037,
+      "base": 100,
+      "annual_rate_pct": 15,
+      "accrued_dividends_usd": 0,
+      "claims_usd": 714103700
+    }
+  },
+  "strive_sats_funding": {
+    "net_new_shares": 104478,
+    "disclosed_gross_proceeds_usd": 10021000,
+    "implied_price": 95.91492945883344,
+    "basis": "8-K ATM table, gross before sales agent commissions"
+  },
+  "strive_preferred_closes": {
+    "SATA": [
+      94.86000061035156,
+      95.19999694824219,
+      95.55000305175781,
+      98.0,
+      95.93000030517578,
+      96.54000091552734,
+      97.7699966430664,
+      96.30999755859375,
+      97.16000366210938,
+      97.94999694824219
+    ],
+    "SATS": [
+      93.25,
+      92.08000183105469,
+      92.8499984741211,
+      95.01000213623047,
+      94.61000061035156,
+      94.2699966430664,
+      95.5,
+      95.48999786376953,
+      96.38999938964844,
+      96.54000091552734
+    ]
+  },
+  "strive_btc_cost": {
+    "usd": 17500000,
+    "issuer_transaction_date": "2026-11-13",
+    "filing_activity_period": [
+      "2026-11-07",
+      "2026-11-13"
+    ],
+    "basis": "Issuer dashboard; 8-K reports 251 BTC at ~$69,853 average."
+  },
+  "source_documents": {
+    "strategy-8k.html": {
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526462151/mstr-20261116.htm",
+      "bytes": 287515,
+      "sha256": "13de1399dd4f3335cd2c86af51141d143f3ce276c19a941c18a86122cb8e0804"
+    },
+    "strive-8k.html": {
+      "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026074004/asst-20261116.htm",
+      "bytes": 64646,
+      "sha256": "c56da747f05f5ab32d21223d95bdc65ac231bc8e22eed96e0eedcca2ba53d18a"
+    },
+    "strive-dividend-8k-2026-11-12.html": {
+      "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026073033/asst-20261111.htm",
+      "bytes": 86811,
+      "sha256": "12d90529eaacb45f7ada8dbadddebb5dfb41ee4f14acedcb97c2f2e484f056da"
+    },
+    "strive-sats-dividend-8k-2026-10-21.html": {
+      "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026066608/asst-20261021.htm",
+      "bytes": 50331,
+      "sha256": "34354b916425c8ddb39a73e51f9bb895e59927b00a754dbc861462de7209ebd3"
+    },
+    "strive-dashboard.json": {
+      "url": "https://strive.com/treasury/api/dashboard/base-data",
+      "bytes": 91328,
+      "sha256": "5c73915fcfe14cd64a90f2d78c33d8522e1edac63cfbe5609a19ba70a2bd3eb1"
+    }
+  }
+}

@@ -123,6 +123,27 @@ class DebtTests(unittest.TestCase):
         self.assertEqual(seed["debt"]["convertible_notes_usd"] + seed["debt"]["other_debt_usd"], seed["debt"]["total_usd"])
 
 
+class StrcDailyDividendTests(unittest.TestCase):
+    """strategy.com's table after STRC moved to daily record dates (Nov 1, 2026)."""
+    KPI = {"currentDividend": 12, "dividendHistory": [
+        {"period": "Oct 2026 #1", "recordDate": "2026-10-15", "payDate": "2026-10-31", "cashAmount": 0.5, "rate": 12},
+        {"period": "Oct 2026 #2", "recordDate": "2026-10-29", "payDate": "—", "cashAmount": "—", "rate": 12},
+        *({"recordDate": f"2026-11-{record:02d}", "payDate": f"2026-11-{pay:02d}", "cashAmount": cash, "rate": 12}
+          for record, pay, cash in ((11, 12, 0.03), (12, 13, 0.04), (13, 16, 0.03), (14, 16, 0.03),
+                                    (15, 16, 0.04), (16, 17, 0.03)))]}
+
+    def test_cancelled_row_is_skipped_and_declared_unpaid_dividends_accrue(self):
+        with patch.object(ar, "_strc_dividends", lambda: self.KPI):
+            rate, days, declared = ar._strc_accrual(date(2026, 11, 15))
+        # Record dates Nov 13-15 are paid Nov 16: $0.03 + $0.03 + $0.04.
+        self.assertEqual((rate, days), (12.0, None))
+        self.assertAlmostEqual(declared, 0.10)
+
+    def test_semi_monthly_periods_still_accrue_30_360(self):
+        with patch.object(ar, "_strc_dividends", lambda: STRC_KPI):
+            self.assertEqual(ar._strc_accrual(date(2026, 9, 20)), (12.0, 5, None))
+
+
 class AutoReconcileTests(unittest.TestCase):
     def setUp(self):
         for target, value in (("_yahoo", fake_yahoo), ("_strc_dividends", lambda: STRC_KPI)):

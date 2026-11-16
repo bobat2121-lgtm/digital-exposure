@@ -86,7 +86,7 @@ reconciles a new week by itself (`report/auto_reconcile.py`) whenever
 | --- | --- |
 | Strategy basic shares | latest reviewed count + 8-K ATM shares sold − repurchased |
 | Strategy preferred shares | latest reviewed count per series + 8-K issued − repurchased |
-| Strategy preferred claims | max($100, ten-close mean before the balance business day) per USD series, €100 STRE, plus 30/360 accrual since the last scheduled payment (STRC dates and rate from strategy.com) |
+| Strategy preferred claims | max($100, ten-close mean before the balance business day) per USD series, €100 STRE, plus 30/360 accrual since the last scheduled payment (STRC dates and rate from strategy.com; since STRC's daily record dates began Nov 1, 2026, its declared dividends with record dates on or before the balance date and paid after it) |
 | Strategy debt | latest reviewed principal carried forward; if strategy.com's convertible-note list (`api.strategy.com/btc/credit`) differs from the reviewed convertibles by more than $5M, reviewed other debt plus the listed notes, passed on as a heads-up (the weekly 8-K never reports debt) |
 | Strive SATA claims | filing share count × max($100, ten-close mean, prior close) |
 | Comparison marks | BTC and EUR/USD at the prior filing's SEC acceptance hour; STRC from the prior Strive filing |
