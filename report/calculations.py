@@ -54,6 +54,22 @@ def comparable_share_counts(current: Snapshot, baseline: Snapshot) -> tuple[floa
     return current.effective_common_shares, baseline.effective_common_shares
 
 
+def mnavs(stock_price: float | None, shares: float | None, debt: float | None, preferred_notional: float | None,
+          liquid: float | None, bitcoin: float | None) -> tuple[float | None, float | None]:
+    """(EV mNAV, simple mNAV), as Strategy and Strive define them.
+
+    EV mNAV = (market cap + debt + preferred notional − cash and liquid assets) ÷ BTC NAV;
+    simple mNAV = market cap ÷ BTC NAV. BTC NAV is holdings × the BTC price.
+    """
+    if not all(_known(value) for value in (stock_price, shares, bitcoin)) or bitcoin <= 0:
+        return None, None
+    market_cap = stock_price * shares
+    simple = market_cap / bitcoin
+    if not all(_known(value) for value in (debt, preferred_notional, liquid)):
+        return None, simple
+    return (market_cap + debt + preferred_notional - liquid) / bitcoin, simple
+
+
 def btc_value(snapshot: Snapshot, btc_price: float | None) -> float | None:
     if not _nonnegative(snapshot.btc_holdings) or not _nonnegative(btc_price):
         return None

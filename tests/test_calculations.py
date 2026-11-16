@@ -9,6 +9,7 @@ from report.calculations import (
     calculate_company,
     calculate_preferred_capital,
     liquid_assets,
+    mnavs,
     net_treasury_nav,
     preferred_activity_capital,
     weekly_vwap,
@@ -454,6 +455,16 @@ class CalculationTests(unittest.TestCase):
         metrics = calculate_company(company, 1.0, 1.0)
         self.assertEqual(metrics.nav_per_share, 10.0)
         self.assertEqual(metrics.effective_common_shares, 10.0)
+
+    def test_mnavs_follow_the_issuers_definitions(self):
+        # strategy.com's Nov 13 KPIs: EV $62,260m = $47,737m cap + $6,714m debt + $12,709m preferred − $4,900m USD.
+        ev, simple = mnavs(111.62, 427_678_040, 6_714e6, 12_709e6, 4_900e6, 50_000e6)
+        self.assertAlmostEqual(ev * 50_000e6 / 1e6, 62_260, delta=1)
+        self.assertAlmostEqual(simple, 111.62 * 427_678_040 / 50_000e6)
+        # A missing balance-sheet input leaves only the simple multiple; no BTC NAV leaves neither.
+        self.assertEqual(mnavs(10, 100, None, 0, 0, 1_000)[1], 1.0)
+        self.assertIsNone(mnavs(10, 100, None, 0, 0, 1_000)[0])
+        self.assertEqual(mnavs(10, 100, 0, 0, 0, 0), (None, None))
 
     def test_nonpositive_nav_disables_amplification_and_price_to_nav(self):
         for preferred_claims in (100.0, 150.0):

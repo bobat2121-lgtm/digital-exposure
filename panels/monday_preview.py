@@ -21,8 +21,8 @@ import numpy as np
 from PIL import Image, ImageColor
 
 from report import live_report as lr
-from report.calculations import (btc_value, calculate_company, comparable_share_counts, liquid_assets,
-                                net_treasury_nav, preferred_activity_capital)
+from report.calculations import (btc_value, calculate_company, comparable_share_counts, liquid_assets, mnavs,
+                                net_treasury_nav, per_share_count, preferred_activity_capital)
 from report.models import Report
 from report.presentation import build_report_view
 from report.view_types import CompanyView, ReportView
@@ -91,6 +91,10 @@ class CompanyExtras:
     average_cost: float | None = None
     cost_source: str = ""
     filing_url: str | None = None               # the week's 8-K
+    # mNAV, as the issuers define it (see report.calculations.mnavs): EV ÷ BTC NAV and market cap ÷ BTC NAV.
+    ev_mnav: float | None = None
+    simple_mnav: float | None = None
+    mnav_source: str = ""
 
 
 @dataclass(frozen=True)
@@ -396,6 +400,39 @@ def _flows_text(e: CompanyExtras) -> str:
         "out " + ", ".join(f"{label} {_money(-amount)}" for label, amount, _ in money_out) if money_out else ""))) or "none")
 
 
+def _preferred_notional(ticker, company, facts, supplements, prices):
+    """(notional preferred in USD, basis): $100 stated amount per share, the issuers' EV input.
+
+    Strive's filing facts carry it; Strategy's comes from the dated series counts (STRE at €100
+    × EUR/USD). Without a dated count, the liquidation claims stand in.
+    """
+    if ticker == "ASST":
+        notional = _n(facts.get("preferred_notional_usd"))
+        if notional is not None:
+            return notional, "preferred notional"
+    else:
+        entry = ((supplements.get("balances") or {}).get(ticker) or {}).get(company.balance_date) or {}
+        components = entry.get("components") or {}
+        if not components:
+            components = _reviewed_series(company.balance_date)
+        eurusd = _n((((prices or {}).get("quotes") or {}).get("EURUSD=X") or {}).get("price"))
+        shares = {series: _n((row or {}).get("shares")) for series, row in components.items()}
+        if shares and None not in shares.values() and (eurusd or "STRE" not in shares):
+            return (sum(count * 100 * (eurusd if series == "STRE" else 1) for series, count in shares.items()),
+                    "preferred notional")
+    claims = company.current.preferred_claims
+    return claims, "preferred liquidation claims"
+
+
+def _reviewed_series(balance_date: str) -> dict:
+    """Strategy's per-series counts from a reviewed reconciliation for that balance date."""
+    for path in sorted(lr.DATA.glob("reconciliation-*.json"), reverse=True):
+        record = json.loads(path.read_text(encoding="utf-8"))
+        if (record.get("strategy_shares") or {}).get("balance_date") == balance_date:
+            return record.get("strategy_claims") or {}
+    return {}
+
+
 def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now: datetime | None = None) -> MondayPreview:
     now = now or datetime.now(ET)
     view = build_report_view(report, prices=prices)
@@ -435,6 +472,11 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
             # Strive's liquidity includes the STRC it holds; show that portion.
             detail = f"{_money(current.cash, False)} cash + {_money(current.marketable_securities, False)} STRC"
         metrics = calculate_company(company, report.current_btc_price, report.prior_btc_price)
+        preferred_notional, notional_basis = _preferred_notional(ticker, company, facts, supplements, prices)
+        ev_mnav, simple_mnav = mnavs(company.stock_price, per_share_count(current), current.debt_principal,
+                                     preferred_notional, liquid, bitcoin)
+        mnav_source = (f"market cap ({'basic' if ticker == 'MSTR' else 'fully diluted'} shares × price); "
+                       f"EV = market cap + debt + {notional_basis} − cash and liquid assets; ÷ BTC holdings × BTC price")
         raised = (metrics.net_common_capital + metrics.net_preferred_capital
                   if None not in (metrics.net_common_capital, metrics.net_preferred_capital) else None)
         funding = raised - liquid_change if raised is not None and liquid_change is not None else None
@@ -502,6 +544,7 @@ def build_preview(report: Report, prices: dict, feed: dict, extras: dict, *, now
             coverage_years=years, breakeven_pct=breakeven, coverage_source=source,
             window=windows.get(ticker, {}), warrants=_warrants(ticker, company, facts, config, now),
             cost_basis=cost_basis, average_cost=average_cost, cost_source=basis_source,
+            ev_mnav=ev_mnav, simple_mnav=simple_mnav, mnav_source=mnav_source,
             filing_url=next((row.get("primaryDocumentUrl") for row in reversed(rows) if row["ticker"] == ticker
                              and row["extracted"]["balanceDate"] == company.balance_date), None))
     period = report.capital_period_label.split("·")[-1].strip()
@@ -734,6 +777,10 @@ def _amplification(e: CompanyExtras) -> tuple[str, str]:
     return _pct(e.amplification_pct, 0), _pct(e.amplification_change_pp, 1, True, " pp")
 
 
+def _multiple(value) -> str:
+    return f"{value:.2f}×" if value is not None else "—"
+
+
 def _share_change(c: CompanyView):
     text = _clean(c.shares.change)
     # "+2.03m (+2.14%) WoW" → "+2.14%"
@@ -755,7 +802,11 @@ def _company(canvas: Canvas, c: CompanyView, e: CompanyExtras, report_company, i
     _logo(canvas, c, theme, p, L, name_middle)
     canvas.text(R, name_middle - cap_middle(T_VALUE), c.stock_price, T_VALUE, p.ink, True, align="right")
     canvas.text(L, top + 102, f"{c.ticker} · balance {_short(report_company.balance_date)}", T_MIN, p.muted)
-    canvas.text(R, top + 96, f"{_clean(c.price_to_nav)} NAV", T_BODY, stripe, True, align="right")
+    # Two mNAVs stacked at the right, beside the ticker line: EV ÷ BTC NAV, then market cap ÷ BTC NAV.
+    for line_y, label, value in ((top + 84, "EV mNAV", e.ev_mnav), (top + 116, "mNAV", e.simple_mnav)):
+        shown = _multiple(value)
+        canvas.text(R, line_y, shown, T_MIN, stripe, True, align="right")
+        canvas.text(R - width(shown, T_MIN, True) - 12, line_y, label, T_MIN, p.muted, align="right")
     canvas.draw.line((L, top + 146, R, top + 146), fill=p.rule or p.line, width=2)
 
     # Bitcoin bought — the point of the week — then how it was funded.
@@ -937,6 +988,9 @@ def audit_rows(preview: MondayPreview) -> list[dict]:
              "source": extra.cost_source or "—"},
             {"metric": f"{company.ticker} price / NAV ({'basic' if company.ticker == 'MSTR' else 'fully diluted'} shares)",
              "value": _clean(company.price_to_nav), "source": "derived"},
+            {"metric": f"{company.ticker} EV mNAV", "value": _multiple(extra.ev_mnav), "source": extra.mnav_source},
+            {"metric": f"{company.ticker} mNAV (market cap ÷ BTC NAV)", "value": _multiple(extra.simple_mnav),
+             "source": extra.mnav_source.split(";")[0] + "; ÷ BTC holdings × BTC price"},
             {"metric": f"{company.ticker} sats per share", "value": company.bitcoin.value, "source": "derived"},
             {"metric": f"{company.ticker} amplification ({'BTC reserve ÷ net BTC reserve' if company.ticker == 'MSTR' else '(debt + preferred notional) ÷ BTC value'})",
              "value": " / ".join(_amplification(extra)), "source": extra.amplification_source},
