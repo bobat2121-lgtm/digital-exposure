@@ -1,0 +1,98 @@
+{
+  "edition": "2026-11-23",
+  "retrievedAt": "2026-11-23T14:13:37.445307+00:00",
+  "update_type": "reviewed Strive balance (no-activity week); automatic Strategy roll-forward",
+  "filings": {
+    "MSTR": {
+      "accession": "0001193125-26-470961",
+      "balanceDate": "2026-11-22",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526470961/mstr-20261123.htm",
+      "sha256": "5d0e71e59375a39ef89ea55cb5ca9fc3197f2485f3665530d3f9ea89b64fb4f8"
+    },
+    "ASST": {
+      "accession": "0001628280-26-075372",
+      "balanceDate": "2026-11-20",
+      "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026075372/asst-20261123.htm",
+      "sha256": "1f1a8c93d622b9f35b6e4d3293ba208ab3692933a2ac05e5c8ffef5724cc840a"
+    }
+  },
+  "strategy_automatic": {
+    "balance_date": "2026-11-22",
+    "seed": "reconciliation-2026-11-09.json (Nov 8: 425,591,000 basic shares) + Nov 15 and Nov 22 8-K ATM shares",
+    "effective_common_shares": 429603716,
+    "strc_repurchased_shares": 2183747,
+    "strc_repurchase_cash_usd": 211800000,
+    "usd_reserve_usd": 3730000000,
+    "usd_cash_usd": 1090000000,
+    "preferred_claims_usd": 11708364383.879778,
+    "preferred_claims_eur": 786194444.4444444,
+    "debt_principal": 6753703000,
+    "note": "Basic shares roll the reviewed Nov 8 count forward with the 8-K ATM shares; employee issuance is not included. STRC accrues its declared unpaid daily dividends ($0.10/share). The board moved up to $1.0B from the USD Reserve to USD Cash; the combined balance is unchanged by it."
+  },
+  "strive_preferred_components": {
+    "SATA": {
+      "shares": 14030176,
+      "base": 100,
+      "annual_rate_pct": 13,
+      "claims_usd": 1403017600
+    },
+    "SATS": {
+      "shares": 7141037,
+      "base": 100,
+      "annual_rate_pct": 15,
+      "accrued_dividends_usd": 0,
+      "claims_usd": 714103700
+    }
+  },
+  "strive_preferred_closes": {
+    "SATA": [
+      96.54000091552734,
+      97.7699966430664,
+      96.30999755859375,
+      97.16000366210938,
+      97.94999694824219,
+      97.7300033569336,
+      94.33000183105469,
+      93.20999908447266,
+      89.0199966430664,
+      88.37000274658203
+    ],
+    "SATS": [
+      94.2699966430664,
+      95.5,
+      95.48999786376953,
+      96.38999938964844,
+      96.54000091552734,
+      96.91999816894531,
+      94.3499984741211,
+      93.45999908447266,
+      89.66000366210938,
+      89.55000305175781
+    ]
+  },
+  "strive_btc_cost": {
+    "usd": 0,
+    "filing_activity_period": [
+      "2026-11-14",
+      "2026-11-20"
+    ],
+    "basis": "8-K: bitcoin held unchanged at 43,404; the issuer dashboard lists no purchase."
+  },
+  "source_documents": {
+    "strategy-8k.html": {
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526470961/mstr-20261123.htm",
+      "bytes": 211631,
+      "sha256": "5d0e71e59375a39ef89ea55cb5ca9fc3197f2485f3665530d3f9ea89b64fb4f8"
+    },
+    "strive-8k.html": {
+      "url": "https://www.sec.gov/Archives/edgar/data/1920406/000162828026075372/asst-20261123.htm",
+      "bytes": 64356,
+      "sha256": "1f1a8c93d622b9f35b6e4d3293ba208ab3692933a2ac05e5c8ffef5724cc840a"
+    },
+    "strive-dashboard.json": {
+      "url": "https://strive.com/treasury/api/dashboard/base-data",
+      "bytes": 91753,
+      "sha256": "fe1a28f8b5a693afe4857b1972925e2a27f01fe5267327485d8c1016f9214cee"
+    }
+  }
+}

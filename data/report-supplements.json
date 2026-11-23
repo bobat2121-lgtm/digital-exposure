@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "2026-11-16.1",
+  "revision": "2026-11-23.1",
   "basis": "Dated supplemental inputs; NAV estimates use ending preferred shares and ordinary accrued dividends. No supplement automatically rolls into a newer balance date.",
   "balances": {
     "MSTR": {
@@ -370,6 +370,51 @@
           "https://api.strategy.com/btc/strcKpiData",
           "https://query1.finance.yahoo.com/v8/finance/chart/"
         ]
+      },
+      "2026-11-22": {
+        "effective_common_shares": 429603716,
+        "debt_principal": 6753703000,
+        "preferred_claims_usd": 11708364383.879778,
+        "preferred_claims_eur": 786194444.4444444,
+        "auto_reconciled": true,
+        "components": {
+          "STRF": {
+            "shares": 12839689,
+            "base": 100.818,
+            "accrual_days": 52,
+            "annual": 10.0
+          },
+          "STRC": {
+            "shares": 75468441,
+            "base": 100.0,
+            "accrual_days": null,
+            "annual": 12.0,
+            "declared_unpaid_per_share": 0.1
+          },
+          "STRK": {
+            "shares": 14020744,
+            "base": 100.0,
+            "accrual_days": 52,
+            "annual": 8.0
+          },
+          "STRD": {
+            "shares": 14024221,
+            "base": 100.0,
+            "accrual_days": 52,
+            "annual": 10.0
+          },
+          "STRE": {
+            "shares": 7750000,
+            "base": 100.0,
+            "accrual_days": 52,
+            "currency": "EUR"
+          }
+        },
+        "limitations": "Basic shares roll the reviewed count forward with 8-K ATM activity; employee issuance since review is not included. Claims: max($100, ten-close mean) plus 30/360 accrual \u2014 STRC declared unpaid daily dividends of $0.10/share, quarterly series 52 days; scheduled payments assumed paid.",
+        "sources": [
+          "https://api.strategy.com/btc/strcKpiData",
+          "https://query1.finance.yahoo.com/v8/finance/chart/"
+        ]
       }
     },
     "ASST": {
@@ -585,6 +630,32 @@
           "https://strive.com/treasury/api/dashboard/base-data"
         ],
         "limitations": "SATA and SATS use their $100 preference floors; the ten closes before Nov 13 and the Nov 13 close remain below par. SATA daily dividends are treated paid through November 13 (the issuer lists Nov 13 paid). SATS moved to daily dividends on Nov 10 (8-K of Oct 21: $0.0658 per business day, each paid that business day); its $0.8710 initial dividend through Nov 9 was paid Nov 9, so no SATS dividend is unpaid at the Nov 13 close. SATS financing is the 8-K's disclosed $10.021m gross proceeds for 104,478 shares, before sales agent commissions. SATA's rate rises to 13.25% from December 1 (8-K of Nov 12); not yet in effect."
+      },
+      "2026-11-20": {
+        "debt_principal": 0,
+        "preferred_claims_usd": 2117121300,
+        "preferred_claims_eur": 0,
+        "preferred_components": {
+          "SATA": {
+            "shares": 14030176,
+            "base": 100,
+            "annual_rate_pct": 13,
+            "claims_usd": 1403017600
+          },
+          "SATS": {
+            "shares": 7141037,
+            "base": 100,
+            "annual_rate_pct": 15,
+            "accrued_dividends_usd": 0,
+            "claims_usd": 714103700
+          }
+        },
+        "sources": [
+          "https://www.sec.gov/Archives/edgar/data/1920406/000162828026075372/asst-20261123.htm",
+          "https://www.sec.gov/Archives/edgar/data/1920406/000162828026066608/asst-20261021.htm",
+          "https://strive.com/treasury/api/dashboard/base-data"
+        ],
+        "limitations": "SATA and SATS use their $100 preference floors; the ten closes before Nov 20 and the Nov 20 close remain below par. SATA daily dividends are treated paid through November 20 (the issuer lists the Nov 20 payment paid). SATS pays $0.0658 each business day on that day (8-K of Oct 21), so none is unpaid at the Nov 20 close. No ATM sales of Class A, SATS or SATA and no bitcoin purchases in the Nov 14-20 period."
       }
     }
   },
@@ -599,7 +670,8 @@
     "2026-10-18": 82540.21,
     "2026-10-25": 80265.94,
     "2026-11-01": 77544,
-    "2026-11-08": 74713.25
+    "2026-11-08": 74713.25,
+    "2026-11-15": 64136.31
   },
   "comparison_release_dates": {
     "2026-08-30": "2026-08-31",
@@ -612,7 +684,8 @@
     "2026-10-18": "2026-10-19",
     "2026-10-25": "2026-10-26",
     "2026-11-01": "2026-11-02",
-    "2026-11-08": "2026-11-09"
+    "2026-11-08": "2026-11-09",
+    "2026-11-15": "2026-11-16"
   },
   "balance_marks": {
     "2026-08-30": {
@@ -692,6 +765,12 @@
     },
     "2026-11-13": {
       "STRC": 99.91089108910892
+    },
+    "2026-11-15": {
+      "EURUSD=X": 1.1017
+    },
+    "2026-11-20": {
+      "STRC": 93.6
     }
   },
   "preferred_audit_files": [
